@@ -3,8 +3,8 @@ use thiserror::Error;
 /// Errors that can occur during fillet operations.
 #[derive(Debug, Error)]
 pub enum FilletError {
-    /// Variable radius is not supported for wire-based fillets.
-    #[error("Variable radius is not supported for fillet_along_wire.")]
+    /// Variable radius on closed wires requires `f(0.0) ~= f(1.0)`.
+    #[error("Variable radius on closed wire requires f(0.0) ~= f(1.0).")]
     VariableRadiusUnsupported,
     /// The wire is not continuous.
     #[error("Wire must be continuous.")]

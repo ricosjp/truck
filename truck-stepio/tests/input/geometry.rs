@@ -321,16 +321,16 @@ fn exec_b_spline_curve_with_knots(
             std::iter::repeat(s).take(*m)
         })
         .collect::<Vec<f64>>();
-    let knots = KnotVec::from(vec);
+    let knots = KnotVector::from(vec);
     let cps = ctrlpt_coords
         .into_iter()
         .take(knots.len() - degree - 1)
         .map(Point3::from)
         .collect::<Vec<_>>();
-    let bsp = BSplineCurve::new(knots, cps);
+    let bsp = BsplineCurve::new(knots, cps);
     let step_str = format!("DATA;{}ENDSEC;", StepDisplay::new(&bsp, 1));
-    let bsp_step = step_to_entity::<BSplineCurveWithKnotsHolder>(&step_str);
-    let res: BSplineCurve<Point3> = (&bsp_step).try_into().unwrap();
+    let bsp_step = step_to_entity::<BsplineCurveWithKnotsHolder>(&step_str);
+    let res: BsplineCurve<Point3> = (&bsp_step).try_into().unwrap();
     assert_eq!(res.knot_vec().len(), bsp.knot_vec().len());
     assert_eq!(res.control_points().len(), bsp.control_points().len());
     res.knot_vec()
@@ -381,8 +381,8 @@ fn exec_bezier_curve(degree: usize, ctrlpt_coords: Vec<[f64; 3]>) {
 {step_cps}ENDSEC;"
     );
     let bsp_step = step_to_entity::<BezierCurveHolder>(&step_str);
-    let res: BSplineCurve<Point3> = (&bsp_step).try_into().unwrap();
-    let ans = BSplineCurve::new(KnotVec::bezier_knot(degree), points);
+    let res: BsplineCurve<Point3> = (&bsp_step).try_into().unwrap();
+    let ans = BsplineCurve::new(KnotVector::bezier_knot(degree), points);
     assert_eq!(res.knot_vec().len(), ans.knot_vec().len());
     assert_eq!(res.control_points().len(), ans.control_points().len());
     res.knot_vec()
@@ -406,7 +406,7 @@ proptest! {
 }
 
 fn exec_quasi_uniform_curve(degree: usize, division: usize, ctrlpt_coords: Vec<[f64; 3]>) {
-    let mut knots = KnotVec::uniform_knot(degree, division);
+    let mut knots = KnotVector::uniform_knot(degree, division);
     knots.transform(division as f64, 0.0);
     let points = ctrlpt_coords
         .into_iter()
@@ -420,8 +420,8 @@ fn exec_quasi_uniform_curve(degree: usize, division: usize, ctrlpt_coords: Vec<[
 {step_cps}ENDSEC;"
     );
     let bsp_step = step_to_entity::<QuasiUniformCurveHolder>(&step_str);
-    let res: BSplineCurve<Point3> = (&bsp_step).try_into().unwrap();
-    let ans = BSplineCurve::new(knots, points);
+    let res: BsplineCurve<Point3> = (&bsp_step).try_into().unwrap();
+    let ans = BsplineCurve::new(knots, points);
     assert_eq!(res.knot_vec().len(), ans.knot_vec().len());
     assert_eq!(res.control_points().len(), ans.control_points().len());
     res.knot_vec()
@@ -446,7 +446,7 @@ proptest! {
 }
 
 fn exec_uniform_curve(degree: usize, knot_len: usize, ctrlpt_coords: Vec<[f64; 3]>) {
-    let knots = KnotVec::from_iter((0..knot_len).map(|i| i as f64 - degree as f64));
+    let knots = KnotVector::from_iter((0..knot_len).map(|i| i as f64 - degree as f64));
     let points = ctrlpt_coords
         .into_iter()
         .take(knot_len - degree - 1)
@@ -459,8 +459,8 @@ fn exec_uniform_curve(degree: usize, knot_len: usize, ctrlpt_coords: Vec<[f64; 3
 {step_cps}ENDSEC;"
     );
     let bsp_step = step_to_entity::<UniformCurveHolder>(&step_str);
-    let res: BSplineCurve<Point3> = (&bsp_step).try_into().unwrap();
-    let ans = BSplineCurve::new(knots, points);
+    let res: BsplineCurve<Point3> = (&bsp_step).try_into().unwrap();
+    let ans = BsplineCurve::new(knots, points);
     assert_eq!(res.knot_vec().len(), ans.knot_vec().len());
     assert_eq!(res.control_points().len(), ans.control_points().len());
     res.knot_vec()
@@ -502,17 +502,17 @@ fn exec_nurbs_curve_b_spline_with_knots(
             std::iter::repeat(s).take(*m)
         })
         .collect::<Vec<f64>>();
-    let knots = KnotVec::from(vec);
+    let knots = KnotVector::from(vec);
     let cps = ctrlpt_coords
         .into_iter()
         .take(knots.len() - degree - 1)
         .map(Point3::from)
         .collect::<Vec<_>>();
     weights.truncate(cps.len());
-    let bsp = BSplineCurve::new(knots, cps);
+    let bsp = BsplineCurve::new(knots, cps);
     let nurbs = NurbsCurve::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
     let step_str = format!("DATA;{}ENDSEC;", StepDisplay::new(&nurbs, 1));
-    let nurbs_step = step_to_entity::<RationalBSplineCurveHolder>(&step_str);
+    let nurbs_step = step_to_entity::<RationalBsplineCurveHolder>(&step_str);
     let res: NurbsCurve<Vector4> = (&nurbs_step).try_into().unwrap();
     assert_eq!(res.knot_vec().len(), nurbs.knot_vec().len());
     assert_eq!(res.control_points().len(), nurbs.control_points().len());
@@ -566,9 +566,9 @@ fn exec_nurbs_curve_bezier_curve(
 );
 {step_cps}ENDSEC;"
     );
-    let bsp_step = step_to_entity::<RationalBSplineCurveHolder>(&step_str);
+    let bsp_step = step_to_entity::<RationalBsplineCurveHolder>(&step_str);
     let res: NurbsCurve<Vector4> = (&bsp_step).try_into().unwrap();
-    let bsp = BSplineCurve::new(KnotVec::bezier_knot(degree), points);
+    let bsp = BsplineCurve::new(KnotVector::bezier_knot(degree), points);
     let ans = NurbsCurve::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
     assert_eq!(res.knot_vec().len(), ans.knot_vec().len());
     assert_eq!(res.control_points().len(), ans.control_points().len());
@@ -599,7 +599,7 @@ fn exec_nurbs_curve_quasi_uniform_curve(
     ctrlpt_coords: Vec<[f64; 3]>,
     mut weights: Vec<f64>,
 ) {
-    let mut knots = KnotVec::uniform_knot(degree, division);
+    let mut knots = KnotVector::uniform_knot(degree, division);
     knots.transform(division as f64, 0.0);
     let points = ctrlpt_coords
         .into_iter()
@@ -622,9 +622,9 @@ fn exec_nurbs_curve_quasi_uniform_curve(
 );
 {step_cps}ENDSEC;"
     );
-    let bsp_step = step_to_entity::<RationalBSplineCurveHolder>(&step_str);
+    let bsp_step = step_to_entity::<RationalBsplineCurveHolder>(&step_str);
     let res: NurbsCurve<Vector4> = (&bsp_step).try_into().unwrap();
-    let bsp = BSplineCurve::new(knots, points);
+    let bsp = BsplineCurve::new(knots, points);
     let ans = NurbsCurve::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
     assert_eq!(res.knot_vec().len(), ans.knot_vec().len());
     assert_eq!(res.control_points().len(), ans.control_points().len());
@@ -656,7 +656,7 @@ fn exec_nurbs_curve_uniform_curve(
     ctrlpt_coords: Vec<[f64; 3]>,
     mut weights: Vec<f64>,
 ) {
-    let knots = KnotVec::from_iter((0..knot_len).map(|i| i as f64 - degree as f64));
+    let knots = KnotVector::from_iter((0..knot_len).map(|i| i as f64 - degree as f64));
     let points = ctrlpt_coords
         .into_iter()
         .take(knot_len - degree - 1)
@@ -678,9 +678,9 @@ fn exec_nurbs_curve_uniform_curve(
 );
 {step_cps}ENDSEC;"
     );
-    let bsp_step = step_to_entity::<RationalBSplineCurveHolder>(&step_str);
+    let bsp_step = step_to_entity::<RationalBsplineCurveHolder>(&step_str);
     let res: NurbsCurve<Vector4> = (&bsp_step).try_into().unwrap();
-    let bsp = BSplineCurve::new(knots, points);
+    let bsp = BsplineCurve::new(knots, points);
     let ans = NurbsCurve::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
     assert_eq!(res.knot_vec().len(), ans.knot_vec().len());
     assert_eq!(res.control_points().len(), ans.control_points().len());
@@ -1207,17 +1207,17 @@ fn coords_to_points(
         .collect()
 }
 
-fn compare_bsp_surfaces(res: &BSplineSurface<Point3>, ans: &BSplineSurface<Point3>) {
-    assert_eq!(res.uknot_vec().len(), ans.uknot_vec().len());
-    assert_eq!(res.vknot_vec().len(), ans.vknot_vec().len());
+fn compare_bsp_surfaces(res: &BsplineSurface<Point3>, ans: &BsplineSurface<Point3>) {
+    assert_eq!(res.knot_vector_u().len(), ans.knot_vector_u().len());
+    assert_eq!(res.knot_vector_v().len(), ans.knot_vector_v().len());
     assert_eq!(res.control_points().len(), ans.control_points().len());
-    res.uknot_vec()
+    res.knot_vector_u()
         .iter()
-        .zip(ans.uknot_vec())
+        .zip(ans.knot_vector_u())
         .for_each(|(x, y)| assert_near!(x, y));
-    res.vknot_vec()
+    res.knot_vector_v()
         .iter()
-        .zip(ans.vknot_vec())
+        .zip(ans.knot_vector_v())
         .for_each(|(x, y)| assert_near!(x, y));
     res.control_points()
         .iter()
@@ -1227,16 +1227,16 @@ fn compare_bsp_surfaces(res: &BSplineSurface<Point3>, ans: &BSplineSurface<Point
 }
 
 fn compare_nurbs_surfaces(res: &NurbsSurface<Vector4>, ans: &NurbsSurface<Vector4>) {
-    assert_eq!(res.uknot_vec().len(), ans.uknot_vec().len());
-    assert_eq!(res.vknot_vec().len(), ans.vknot_vec().len());
+    assert_eq!(res.knot_vector_u().len(), ans.knot_vector_u().len());
+    assert_eq!(res.knot_vector_v().len(), ans.knot_vector_v().len());
     assert_eq!(res.control_points().len(), ans.control_points().len());
-    res.uknot_vec()
+    res.knot_vector_u()
         .iter()
-        .zip(ans.uknot_vec())
+        .zip(ans.knot_vector_u())
         .for_each(|(x, y)| assert_near!(x, y));
-    res.vknot_vec()
+    res.knot_vector_v()
         .iter()
-        .zip(ans.vknot_vec())
+        .zip(ans.knot_vector_v())
         .for_each(|(x, y)| assert_near!(x, y));
     res.control_points()
         .iter()
@@ -1266,7 +1266,7 @@ fn exec_b_spline_surface_with_knots(
             std::iter::repeat(s).take(*m)
         })
         .collect::<Vec<f64>>();
-    let uknots = KnotVec::from(uvec);
+    let uknots = KnotVector::from(uvec);
     let mut s = 0.0;
     let vvec = vknot_mults
         .iter()
@@ -1277,16 +1277,16 @@ fn exec_b_spline_surface_with_knots(
             std::iter::repeat(s).take(*m)
         })
         .collect::<Vec<f64>>();
-    let vknots = KnotVec::from(vvec);
+    let vknots = KnotVector::from(vvec);
     let cps = coords_to_points(
         uknots.len() - udegree - 1,
         vknots.len() - vdegree - 1,
         ctrlpt_coords,
     );
-    let bsp = BSplineSurface::new((uknots, vknots), cps);
+    let bsp = BsplineSurface::new((uknots, vknots), cps);
     let step_str = format!("DATA;{}ENDSEC;", StepDisplay::new(&bsp, 1));
-    let bsp_step = step_to_entity::<BSplineSurfaceWithKnotsHolder>(&step_str);
-    let res: BSplineSurface<Point3> = (&bsp_step).try_into().unwrap();
+    let bsp_step = step_to_entity::<BsplineSurfaceWithKnotsHolder>(&step_str);
+    let res: BsplineSurface<Point3> = (&bsp_step).try_into().unwrap();
     compare_bsp_surfaces(&res, &bsp);
 }
 
@@ -1348,9 +1348,12 @@ fn exec_bezier_surface([udegree, vdegree]: [usize; 2], ctrlpt_coords: Vec<Vec<[f
 {step_cps}ENDSEC;"
     );
     let bsp_step = step_to_entity::<BezierSurfaceHolder>(&step_str);
-    let res: BSplineSurface<Point3> = (&bsp_step).into();
-    let ans = BSplineSurface::new(
-        (KnotVec::bezier_knot(udegree), KnotVec::bezier_knot(vdegree)),
+    let res: BsplineSurface<Point3> = (&bsp_step).into();
+    let ans = BsplineSurface::new(
+        (
+            KnotVector::bezier_knot(udegree),
+            KnotVector::bezier_knot(vdegree),
+        ),
         points,
     );
     compare_bsp_surfaces(&res, &ans);
@@ -1371,9 +1374,9 @@ fn exec_quasi_uniform_surface(
     [udivision, vdivision]: [usize; 2],
     ctrlpt_coords: Vec<Vec<[f64; 3]>>,
 ) {
-    let mut uknots = KnotVec::uniform_knot(udegree, udivision);
+    let mut uknots = KnotVector::uniform_knot(udegree, udivision);
     uknots.transform(udivision as f64, 0.0);
-    let mut vknots = KnotVec::uniform_knot(vdegree, vdivision);
+    let mut vknots = KnotVector::uniform_knot(vdegree, vdivision);
     vknots.transform(vdivision as f64, 0.0);
     let points = coords_to_points(
         uknots.len() - udegree - 1,
@@ -1387,8 +1390,8 @@ fn exec_quasi_uniform_surface(
 {step_cps}ENDSEC;"
     );
     let bsp_step = step_to_entity::<QuasiUniformSurfaceHolder>(&step_str);
-    let res: BSplineSurface<Point3> = (&bsp_step).try_into().unwrap();
-    let ans = BSplineSurface::new((uknots, vknots), points);
+    let res: BsplineSurface<Point3> = (&bsp_step).try_into().unwrap();
+    let ans = BsplineSurface::new((uknots, vknots), points);
     compare_bsp_surfaces(&res, &ans);
 }
 
@@ -1408,8 +1411,8 @@ fn exec_uniform_surface(
     [uknot_len, vknot_len]: [usize; 2],
     ctrlpt_coords: Vec<Vec<[f64; 3]>>,
 ) {
-    let uknots = KnotVec::from_iter((0..uknot_len).map(|i| i as f64 - udegree as f64));
-    let vknots = KnotVec::from_iter((0..vknot_len).map(|i| i as f64 - vdegree as f64));
+    let uknots = KnotVector::from_iter((0..uknot_len).map(|i| i as f64 - udegree as f64));
+    let vknots = KnotVector::from_iter((0..vknot_len).map(|i| i as f64 - vdegree as f64));
     let points = coords_to_points(
         uknots.len() - udegree - 1,
         vknots.len() - vdegree - 1,
@@ -1422,8 +1425,8 @@ fn exec_uniform_surface(
 {step_cps}ENDSEC;"
     );
     let bsp_step = step_to_entity::<UniformSurfaceHolder>(&step_str);
-    let res: BSplineSurface<Point3> = (&bsp_step).try_into().unwrap();
-    let ans = BSplineSurface::new((uknots, vknots), points);
+    let res: BsplineSurface<Point3> = (&bsp_step).try_into().unwrap();
+    let ans = BsplineSurface::new((uknots, vknots), points);
     compare_bsp_surfaces(&res, &ans);
 }
 
@@ -1460,7 +1463,7 @@ fn exec_nurbs_surface_b_spline_surface_with_knots(
             std::iter::repeat(s).take(*m)
         })
         .collect::<Vec<f64>>();
-    let uknots = KnotVec::from(uvec);
+    let uknots = KnotVector::from(uvec);
     let mut s = 0.0;
     let vvec = vknot_mults
         .iter()
@@ -1471,7 +1474,7 @@ fn exec_nurbs_surface_b_spline_surface_with_knots(
             std::iter::repeat(s).take(*m)
         })
         .collect::<Vec<f64>>();
-    let vknots = KnotVec::from(vvec);
+    let vknots = KnotVector::from(vvec);
     let cps = coords_to_points(
         uknots.len() - udegree - 1,
         vknots.len() - vdegree - 1,
@@ -1482,10 +1485,10 @@ fn exec_nurbs_surface_b_spline_surface_with_knots(
         .iter_mut()
         .zip(&cps)
         .for_each(|(vec, vec0)| vec.truncate(vec0.len()));
-    let bsp = BSplineSurface::new((uknots, vknots), cps);
+    let bsp = BsplineSurface::new((uknots, vknots), cps);
     let ans = NurbsSurface::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
     let step_str = format!("DATA;{}ENDSEC;", StepDisplay::new(&ans, 1));
-    let bsp_step = step_to_entity::<RationalBSplineSurfaceHolder>(&step_str);
+    let bsp_step = step_to_entity::<RationalBsplineSurfaceHolder>(&step_str);
     let res: NurbsSurface<Vector4> = (&bsp_step).try_into().unwrap();
     compare_nurbs_surfaces(&res, &ans);
 }
@@ -1549,10 +1552,13 @@ fn exec_nurbs_surface_bezier_surface(
 );
 {step_cps}ENDSEC;"
     );
-    let bsp_step = step_to_entity::<RationalBSplineSurfaceHolder>(&step_str);
+    let bsp_step = step_to_entity::<RationalBsplineSurfaceHolder>(&step_str);
     let res: NurbsSurface<Vector4> = (&bsp_step).try_into().unwrap();
-    let bsp = BSplineSurface::new(
-        (KnotVec::bezier_knot(udegree), KnotVec::bezier_knot(vdegree)),
+    let bsp = BsplineSurface::new(
+        (
+            KnotVector::bezier_knot(udegree),
+            KnotVector::bezier_knot(vdegree),
+        ),
         points,
     );
     let ans = NurbsSurface::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
@@ -1576,9 +1582,9 @@ fn exec_nurbs_surface_quasi_uniform_surface(
     ctrlpt_coords: Vec<Vec<[f64; 3]>>,
     mut weights: Vec<Vec<f64>>,
 ) {
-    let mut uknots = KnotVec::uniform_knot(udegree, udivision);
+    let mut uknots = KnotVector::uniform_knot(udegree, udivision);
     uknots.transform(udivision as f64, 0.0);
-    let mut vknots = KnotVec::uniform_knot(vdegree, vdivision);
+    let mut vknots = KnotVector::uniform_knot(vdegree, vdivision);
     vknots.transform(vdivision as f64, 0.0);
     let points = coords_to_points(
         uknots.len() - udegree - 1,
@@ -1609,9 +1615,9 @@ fn exec_nurbs_surface_quasi_uniform_surface(
 );
 {step_cps}ENDSEC;"
     );
-    let bsp_step = step_to_entity::<RationalBSplineSurfaceHolder>(&step_str);
+    let bsp_step = step_to_entity::<RationalBsplineSurfaceHolder>(&step_str);
     let res: NurbsSurface<Vector4> = (&bsp_step).try_into().unwrap();
-    let bsp = BSplineSurface::new((uknots, vknots), points);
+    let bsp = BsplineSurface::new((uknots, vknots), points);
     let ans = NurbsSurface::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
     compare_nurbs_surfaces(&res, &ans);
 }
@@ -1634,8 +1640,8 @@ fn exec_nurbs_surface_uniform_surface(
     ctrlpt_coords: Vec<Vec<[f64; 3]>>,
     mut weights: Vec<Vec<f64>>,
 ) {
-    let uknots = KnotVec::from_iter((0..uknot_len).map(|i| i as f64 - udegree as f64));
-    let vknots = KnotVec::from_iter((0..vknot_len).map(|i| i as f64 - vdegree as f64));
+    let uknots = KnotVector::from_iter((0..uknot_len).map(|i| i as f64 - udegree as f64));
+    let vknots = KnotVector::from_iter((0..vknot_len).map(|i| i as f64 - vdegree as f64));
     let points = coords_to_points(
         uknots.len() - udegree - 1,
         vknots.len() - vdegree - 1,
@@ -1666,9 +1672,9 @@ fn exec_nurbs_surface_uniform_surface(
 );
 {step_cps}ENDSEC;"
     );
-    let bsp_step = step_to_entity::<RationalBSplineSurfaceHolder>(&step_str);
+    let bsp_step = step_to_entity::<RationalBsplineSurfaceHolder>(&step_str);
     let res: NurbsSurface<Vector4> = (&bsp_step).try_into().unwrap();
-    let bsp = BSplineSurface::new((uknots, vknots), points);
+    let bsp = BsplineSurface::new((uknots, vknots), points);
     let ans = NurbsSurface::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
     compare_nurbs_surfaces(&res, &ans);
 }

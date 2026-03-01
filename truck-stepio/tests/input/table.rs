@@ -25,7 +25,7 @@ fn read() {
 
 #13 = LINE('Line', #1, #3);
 #14 = POLYLINE('Polyline', (#1, #1, #1, #1, #1, #1));
-#15 = B_SPLINE_CURVE_WITH_KNOTS('BSplineCurveWithKnots', 2, (#1, #1, #1, #1, #1), .UNSPECIFIED.,
+#15 = B_SPLINE_CURVE_WITH_KNOTS('BsplineCurveWithKnots', 2, (#1, #1, #1, #1, #1), .UNSPECIFIED.,
     .U., .U., (3, 1, 3), (0.0, 0.5, 1.0), .UNSPECIFIED.);
 #16 = BEZIER_CURVE('BezierCurve', 2, (#1, #1, #1, #1, #1), .UNSPECIFIED., .U., .U.);
 #17 = QUASI_UNIFORM_CURVE('QuasiUniformCurve', 2, (#1, #1, #1, #1, #1), .UNSPECIFIED., .U., .U.);
@@ -37,12 +37,12 @@ fn read() {
     CURVE()
     GEOMETRIC_REPRESENTATION_ITEM()
     RATIONAL_B_SPLINE_CURVE((1.0, 2.0, 3.0, 4.0, 5.0))
-    REPRESENTATION_ITEM('RationalBSplineCurve')
+    REPRESENTATION_ITEM('RationalBsplineCurve')
 );
 #20 = CIRCLE('Circle', #7, 10.0);
 #21 = PLANE('Plane', #9);
 #22 = B_SPLINE_SURFACE_WITH_KNOTS(
-    'BSplineSurfaceWithKnots', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.,
+    'BsplineSurfaceWithKnots', 2, 2, ((#1, #1, #1), (#1, #1, #1), (#1, #1, #1)), .UNSPECIFIED., .U., .U., .U.,
     (3, 3), (3, 3), (0.0, 1.0), (0.0, 1.0), .UNSPECIFIED.
 );
 #23 = SURFACE_OF_REVOLUTION('SurfaceOfRevolution', #20, #5);
@@ -67,7 +67,7 @@ fn read() {
     B_SPLINE_SURFACE_WITH_KNOTS((3, 3), (3, 3), (0.0, 1.0), (0.0, 1.0), .UNSPECIFIED.)
     GEOMETRIC_REPRESENTATION_ITEM()
     RATIONAL_B_SPLINE_SURFACE(((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)))
-    REPRESENTATION_ITEM('RationalBSplineSurface')
+    REPRESENTATION_ITEM('RationalBsplineSurface')
     SURFACE()
 );
 
@@ -220,8 +220,8 @@ ENDSEC;
         )]),
         b_spline_curve_with_knots: HashMap::from_iter(vec![(
             15,
-            BSplineCurveWithKnotsHolder {
-                label: "BSplineCurveWithKnots".to_string(),
+            BsplineCurveWithKnotsHolder {
+                label: "BsplineCurveWithKnots".to_string(),
                 degree: 2,
                 control_points_list: vec![
                     PlaceHolder::Ref(Name::Entity(1)),
@@ -230,7 +230,7 @@ ENDSEC;
                     PlaceHolder::Ref(Name::Entity(1)),
                     PlaceHolder::Ref(Name::Entity(1)),
                 ],
-                curve_form: BSplineCurveForm::Unspecified,
+                curve_form: BsplineCurveForm::Unspecified,
                 closed_curve: Logical::Unknown,
                 self_intersect: Logical::Unknown,
                 knot_multiplicities: vec![3, 1, 3],
@@ -250,7 +250,7 @@ ENDSEC;
                     PlaceHolder::Ref(Name::Entity(1)),
                     PlaceHolder::Ref(Name::Entity(1)),
                 ],
-                curve_form: BSplineCurveForm::Unspecified,
+                curve_form: BsplineCurveForm::Unspecified,
                 closed_curve: Logical::Unknown,
                 self_intersect: Logical::Unknown,
             },
@@ -267,7 +267,7 @@ ENDSEC;
                     PlaceHolder::Ref(Name::Entity(1)),
                     PlaceHolder::Ref(Name::Entity(1)),
                 ],
-                curve_form: BSplineCurveForm::Unspecified,
+                curve_form: BsplineCurveForm::Unspecified,
                 closed_curve: Logical::Unknown,
                 self_intersect: Logical::Unknown,
             },
@@ -284,18 +284,18 @@ ENDSEC;
                     PlaceHolder::Ref(Name::Entity(1)),
                     PlaceHolder::Ref(Name::Entity(1)),
                 ],
-                curve_form: BSplineCurveForm::Unspecified,
+                curve_form: BsplineCurveForm::Unspecified,
                 closed_curve: Logical::Unknown,
                 self_intersect: Logical::Unknown,
             },
         )]),
         rational_b_spline_curve: HashMap::from_iter(vec![(
             19,
-            RationalBSplineCurveHolder {
+            RationalBsplineCurveHolder {
                 non_rational_b_spline_curve: PlaceHolder::Owned(
-                    NonRationalBSplineCurveHolder::BSplineCurveWithKnots(
-                        BSplineCurveWithKnotsHolder {
-                            label: "RationalBSplineCurve".to_string(),
+                    NonRationalBsplineCurveHolder::BsplineCurveWithKnots(
+                        BsplineCurveWithKnotsHolder {
+                            label: "RationalBsplineCurve".to_string(),
                             degree: 2,
                             control_points_list: vec![
                                 PlaceHolder::Ref(Name::Entity(1)),
@@ -304,7 +304,7 @@ ENDSEC;
                                 PlaceHolder::Ref(Name::Entity(1)),
                                 PlaceHolder::Ref(Name::Entity(1)),
                             ],
-                            curve_form: BSplineCurveForm::Unspecified,
+                            curve_form: BsplineCurveForm::Unspecified,
                             closed_curve: Logical::Unknown,
                             self_intersect: Logical::Unknown,
                             knot_multiplicities: vec![3, 1, 3],
@@ -361,8 +361,8 @@ ENDSEC;
         )]),
         b_spline_surface_with_knots: HashMap::from_iter(vec![(
             22,
-            BSplineSurfaceWithKnotsHolder {
-                label: "BSplineSurfaceWithKnots".to_string(),
+            BsplineSurfaceWithKnotsHolder {
+                label: "BsplineSurfaceWithKnots".to_string(),
                 u_degree: 2,
                 v_degree: 2,
                 control_points_list: vec![
@@ -382,7 +382,7 @@ ENDSEC;
                         PlaceHolder::Ref(Name::Entity(1)),
                     ],
                 ],
-                surface_form: BSplineSurfaceForm::Unspecified,
+                surface_form: BsplineSurfaceForm::Unspecified,
                 u_closed: Logical::Unknown,
                 v_closed: Logical::Unknown,
                 self_intersect: Logical::Unknown,
@@ -440,7 +440,7 @@ ENDSEC;
                         PlaceHolder::Ref(Name::Entity(1)),
                     ],
                 ],
-                surface_form: BSplineSurfaceForm::Unspecified,
+                surface_form: BsplineSurfaceForm::Unspecified,
                 u_closed: Logical::Unknown,
                 v_closed: Logical::Unknown,
                 self_intersect: Logical::Unknown,
@@ -469,7 +469,7 @@ ENDSEC;
                         PlaceHolder::Ref(Name::Entity(1)),
                     ],
                 ],
-                surface_form: BSplineSurfaceForm::Unspecified,
+                surface_form: BsplineSurfaceForm::Unspecified,
                 u_closed: Logical::Unknown,
                 v_closed: Logical::Unknown,
                 self_intersect: Logical::Unknown,
@@ -498,7 +498,7 @@ ENDSEC;
                         PlaceHolder::Ref(Name::Entity(1)),
                     ],
                 ],
-                surface_form: BSplineSurfaceForm::Unspecified,
+                surface_form: BsplineSurfaceForm::Unspecified,
                 u_closed: Logical::Unknown,
                 v_closed: Logical::Unknown,
                 self_intersect: Logical::Unknown,
@@ -506,10 +506,10 @@ ENDSEC;
         )]),
         rational_b_spline_surface: HashMap::from_iter(vec![(
             37,
-            RationalBSplineSurfaceHolder {
-                non_rational_b_spline_surface: PlaceHolder::Owned(NonRationalBSplineSurfaceHolder::BSplineSurfaceWithKnots(
-                    Box::new(BSplineSurfaceWithKnotsHolder {
-                label: "RationalBSplineSurface".to_string(),
+            RationalBsplineSurfaceHolder {
+                non_rational_b_spline_surface: PlaceHolder::Owned(NonRationalBsplineSurfaceHolder::BsplineSurfaceWithKnots(
+                    Box::new(BsplineSurfaceWithKnotsHolder {
+                label: "RationalBsplineSurface".to_string(),
                 u_degree: 2,
                 v_degree: 2,
                 control_points_list: vec![
@@ -529,7 +529,7 @@ ENDSEC;
                         PlaceHolder::Ref(Name::Entity(1)),
                     ],
                 ],
-                surface_form: BSplineSurfaceForm::Unspecified,
+                surface_form: BsplineSurfaceForm::Unspecified,
                 u_closed: Logical::Unknown,
                 v_closed: Logical::Unknown,
                 self_intersect: Logical::Unknown,

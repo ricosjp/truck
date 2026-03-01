@@ -7,24 +7,45 @@ use truck_base::{
     tolerance::Tolerance,
 };
 
-/// Parametric curves
+/// A curve defined by a mapping `P(t)` from a scalar parameter `t` to a point.
+///
+/// As `t` varies over the parameter range, the returned points trace out the curve.
+/// Derivatives give the tangent (`derivative`), curvature direction (`derivative_2`), and
+/// higher-order information (`derivative_n`) at any parameter value.
+/// New code should prefer `evaluate` and `derivative*` methods.
+/// Legacy `subs` and `der*` methods are kept for compatibility.
 pub trait ParametricCurve: Clone {
-    /// The curve is in the space of `Self::Point`.
+    /// The point type the curve maps into (e.g. `Point2`, `Point3`).
     type Point;
-    /// The derivation vector of the curve.
+    /// The derivative vector type (e.g. `Vector2`, `Vector3`).
     type Vector: Zero + Copy;
-    /// Substitutes the parameter `t`.
-    fn subs(&self, t: f64) -> Self::Point;
-    /// Returns the derivation.
-    fn der(&self, t: f64) -> Self::Vector;
-    /// Returns the 2nd-order derivation.
-    fn der2(&self, t: f64) -> Self::Vector;
-    /// Returns the `n`th-order derivation.
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector;
-    /// Returns derivations at the parameter `t` with order `0..=n`.
-    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> {
-        (0..=n).map(|i| self.der_n(i, t)).collect()
+    /// Evaluates the curve at parameter `t`, returning the point `P(t)`.
+    fn evaluate(&self, t: f64) -> Self::Point;
+    /// Returns `dP/dt` — the first derivative (tangent) at `t`.
+    fn derivative(&self, t: f64) -> Self::Vector;
+    /// Returns `d²P/dt²` — the second derivative at `t`.
+    fn derivative_2(&self, t: f64) -> Self::Vector;
+    /// Returns the `n`-th derivative `dⁿP/dtⁿ` at `t`.
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector;
+    /// Returns all derivatives at parameter `t` with order `0..=n`.
+    fn derivatives(&self, n: usize, t: f64) -> CurveDerivatives<Self::Vector> {
+        (0..=n).map(|i| self.derivative_n(i, t)).collect()
     }
+    /// Deprecated: use [`evaluate`](ParametricCurve::evaluate).
+    #[inline(always)]
+    fn subs(&self, t: f64) -> Self::Point { self.evaluate(t) }
+    /// Deprecated: use [`derivative`](ParametricCurve::derivative).
+    #[inline(always)]
+    fn der(&self, t: f64) -> Self::Vector { self.derivative(t) }
+    /// Deprecated: use [`derivative_2`](ParametricCurve::derivative_2).
+    #[inline(always)]
+    fn der2(&self, t: f64) -> Self::Vector { self.derivative_2(t) }
+    /// Deprecated: use [`derivative_n`](ParametricCurve::derivative_n).
+    #[inline(always)]
+    fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.derivative_n(n, t) }
+    /// Deprecated: use [`derivatives`](ParametricCurve::derivatives).
+    #[inline(always)]
+    fn ders(&self, n: usize, t: f64) -> CurveDerivatives<Self::Vector> { self.derivatives(n, t) }
     /// Returns default parameter range
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { (Bound::Unbounded, Bound::Unbounded) }
@@ -49,13 +70,13 @@ pub trait BoundedCurve: ParametricCurve {
     #[inline(always)]
     fn front(&self) -> Self::Point {
         let (x, _) = self.parameter_range();
-        self.subs(bound2opt(x).expect(UNBOUNDED_ERROR))
+        self.evaluate(bound2opt(x).expect(UNBOUNDED_ERROR))
     }
     /// The back end point of the curve.
     #[inline(always)]
     fn back(&self) -> Self::Point {
         let (_, y) = self.parameter_range();
-        self.subs(bound2opt(y).expect(UNBOUNDED_ERROR))
+        self.evaluate(bound2opt(y).expect(UNBOUNDED_ERROR))
     }
 }
 
@@ -63,15 +84,15 @@ pub trait BoundedCurve: ParametricCurve {
 impl ParametricCurve for (usize, usize) {
     type Point = usize;
     type Vector = usize;
-    fn der_n(&self, _: usize, _: f64) -> Self::Vector { self.1 - self.0 }
-    fn subs(&self, t: f64) -> Self::Point {
+    fn derivative_n(&self, _: usize, _: f64) -> Self::Vector { self.1 - self.0 }
+    fn evaluate(&self, t: f64) -> Self::Point {
         match t < 0.5 {
             true => self.0,
             false => self.1,
         }
     }
-    fn der(&self, _: f64) -> Self::Vector { self.1 - self.0 }
-    fn der2(&self, _: f64) -> Self::Vector { self.1 - self.0 }
+    fn derivative(&self, _: f64) -> Self::Vector { self.1 - self.0 }
+    fn derivative_2(&self, _: f64) -> Self::Vector { self.1 - self.0 }
     fn parameter_range(&self) -> ParameterRange { (Bound::Included(0.0), Bound::Included(1.0)) }
 }
 
@@ -81,15 +102,17 @@ impl BoundedCurve for (usize, usize) {}
 impl<C: ParametricCurve> ParametricCurve for &C {
     type Point = C::Point;
     type Vector = C::Vector;
-    fn subs(&self, t: f64) -> Self::Point { (*self).subs(t) }
+    fn evaluate(&self, t: f64) -> Self::Point { (*self).evaluate(t) }
     #[inline(always)]
-    fn der(&self, t: f64) -> Self::Vector { (*self).der(t) }
+    fn derivative(&self, t: f64) -> Self::Vector { (*self).derivative(t) }
     #[inline(always)]
-    fn der2(&self, t: f64) -> Self::Vector { (*self).der2(t) }
+    fn derivative_2(&self, t: f64) -> Self::Vector { (*self).derivative_2(t) }
     #[inline(always)]
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector { (*self).der_n(n, t) }
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector { (*self).derivative_n(n, t) }
     #[inline(always)]
-    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> { (*self).ders(n, t) }
+    fn derivatives(&self, n: usize, t: f64) -> CurveDerivatives<Self::Vector> {
+        (*self).derivatives(n, t)
+    }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { (*self).parameter_range() }
     #[inline(always)]
@@ -106,15 +129,17 @@ impl<C: BoundedCurve> BoundedCurve for &C {
 impl<C: ParametricCurve> ParametricCurve for Box<C> {
     type Point = C::Point;
     type Vector = C::Vector;
-    fn subs(&self, t: f64) -> Self::Point { (**self).subs(t) }
+    fn evaluate(&self, t: f64) -> Self::Point { (**self).evaluate(t) }
     #[inline(always)]
-    fn der(&self, t: f64) -> Self::Vector { (**self).der(t) }
+    fn derivative(&self, t: f64) -> Self::Vector { (**self).derivative(t) }
     #[inline(always)]
-    fn der2(&self, t: f64) -> Self::Vector { (**self).der2(t) }
+    fn derivative_2(&self, t: f64) -> Self::Vector { (**self).derivative_2(t) }
     #[inline(always)]
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector { (**self).der_n(n, t) }
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector { (**self).derivative_n(n, t) }
     #[inline(always)]
-    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> { (**self).ders(n, t) }
+    fn derivatives(&self, n: usize, t: f64) -> CurveDerivatives<Self::Vector> {
+        (**self).derivatives(n, t)
+    }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { (**self).parameter_range() }
     #[inline(always)]
@@ -178,7 +203,7 @@ pub trait ParameterTransform: BoundedCurve {
     /// let curve0 = ... // implemented ParameterTransform
     /// assert_eq!(curve0.range_tuple(), (0.0, 1.0));
     /// let curve1 = curve0.parameter_transformed(1.0, 2.0);
-    /// assert_eq!(curve1.subs(0.5), curve0.subs(2.5));
+    /// assert_eq!(curve1.evaluate(0.5), curve0.evaluate(2.5));
     /// ```
     fn parameter_transformed(&self, scalar: f64, r#move: f64) -> Self {
         let mut curve = self.clone();
@@ -362,9 +387,12 @@ where
     assert_near!(transformed.range_tuple().1, t1 * a + b);
     let p = rand::random::<f64>();
     let t = (1.0 - p) * t0 + p * t1;
-    assert_near!(transformed.subs(t * a + b), curve.subs(t));
-    assert_near!(transformed.der(t * a + b) * a, curve.der(t));
-    assert_near!(transformed.der2(t * a + b) * a * a, curve.der2(t));
+    assert_near!(transformed.evaluate(t * a + b), curve.evaluate(t));
+    assert_near!(transformed.derivative(t * a + b) * a, curve.derivative(t));
+    assert_near!(
+        transformed.derivative_2(t * a + b) * a * a,
+        curve.derivative_2(t)
+    );
     assert_near!(transformed.front(), curve.front());
     assert_near!(transformed.back(), curve.back());
 }
@@ -395,16 +423,16 @@ where
 
     let p = rand::random::<f64>();
     let t = t0 * (1.0 - p) + t1 * p;
-    assert_near!(concatted.subs(t), curve0.subs(t));
-    assert_near!(concatted.der(t), curve0.der(t));
-    assert_near!(concatted.der2(t), curve0.der2(t));
+    assert_near!(concatted.evaluate(t), curve0.evaluate(t));
+    assert_near!(concatted.derivative(t), curve0.derivative(t));
+    assert_near!(concatted.derivative_2(t), curve0.derivative_2(t));
     assert_near!(concatted.front(), curve0.front());
 
     let p = rand::random::<f64>();
     let t = t1 * (1.0 - p) + t2 * p;
-    assert_near!(concatted.subs(t), curve1.subs(t));
-    assert_near!(concatted.der(t), curve1.der(t));
-    assert_near!(concatted.der2(t), curve1.der2(t));
+    assert_near!(concatted.evaluate(t), curve1.evaluate(t));
+    assert_near!(concatted.derivative(t), curve1.derivative(t));
+    assert_near!(concatted.derivative_2(t), curve1.derivative_2(t));
     assert_near!(concatted.back(), curve1.back());
 }
 
@@ -434,13 +462,13 @@ where
 
     let p = rand::random::<f64>();
     let s = t0 * (1.0 - p) + t * p;
-    assert_near!(part0.subs(s), curve.subs(s));
+    assert_near!(part0.evaluate(s), curve.evaluate(s));
     assert_near!(part0.front(), curve.front());
-    assert_near!(part0.back(), curve.subs(t));
+    assert_near!(part0.back(), curve.evaluate(t));
 
     let p = rand::random::<f64>();
     let s = t * (1.0 - p) + t1 * p;
-    assert_near!(part1.subs(s), curve.subs(s));
-    assert_near!(part1.front(), curve.subs(t));
+    assert_near!(part1.evaluate(s), curve.evaluate(s));
+    assert_near!(part1.front(), curve.evaluate(t));
     assert_near!(part1.back(), curve.back());
 }

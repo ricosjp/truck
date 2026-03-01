@@ -1,5 +1,6 @@
 use super::*;
 use truck_base::newton::{self, CalcOutput};
+use truck_geotrait::ParametricCurve as PcurveTrait;
 
 fn double_projection<S0, S1>(
     surface0: &S0,
@@ -31,7 +32,26 @@ where
     };
     let (x, y) = hint0.or_else(|| surface0.search_nearest_parameter(plane_point, hint0, trials))?;
     let (z, w) = hint1.or_else(|| surface1.search_nearest_parameter(plane_point, hint1, trials))?;
-    let Vector4 { x, y, z, w } = newton::solve(function, Vector4 { x, y, z, w }, trials).ok()?;
+    let res = newton::solve(function, Vector4 { x, y, z, w }, trials);
+    let Vector4 { x, y, z, w } = match res {
+        Ok(res) => res,
+        Err(_) => {
+            let pt0 = surface0.subs(x, y);
+            let pt1 = surface1.subs(z, w);
+            let n0 = surface0.normal(x, y);
+            let n1 = surface1.normal(z, w);
+            // Newton's method may fail when the Jacobian is singular, which happens
+            // when surfaces are coplanar or tangent.
+            // If the points are close enough and normals are parallel (indicating
+            // coplanarity), accept the initial guess as a valid intersection point.
+            if pt0.near(&pt1) && n0.cross(n1).magnitude() < TOLERANCE {
+                let point = pt0.midpoint(pt1);
+                return Some((point, Point2::new(x, y), Point2::new(z, w)));
+            } else {
+                return None;
+            }
+        }
+    };
     let point = surface0.subs(x, y).midpoint(surface1.subs(z, w));
     Some((point, Point2::new(x, y), Point2::new(z, w)))
 }
@@ -209,7 +229,7 @@ fn der_routine(
     uv1ders[n] = uv_der_n(uder1, vder1, sum1, *s1normal, cders[n]);
 }
 
-impl<C, S0, S1> ParametricCurve for IntersectionCurve<C, S0, S1>
+impl<C, S0, S1> PcurveTrait for IntersectionCurve<C, S0, S1>
 where
     C: ParametricCurve3D,
     S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
@@ -217,8 +237,8 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
-    fn subs(&self, t: f64) -> Point3 { self.search_triple(t, 100).unwrap().0 }
-    fn der(&self, t: f64) -> Vector3 {
+    fn evaluate(&self, t: f64) -> Point3 { self.search_triple(t, 100).unwrap().0 }
+    fn derivative(&self, t: f64) -> Vector3 {
         let IntersectionCurve {
             surface0,
             surface1,
@@ -232,17 +252,17 @@ where
         n * k
     }
     #[inline(always)]
-    fn der2(&self, t: f64) -> Vector3 { self.der_n(2, t) }
+    fn derivative_2(&self, t: f64) -> Vector3 { self.derivative_n(2, t) }
     #[inline(always)]
-    fn der_n(&self, n: usize, t: f64) -> Vector3 {
+    fn derivative_n(&self, n: usize, t: f64) -> Vector3 {
         match n {
-            0 => return self.subs(t).to_vec(),
-            1 => return self.der(t),
+            0 => return self.evaluate(t).to_vec(),
+            1 => return self.derivative(t),
             _ => {}
         }
-        self.ders(n, t)[n]
+        self.derivatives(n, t)[n]
     }
-    fn ders(&self, n: usize, t: f64) -> CurveDers<Vector3> {
+    fn derivatives(&self, n: usize, t: f64) -> CurveDers<Vector3> {
         let (c, uv0, uv1) = self.search_triple(t, 100).unwrap();
         let mut uv0ders = CurveDers::new(n);
         uv0ders[0] = uv0.to_vec();
@@ -318,7 +338,7 @@ where
     S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
-    fn search_parameter<H: Into<SPHint1D>>(
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: Point3,
         hint: H,
@@ -342,7 +362,7 @@ where
     S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
-    fn search_nearest_parameter<H: Into<SPHint1D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: Point3,
         hint: H,

@@ -4,12 +4,12 @@ use truck_modeling::*;
 
 fn main() {
     let v = builder::vertex(Point3::origin());
-    let e = builder::tsweep(&v, Vector3::unit_x());
-    let f = builder::tsweep(&e, Vector3::unit_y());
-    let cube: Solid = builder::tsweep(&f, Vector3::unit_z());
+    let e = builder::extrude(&v, Vector3::unit_x());
+    let f = builder::extrude(&e, Vector3::unit_y());
+    let cube: Solid = builder::extrude(&f, Vector3::unit_z());
 
     let v = builder::vertex(Point3::new(0.5, 0.25, -0.5));
-    let w = builder::rsweep(
+    let w = builder::revolve(
         &v,
         Point3::new(0.5, 0.5, 0.0),
         Vector3::unit_z(),
@@ -17,7 +17,7 @@ fn main() {
         4,
     );
     let f = builder::try_attach_plane(&[w]).unwrap();
-    let mut cylinder = builder::tsweep(&f, Vector3::unit_z() * 2.0);
+    let mut cylinder = builder::extrude(&f, Vector3::unit_z() * 2.0);
     cylinder.not();
     let and = truck_shapeops::and(&cube, &cylinder, 0.05).unwrap();
     let json = serde_json::to_vec_pretty(&and).unwrap();

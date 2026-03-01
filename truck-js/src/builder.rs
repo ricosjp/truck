@@ -132,14 +132,14 @@ macro_rules! derive_all_sweepable{
 
 /// Sweeps a vertex, an edge, a wire, a face, or a shell by a vector.
 #[wasm_bindgen]
-pub fn tsweep(shape: &AbstractShape, vector: &[f64]) -> AbstractShape {
+pub fn extrude(shape: &AbstractShape, vector: &[f64]) -> AbstractShape {
     intopt!(Vector3, vector);
-    derive_all_sweepable!(shape, builder::tsweep, (vector))
+    derive_all_sweepable!(shape, builder::extrude, (vector))
 }
 
 /// Sweeps a vertex, an edge, a wire, a face, or a shell by the rotation.
 #[wasm_bindgen]
-pub fn rsweep(
+pub fn revolve(
     shape: &AbstractShape,
     origin: &[f64],
     axis: &[f64],
@@ -147,5 +147,5 @@ pub fn rsweep(
     division: usize,
 ) -> AbstractShape {
     intopt!(Point3, origin, Vector3, axis);
-    derive_all_sweepable!(shape, builder::rsweep, (origin, axis, Rad(angle), division))
+    derive_all_sweepable!(shape, builder::revolve, (origin, axis, Rad(angle), division))
 }

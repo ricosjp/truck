@@ -10,7 +10,7 @@ impl ParametricCurve for UnitParabola<Point2> {
     type Point = Point2;
     type Vector = Vector2;
     #[inline]
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector {
         match n {
             0 => Vector2::new(t * t, 2.0 * t),
             1 => Vector2::new(2.0 * t, 2.0),
@@ -19,17 +19,17 @@ impl ParametricCurve for UnitParabola<Point2> {
         }
     }
     #[inline]
-    fn subs(&self, t: f64) -> Self::Point { Self::Point::from_vec(self.der_n(0, t)) }
+    fn evaluate(&self, t: f64) -> Self::Point { Self::Point::from_vec(self.derivative_n(0, t)) }
     #[inline]
-    fn der(&self, t: f64) -> Self::Vector { self.der_n(1, t) }
+    fn derivative(&self, t: f64) -> Self::Vector { self.derivative_n(1, t) }
     #[inline]
-    fn der2(&self, t: f64) -> Self::Vector { self.der_n(2, t) }
+    fn derivative_2(&self, t: f64) -> Self::Vector { self.derivative_n(2, t) }
 }
 
 impl ParametricCurve for UnitParabola<Point3> {
     type Point = Point3;
     type Vector = Vector3;
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector {
         match n {
             0 => Vector3::new(t * t, 2.0 * t, 0.0),
             1 => Vector3::new(2.0 * t, 2.0, 0.0),
@@ -38,11 +38,11 @@ impl ParametricCurve for UnitParabola<Point3> {
         }
     }
     #[inline]
-    fn subs(&self, t: f64) -> Self::Point { Self::Point::from_vec(self.der_n(0, t)) }
+    fn evaluate(&self, t: f64) -> Self::Point { Self::Point::from_vec(self.derivative_n(0, t)) }
     #[inline]
-    fn der(&self, t: f64) -> Self::Vector { self.der_n(1, t) }
+    fn derivative(&self, t: f64) -> Self::Vector { self.derivative_n(1, t) }
     #[inline]
-    fn der2(&self, t: f64) -> Self::Vector { self.der_n(2, t) }
+    fn derivative_2(&self, t: f64) -> Self::Vector { self.derivative_n(2, t) }
 }
 
 impl<P> ParameterDivision1D for UnitParabola<P>
@@ -59,7 +59,7 @@ where
 impl SearchNearestParameter<D1> for UnitParabola<Point2> {
     type Point = Point2;
     #[inline]
-    fn search_nearest_parameter<H: Into<SPHint1D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         pt: Point2,
         _: H,
@@ -84,7 +84,7 @@ impl SearchNearestParameter<D1> for UnitParabola<Point2> {
 impl SearchNearestParameter<D1> for UnitParabola<Point3> {
     type Point = Point3;
     #[inline]
-    fn search_nearest_parameter<H: Into<SPHint1D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         pt: Point3,
         _hint: H,
@@ -101,7 +101,12 @@ impl SearchNearestParameter<D1> for UnitParabola<Point3> {
 impl SearchParameter<D1> for UnitParabola<Point2> {
     type Point = Point2;
     #[inline]
-    fn search_parameter<H: Into<SPHint1D>>(&self, pt: Point2, _: H, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
+        &self,
+        pt: Point2,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         let t = pt.y / 2.0;
         let pt0 = self.subs(t);
         match pt.near(&pt0) {
@@ -114,7 +119,7 @@ impl SearchParameter<D1> for UnitParabola<Point2> {
 impl SearchParameter<D1> for UnitParabola<Point3> {
     type Point = Point3;
     #[inline]
-    fn search_parameter<H: Into<SPHint1D>>(
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         pt: Point3,
         _hint: H,

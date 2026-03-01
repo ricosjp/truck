@@ -1,5 +1,6 @@
 use super::*;
 use std::f64::consts::PI;
+use truck_geotrait::ParametricCurve as PcurveTrait;
 
 impl<C, S0, S1, R> RbfSurface<C, S0, S1, R> {
     /// constructor
@@ -80,11 +81,11 @@ macro_rules! impl_radius_1dim {
     ($ty: ty) => {
         impl RadiusFunction for $ty {
             #[inline]
-            fn der_n(&self, n: usize, t: f64) -> f64 { ParametricCurve::der_n(self, n, t).x }
+            fn der_n(&self, n: usize, t: f64) -> f64 { PcurveTrait::der_n(self, n, t).x }
         }
     };
 }
-impl_radius_1dim!(BSplineCurve<Point1>);
+impl_radius_1dim!(BsplineCurve<Point1>);
 impl_radius_1dim!(NurbsCurve<Vector2>);
 
 /// Contact point of the rolling ball and surface
@@ -147,7 +148,7 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
-    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Vector3> {
+    fn derivatives(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Vector3> {
         let cc = self.contact_circle(v).unwrap();
         let mut out = SurfaceDers::new(max_order);
         (0..=max_order).for_each(|i| {
@@ -157,19 +158,19 @@ where
         });
         out
     }
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Vector3 {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Vector3 {
         self.sub_der_mn(m, n, u, self.contact_circle(v).unwrap())
     }
-    fn subs(&self, u: f64, v: f64) -> Point3 { self.contact_circle(v).unwrap().subs(u) }
-    fn uder(&self, u: f64, v: f64) -> Vector3 { self.contact_circle(v).unwrap().der(u) }
-    fn vder(&self, u: f64, v: f64) -> Vector3 {
+    fn evaluate(&self, u: f64, v: f64) -> Point3 { self.contact_circle(v).unwrap().evaluate(u) }
+    fn derivative_u(&self, u: f64, v: f64) -> Vector3 { self.contact_circle(v).unwrap().der(u) }
+    fn derivative_v(&self, u: f64, v: f64) -> Vector3 {
         self.vder_info(self.contact_circle(v).unwrap(), 1).vder(u)
     }
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.contact_circle(v).unwrap().der2(u) }
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector {
+    fn derivative_uu(&self, u: f64, v: f64) -> Self::Vector { self.contact_circle(v).unwrap().der2(u) }
+    fn derivative_uv(&self, u: f64, v: f64) -> Self::Vector {
         self.vder_info(self.contact_circle(v).unwrap(), 1).uvder(u)
     }
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector {
+    fn derivative_vv(&self, u: f64, v: f64) -> Self::Vector {
         self.vder_info(self.contact_circle(v).unwrap(), 2).vvder(u)
     }
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
@@ -228,16 +229,16 @@ where
     R: RadiusFunction,
 {
     type Point = Point3;
-    fn search_parameter<H: Into<SPHint2D>>(
+    fn search_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Self::Point,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         let curve_hint = match hint.into() {
-            SPHint2D::Parameter(_, v) => SPHint1D::Parameter(v),
-            SPHint2D::Range(_, (v0, v1)) => SPHint1D::Range(v0, v1),
-            SPHint2D::None => SPHint1D::None,
+            SearchParameterHint2D::Parameter(_, v) => SearchParameterHint1D::Parameter(v),
+            SearchParameterHint2D::Range(_, (v0, v1)) => SearchParameterHint1D::Range(v0, v1),
+            SearchParameterHint2D::None => SearchParameterHint1D::None,
         };
         let edge_curve = &self.edge_curve;
         let v = edge_curve.search_nearest_parameter(point, curve_hint, trials)?;
@@ -262,7 +263,7 @@ impl<C, S0, S1, R> RbfContactCurve<C, S0, S1, R> {
     pub const fn index(&self) -> usize { self.index }
 }
 
-impl<C, S0, S1, R> ParametricCurve for RbfContactCurve<C, S0, S1, R>
+impl<C, S0, S1, R> PcurveTrait for RbfContactCurve<C, S0, S1, R>
 where
     C: ParametricCurve3D,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
@@ -271,9 +272,9 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
-    fn ders(&self, n: usize, t: f64) -> CurveDers<Vector3> {
+    fn derivatives(&self, n: usize, t: f64) -> CurveDers<Vector3> {
         if n == 0 {
-            return CurveDers::try_from([self.subs(t).to_vec()]).unwrap();
+            return CurveDers::try_from([self.evaluate(t).to_vec()]).unwrap();
         }
         let cc = self.surface.contact_circle(t).unwrap();
         let rders = self.surface.radius.ders(n, t);
@@ -283,16 +284,16 @@ where
             _ => cc_ders.contact1_ders,
         }
     }
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.ders(n, t)[n] }
-    fn subs(&self, t: f64) -> Self::Point {
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector { self.derivatives(n, t)[n] }
+    fn evaluate(&self, t: f64) -> Self::Point {
         let cc = self.surface.contact_circle(t).unwrap();
         match self.index {
             0 => cc.contact_point0.point,
             _ => cc.contact_point1.point,
         }
     }
-    fn der(&self, t: f64) -> Self::Vector { self.der_n(1, t) }
-    fn der2(&self, t: f64) -> Self::Vector { self.der_n(2, t) }
+    fn derivative(&self, t: f64) -> Self::Vector { self.derivative_n(1, t) }
+    fn derivative_2(&self, t: f64) -> Self::Vector { self.derivative_n(2, t) }
     #[inline]
     fn parameter_range(&self) -> ParameterRange { self.surface.edge_curve.parameter_range() }
     #[inline]
@@ -329,7 +330,7 @@ where
     R: RadiusFunction,
 {
     type Point = Point3;
-    fn search_parameter<H: Into<SPHint1D>>(
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: Self::Point,
         hint: H,

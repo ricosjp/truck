@@ -67,7 +67,7 @@ pub struct TmeshControlPoint<P> {
 pub struct Tmesh<P> {
     control_points: Vec<Arc<RwLock<TmeshControlPoint<P>>>>,
 
-    knot_vectors: RwLock<Option<Vec<(KnotVec, KnotVec)>>>,
+    knot_vectors: RwLock<Option<Vec<(KnotVector, KnotVector)>>>,
 }
 
 /// # TmeshDirection

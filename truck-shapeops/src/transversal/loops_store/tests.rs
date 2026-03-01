@@ -4,11 +4,11 @@ const TOL: f64 = 0.01;
 
 crate::impl_from!(
     NurbsCurve<Vector4>,
-    IntersectionCurve<PolylineCurve, BSplineSurface<Point3>, BSplineSurface<Point3>>
+    IntersectionCurve<PolylineCurve, BsplineSurface<Point3>, BsplineSurface<Point3>>
 );
 type AlternativeIntersection = crate::alternative::Alternative<
     NurbsCurve<Vector4>,
-    IntersectionCurve<PolylineCurve, BSplineSurface<Point3>, BSplineSurface<Point3>>,
+    IntersectionCurve<PolylineCurve, BsplineSurface<Point3>, BsplineSurface<Point3>>,
 >;
 
 struct DebugDisplay<'a, T, Format> {
@@ -51,7 +51,7 @@ impl<P: Debug, C: Debug> LoopsStore<P, C> {
     }
 }
 
-fn parabola_surfaces() -> (BSplineSurface<Point3>, BSplineSurface<Point3>) {
+fn parabola_surfaces() -> (BsplineSurface<Point3>, BsplineSurface<Point3>) {
     // define surfaces
     #[rustfmt::skip]
 	let ctrl0 = vec![
@@ -66,16 +66,22 @@ fn parabola_surfaces() -> (BSplineSurface<Point3>, BSplineSurface<Point3>) {
 		vec![Point3::new(1.0, -1.0, -3.0), Point3::new(1.0, 0.0, 1.0), Point3::new(1.0, 1.0, -3.0)],
 	];
     (
-        BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)), ctrl0),
-        BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)), ctrl1),
+        BsplineSurface::new(
+            (KnotVector::bezier_knot(2), KnotVector::bezier_knot(2)),
+            ctrl0,
+        ),
+        BsplineSurface::new(
+            (KnotVector::bezier_knot(2), KnotVector::bezier_knot(2)),
+            ctrl1,
+        ),
     )
 }
 
 #[test]
 fn independent_intersection() {
     // prepare geoetries
-    let arc00: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc00: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(1.0, 0.0, 1.0, 1.0),
             Vector4::new(0.0, 1.0, 0.0, 0.0),
@@ -83,8 +89,8 @@ fn independent_intersection() {
         ],
     ))
     .into();
-    let arc01 = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc01 = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(-1.0, 0.0, 1.0, 1.0),
             Vector4::new(0.0, -1.0, 0.0, 0.0),
@@ -92,8 +98,8 @@ fn independent_intersection() {
         ],
     ))
     .into();
-    let arc10: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc10: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(1.0, 0.0, -1.0, 1.0),
             Vector4::new(0.0, 1.0, 0.0, 0.0),
@@ -101,8 +107,8 @@ fn independent_intersection() {
         ],
     ))
     .into();
-    let arc11 = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc11 = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(-1.0, 0.0, -1.0, 1.0),
             Vector4::new(0.0, -1.0, 0.0, 0.0),
@@ -274,8 +280,8 @@ fn independent_intersection() {
 #[test]
 fn rotated_intersection() {
     // prepare geoetries
-    let arc00: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc00: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(1.0, 0.0, 1.0, 1.0),
             Vector4::new(0.0, 1.0, 0.0, 0.0),
@@ -283,8 +289,8 @@ fn rotated_intersection() {
         ],
     ))
     .into();
-    let arc01: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc01: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(-1.0, 0.0, 1.0, 1.0),
             Vector4::new(0.0, -1.0, 0.0, 0.0),
@@ -292,8 +298,8 @@ fn rotated_intersection() {
         ],
     ))
     .into();
-    let arc02: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc02: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(1.0, 0.0, 1.0, 1.0),
             Vector4::new(0.0, 0.0, -3.0, 1.0),
@@ -301,8 +307,8 @@ fn rotated_intersection() {
         ],
     ))
     .into();
-    let arc10: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc10: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(0.0, -1.0, -1.0, 1.0),
             Vector4::new(1.0, 0.0, 0.0, 0.0),
@@ -310,8 +316,8 @@ fn rotated_intersection() {
         ],
     ))
     .into();
-    let arc11: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc11: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(0.0, 1.0, -1.0, 1.0),
             Vector4::new(-1.0, 0.0, 0.0, 0.0),
@@ -319,8 +325,8 @@ fn rotated_intersection() {
         ],
     ))
     .into();
-    let arc12: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc12: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(0.0, -1.0, -1.0, 1.0),
             Vector4::new(0.0, 0.0, 3.0, 1.0),
@@ -527,8 +533,8 @@ fn rotated_intersection() {
 
 #[test]
 fn crossing_edges() {
-    let arc00: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc00: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(1.0, 0.0, 1.0, 1.0),
             Vector4::new(0.0, 1.0, 0.0, 0.0),
@@ -536,8 +542,8 @@ fn crossing_edges() {
         ],
     ))
     .into();
-    let arc01: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc01: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(-1.0, 0.0, 1.0, 1.0),
             Vector4::new(0.0, -1.0, 0.0, 0.0),
@@ -545,8 +551,8 @@ fn crossing_edges() {
         ],
     ))
     .into();
-    let arc02: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc02: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(1.0, 0.0, 1.0, 1.0),
             Vector4::new(0.0, 0.0, -3.0, 1.0),
@@ -554,8 +560,8 @@ fn crossing_edges() {
         ],
     ))
     .into();
-    let arc10: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc10: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(1.0, 0.0, -1.0, 1.0),
             Vector4::new(0.0, 1.0, 0.0, 0.0),
@@ -563,8 +569,8 @@ fn crossing_edges() {
         ],
     ))
     .into();
-    let arc11: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc11: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(-1.0, 0.0, -1.0, 1.0),
             Vector4::new(0.0, -1.0, 0.0, 0.0),
@@ -572,8 +578,8 @@ fn crossing_edges() {
         ],
     ))
     .into();
-    let arc12: AlternativeIntersection = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let arc12: AlternativeIntersection = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Vector4::new(1.0, 0.0, -1.0, 1.0),
             Vector4::new(0.0, 0.0, 3.0, 1.0),

@@ -3,13 +3,13 @@ use truck_geometry::prelude::*;
 
 #[test]
 fn test_substitution() {
-    let knot_vec = KnotVec::from(vec![-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]);
-    let ctrl_pts = vec![
+    let knot_vec = KnotVector::from(vec![-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]);
+    let control_points = vec![
         Vector2::new(-1.0, 1.0),
         Vector2::new(0.0, -1.0),
         Vector2::new(1.0, 1.0),
     ];
-    let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    let bspcurve = BsplineCurve::new(knot_vec, control_points);
 
     // bspcurve coincides with (t, t * t) in the range [-1.0..1.0].
     const N: usize = 100; // sample size
@@ -21,13 +21,13 @@ fn test_substitution() {
 
 #[test]
 fn test_derivation() {
-    let knot_vec = KnotVec::bezier_knot(2);
-    let ctrl_pts = vec![
+    let knot_vec = KnotVector::bezier_knot(2);
+    let control_points = vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(0.5, 0.0),
         Vector2::new(1.0, 1.0),
     ];
-    let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    let bspcurve = BsplineCurve::new(knot_vec, control_points);
 
     // `bpscurve = (t, t^2), derived = (1, 2t)`
     const N: usize = 100; // sample size
@@ -39,14 +39,14 @@ fn test_derivation() {
 
 #[test]
 fn test_2nd_derivation() {
-    let knot_vec = KnotVec::bezier_knot(3);
-    let ctrl_pts = vec![
+    let knot_vec = KnotVector::bezier_knot(3);
+    let control_points = vec![
         Vector2::new(0.0, 0.0),
         Vector2::new(1.0, 1.0),
         Vector2::new(0.0, 1.0),
         Vector2::new(1.0, 0.0),
     ];
-    let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    let bspcurve = BsplineCurve::new(knot_vec, control_points);
 
     // bpscurve = (4t^3 - 6t^2 + 3t, -3t^2 + 3t), derived2 = (24t - 12, -6)
     const N: usize = 100; // sample size
@@ -66,12 +66,12 @@ proptest! {
         pts in prop::array::uniform16(prop::array::uniform3(-10f64..=10.0))
     ) {
         prop_assume!(degree > n + 1);
-        let knot_vec = KnotVec::uniform_knot(degree, div);
+        let knot_vec = KnotVector::uniform_knot(degree, div);
         let control_points = pts[0..degree + div]
             .iter()
             .map(|&p| Point3::from(p))
             .collect::<Vec<_>>();
-        let bsp = BSplineCurve::new(knot_vec, control_points);
+        let bsp = BsplineCurve::new(knot_vec, control_points);
 
         const EPS: f64 = 1.0e-4;
         let der0 = bsp.der_n(n + 1, t);
@@ -83,8 +83,8 @@ proptest! {
 proptest! {
     #[test]
     fn parameter_random_tests(c in prop::array::uniform8(prop::array::uniform3(-10f64..10f64))) {
-        let curve = BSplineCurve::new(
-            KnotVec::uniform_knot(4, 4),
+        let curve = BsplineCurve::new(
+            KnotVector::uniform_knot(4, 4),
             c.into_iter().map(Point3::from).collect(),
         );
         truck_geotrait::parameter_transform_random_test(&curve, 10);
@@ -98,12 +98,12 @@ proptest! {
 
 #[test]
 fn concat_negative_test() {
-    let curve0 = BSplineCurve::new(
-        KnotVec::bezier_knot(1),
+    let curve0 = BsplineCurve::new(
+        KnotVector::bezier_knot(1),
         vec![Point2::new(0.0, 0.0), Point2::new(0.0, 1.0)],
     );
-    let mut curve1 = BSplineCurve::new(
-        KnotVec::bezier_knot(1),
+    let mut curve1 = BsplineCurve::new(
+        KnotVector::bezier_knot(1),
         vec![Point2::new(1.0, 1.0), Point2::new(1.0, 1.0)],
     );
     assert_eq!(
@@ -122,7 +122,7 @@ fn concat_negative_test() {
 
 #[test]
 fn test_near_as_curve() {
-    let knot_vec = KnotVec::from(vec![
+    let knot_vec = KnotVector::from(vec![
         0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0,
     ]);
     let control_points = vec![
@@ -135,8 +135,8 @@ fn test_near_as_curve() {
         Vector4::new(1.0, 0.0, 0.0, 1.0),
         Vector4::new(1.0, 1.0, 1.0, 0.0),
     ];
-    let bspline0 = BSplineCurve::new(knot_vec, control_points.clone());
-    let knot_vec = KnotVec::from(vec![
+    let bspline0 = BsplineCurve::new(knot_vec, control_points.clone());
+    let knot_vec = KnotVector::from(vec![
         0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 2.5, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0,
     ]);
     let control_points = vec![
@@ -150,8 +150,8 @@ fn test_near_as_curve() {
         control_points[6],
         control_points[7],
     ];
-    let bspline1 = BSplineCurve::new(knot_vec, control_points);
-    let knot_vec = KnotVec::from(vec![
+    let bspline1 = BsplineCurve::new(knot_vec, control_points);
+    let knot_vec = KnotVector::from(vec![
         0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0, 5.0, 5.0,
     ]);
     let control_points = vec![
@@ -164,22 +164,22 @@ fn test_near_as_curve() {
         Vector4::new(1.0, 0.0, 0.0, 1.0),
         Vector4::new(1.0, 1.0, 1.0, 0.0),
     ];
-    let bspline2 = BSplineCurve::new(knot_vec, control_points);
+    let bspline2 = BsplineCurve::new(knot_vec, control_points);
     assert!(bspline0.near_as_curve(&bspline1));
     assert!(!bspline0.near_as_curve(&bspline2));
 }
 
 #[test]
 fn test_parameter_division() {
-    let knot_vec = KnotVec::uniform_knot(2, 3);
-    let ctrl_pts = vec![
+    let knot_vec = KnotVector::uniform_knot(2, 3);
+    let control_points = vec![
         Point3::new(0.0, 0.0, 0.0),
         Point3::new(1.0, 0.0, 0.0),
         Point3::new(0.0, 1.0, 0.0),
         Point3::new(0.0, 0.0, 1.0),
         Point3::new(1.0, 1.0, 1.0),
     ];
-    let bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    let bspcurve = BsplineCurve::new(knot_vec, control_points);
     let tol = 0.01;
     let (div, pts) = bspcurve.parameter_division(bspcurve.range_tuple(), tol);
     let knot_vec = bspcurve.knot_vec();
@@ -198,14 +198,14 @@ fn test_parameter_division() {
 
 #[test]
 fn test_invert() {
-    let knot_vec = KnotVec::uniform_knot(2, 2);
-    let ctrl_pts = vec![
+    let knot_vec = KnotVector::uniform_knot(2, 2);
+    let control_points = vec![
         Vector2::new(1.0, 2.0),
         Vector2::new(2.0, 3.0),
         Vector2::new(3.0, 4.0),
         Vector2::new(4.0, 5.0),
     ];
-    let bspcurve0 = BSplineCurve::new(knot_vec, ctrl_pts);
+    let bspcurve0 = BsplineCurve::new(knot_vec, control_points);
     let mut bspcurve1 = bspcurve0.clone();
     bspcurve1.invert();
 
@@ -222,7 +222,7 @@ fn bsp_bench() {
     const N: usize = 1000000;
     let instant = std::time::Instant::now();
 
-    let knot_vec = KnotVec::uniform_knot(3, 10);
+    let knot_vec = KnotVector::uniform_knot(3, 10);
     for i in 0..=N {
         let t = i as f64 / N as f64;
         let x = knot_vec.try_bspline_basis_functions(3, 0, t).unwrap();

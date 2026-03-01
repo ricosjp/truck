@@ -6,7 +6,7 @@ use super::geometry::*;
 use super::params::FilletProfile;
 use super::types::*;
 
-pub(super) fn find_adjacent_edge(face: &Face, edge_id: EdgeID) -> Option<(Edge, Edge)> {
+pub(super) fn find_adjacent_edge(face: &Face, edge_id: EdgeId) -> Option<(Edge, Edge)> {
     face.boundary_iters()
         .into_iter()
         .flat_map(|boundary_iter| boundary_iter.circular_tuple_windows())
@@ -25,7 +25,7 @@ pub(super) fn take_ori<T>(ori: bool, (a, b): (T, T)) -> T {
 pub(super) fn cut_face_by_bezier(
     face: &Face,
     mut bezier: NurbsCurve<Vector4>,
-    filleted_edge_id: EdgeID,
+    filleted_edge_id: EdgeId,
 ) -> Option<(Face, Edge)> {
     let (front_edge, back_edge) = find_adjacent_edge(face, filleted_edge_id)?;
 
@@ -96,14 +96,14 @@ pub(super) fn create_pcurve_edge(
 ) -> Option<Edge> {
     let uv0 = fillet_surface.search_parameter(v0.point(), hint0, 100)?;
     let uv1 = fillet_surface.search_parameter(v1.point(), hint1, 100)?;
-    let curve = PCurve::new(Line(uv0.into(), uv1.into()), fillet_surface.clone());
+    let curve = ParameterCurve::new(Line(uv0.into(), uv1.into()), fillet_surface.clone());
     Some(Edge::new(v0, v1, curve.into()))
 }
 
 pub(super) fn create_new_side(
     side: &Face,
     fillet_edge: &Edge,
-    corner_vertex_id: VertexID,
+    corner_vertex_id: VertexId,
     left_face_front_edge: &Edge,
     right_face_back_edge: &Edge,
 ) -> Option<Face> {
@@ -137,7 +137,7 @@ pub(super) fn create_new_side(
         })
         .collect();
     let side_surface = Box::new(side.oriented_surface());
-    let Curve::PCurve(fillet_curve) = fillet_edge.curve() else {
+    let Curve::ParameterCurve(fillet_curve) = fillet_edge.curve() else {
         return None;
     };
     let fillet_surface = Box::new(fillet_curve.surface().clone());
@@ -208,6 +208,32 @@ pub(super) fn enumerate_adjacent_faces(
     iter.collect()
 }
 
+pub(super) fn wire_edge_starts_and_spans(wire: &Wire) -> Option<(Vec<f64>, Vec<f64>)> {
+    let edge_count = wire.len();
+    if edge_count == 0 {
+        return None;
+    }
+    let lengths: Vec<_> = wire
+        .edge_iter()
+        .map(|edge| approximate_edge_length(edge, 10))
+        .collect();
+    let total_length: f64 = lengths.iter().sum();
+    let spans: Vec<f64> = if total_length > TOLERANCE {
+        lengths.iter().map(|length| length / total_length).collect()
+    } else {
+        std::iter::repeat_n(1.0 / edge_count as f64, edge_count).collect()
+    };
+    let starts = spans
+        .iter()
+        .scan(0.0, |acc, &span| {
+            let start = *acc;
+            *acc += span;
+            Some(start)
+        })
+        .collect();
+    Some((starts, spans))
+}
+
 pub(super) fn fillet_surfaces_along_wire(
     shell: &Shell,
     wire: &Wire,
@@ -217,56 +243,79 @@ pub(super) fn fillet_surfaces_along_wire(
     fillet_division: usize,
     profile: &FilletProfile,
 ) -> Option<Vec<NurbsSurface<Vector4>>> {
-    let wire_faces_iter = wire.edge_iter().zip(adjacent_faces);
-    let create_fillet_surface = |(edge, face_index): (&Edge, &FaceBoundaryEdgeIndex)| {
-        let surface0 = &shell[shared_face_index.face_index].oriented_surface();
-        let surface1 = &shell[face_index.face_index].oriented_surface();
-        let curve = &edge.oriented_curve();
-        let (first_wire, last_wire) = if wire.is_closed() {
-            (false, false)
-        } else {
-            (
-                edge.id() == wire.front_edge().unwrap().id(),
-                edge.id() == wire.back_edge().unwrap().id(),
-            )
-        };
-        let extend = first_wire || last_wire;
-        let mut rs = relay_spheres(surface0, surface1, curve, fillet_division, &radius, extend)?;
-        if first_wire {
-            rs.pop();
-        }
-        if last_wire {
-            rs.remove(0);
-        }
-        let surface = match profile {
-            FilletProfile::Round => expand_fillet(&rs, surface0, surface1),
-            FilletProfile::Chamfer => expand_chamfer(&rs, surface0, surface1),
-            FilletProfile::Ridge => expand_ridge(&rs, surface0, surface1),
-            FilletProfile::Custom(curve) => expand_custom(&rs, surface0, surface1, curve),
-        };
-        Some(surface)
+    let (edge_starts, edge_spans) = wire_edge_starts_and_spans(wire)?;
+    let front_back_ids = if wire.is_closed() {
+        None
+    } else {
+        Some((wire.front_edge()?.id(), wire.back_edge()?.id()))
     };
+    let wire_faces_iter = wire.edge_iter().zip(adjacent_faces).enumerate();
+    let create_fillet_surface =
+        |(edge_index, (edge, face_index)): (usize, (&Edge, &FaceBoundaryEdgeIndex))| {
+            let surface0 = &shell[shared_face_index.face_index].oriented_surface();
+            let surface1 = &shell[face_index.face_index].oriented_surface();
+            let curve = &edge.oriented_curve();
+            let start = edge_starts[edge_index];
+            let span = edge_spans[edge_index];
+            let radius_on_edge = |edge_t: f64| {
+                let global_t = (start + span * edge_t).clamp(0.0, 1.0);
+                radius(global_t)
+            };
+            let (first_wire, last_wire) = front_back_ids
+                .map(|(front_id, back_id)| (edge.id() == front_id, edge.id() == back_id))
+                .unwrap_or((false, false));
+            let extend = first_wire || last_wire;
+            let mut rs = relay_spheres(
+                surface0,
+                surface1,
+                curve,
+                fillet_division,
+                radius_on_edge,
+                extend,
+            )?;
+            if first_wire {
+                rs.pop();
+            }
+            if last_wire {
+                rs.remove(0);
+            }
+            let surface = match profile {
+                FilletProfile::Round => expand_fillet(&rs, surface0, surface1),
+                FilletProfile::Chamfer => expand_chamfer(&rs, surface0, surface1),
+                FilletProfile::Ridge => expand_ridge(&rs, surface0, surface1),
+                FilletProfile::Custom(curve) => expand_custom(&rs, surface0, surface1, curve),
+            };
+            Some(surface)
+        };
     wire_faces_iter.map(create_fillet_surface).collect()
 }
 
-pub(super) fn concat_fillet_surface(surfaces: &[NurbsSurface<Vector4>]) -> NurbsSurface<Vector4> {
+pub(super) fn concat_fillet_surface(
+    surfaces: &[NurbsSurface<Vector4>],
+) -> Option<NurbsSurface<Vector4>> {
+    if surfaces.is_empty() {
+        return None;
+    }
     let len = surfaces[0].control_points().len();
-    let concat_beziers = |i: usize| {
+    let concat_beziers = |i: usize| -> Option<NurbsCurve<Vector4>> {
         let mut collector = CurveCollector::<NurbsCurve<Vector4>>::Singleton;
         (0..surfaces.len()).for_each(|n| {
             let mut curve = surfaces[n].column_curve(i);
             curve.knot_translate(n as f64);
             collector.concat(&curve);
         });
-        collector.unwrap()
+        collector.into()
     };
-    let long_beziers = (0..len).map(concat_beziers).collect::<Vec<_>>();
+    let long_beziers = (0..len).map(concat_beziers).collect::<Option<Vec<_>>>()?;
 
-    let uknot_vec = surfaces[0].uknot_vec().clone();
-    let vknot_vec = long_beziers[0].knot_vec().clone();
+    let knot_vector_u = surfaces[0].knot_vector_u().clone();
+    let knot_vector_v = long_beziers[0].knot_vec().clone();
     let destruct_bezier = |bezier: NurbsCurve<Vector4>| bezier.into_non_rationalized().destruct().1;
     let control_points = long_beziers.into_iter().map(destruct_bezier).collect();
-    NurbsSurface::new(BSplineSurface::new((uknot_vec, vknot_vec), control_points))
+    Some(NurbsSurface::new(BsplineSurface::new(
+        (knot_vector_u, knot_vector_v),
+        control_points,
+    )))
 }
 
 pub(super) fn create_free_edge(curve: Curve) -> Edge {

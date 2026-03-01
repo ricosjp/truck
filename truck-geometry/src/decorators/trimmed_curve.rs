@@ -1,4 +1,5 @@
 use super::*;
+use truck_geotrait::ParametricCurve as PcurveTrait;
 
 impl<C> TrimmedCurve<C> {
     /// constructor
@@ -12,17 +13,17 @@ impl<C> TrimmedCurve<C> {
     pub fn curve_mut(&mut self) -> &mut C { &mut self.curve }
 }
 
-impl<C: ParametricCurve> ParametricCurve for TrimmedCurve<C> {
+impl<C: PcurveTrait> PcurveTrait for TrimmedCurve<C> {
     type Point = C::Point;
     type Vector = C::Vector;
     #[inline(always)]
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.curve.der_n(n, t) }
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector { self.curve.derivative_n(n, t) }
     #[inline(always)]
-    fn subs(&self, t: f64) -> Self::Point { self.curve.subs(t) }
+    fn evaluate(&self, t: f64) -> Self::Point { self.curve.evaluate(t) }
     #[inline(always)]
-    fn der(&self, t: f64) -> Self::Vector { self.curve.der(t) }
+    fn derivative(&self, t: f64) -> Self::Vector { self.curve.derivative(t) }
     #[inline(always)]
-    fn der2(&self, t: f64) -> Self::Vector { self.curve.der2(t) }
+    fn derivative_2(&self, t: f64) -> Self::Vector { self.curve.derivative_2(t) }
     #[inline(always)]
     fn period(&self) -> Option<f64> { self.curve.period() }
     #[inline(always)]
@@ -31,9 +32,9 @@ impl<C: ParametricCurve> ParametricCurve for TrimmedCurve<C> {
     }
 }
 
-impl<C: ParametricCurve> BoundedCurve for TrimmedCurve<C> {}
+impl<C: PcurveTrait> BoundedCurve for TrimmedCurve<C> {}
 
-impl<C: ParametricCurve> Cut for TrimmedCurve<C> {
+impl<C: PcurveTrait> Cut for TrimmedCurve<C> {
     fn cut(&mut self, t: f64) -> Self {
         let (t0, t1) = self.range;
         self.range = (t0, t);
@@ -44,7 +45,7 @@ impl<C: ParametricCurve> Cut for TrimmedCurve<C> {
 impl<C: SearchNearestParameter<D1>> SearchNearestParameter<D1> for TrimmedCurve<C> {
     type Point = C::Point;
     #[inline(always)]
-    fn search_nearest_parameter<H: Into<SPHint1D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         pt: C::Point,
         hint: H,
@@ -57,7 +58,7 @@ impl<C: SearchNearestParameter<D1>> SearchNearestParameter<D1> for TrimmedCurve<
 impl<C: SearchParameter<D1>> SearchParameter<D1> for TrimmedCurve<C> {
     type Point = C::Point;
     #[inline(always)]
-    fn search_parameter<H: Into<SPHint1D>>(
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         pt: C::Point,
         hint: H,

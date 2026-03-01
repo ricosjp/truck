@@ -41,11 +41,11 @@ pub struct Table {
     // curve
     pub line: HashMap<u64, LineHolder>,
     pub polyline: HashMap<u64, PolylineHolder>,
-    pub b_spline_curve_with_knots: HashMap<u64, BSplineCurveWithKnotsHolder>,
+    pub b_spline_curve_with_knots: HashMap<u64, BsplineCurveWithKnotsHolder>,
     pub bezier_curve: HashMap<u64, BezierCurveHolder>,
     pub quasi_uniform_curve: HashMap<u64, QuasiUniformCurveHolder>,
     pub uniform_curve: HashMap<u64, UniformCurveHolder>,
-    pub rational_b_spline_curve: HashMap<u64, RationalBSplineCurveHolder>,
+    pub rational_b_spline_curve: HashMap<u64, RationalBsplineCurveHolder>,
     pub circle: HashMap<u64, CircleHolder>,
     pub ellipse: HashMap<u64, EllipseHolder>,
     pub hyperbola: HashMap<u64, HyperbolaHolder>,
@@ -59,11 +59,11 @@ pub struct Table {
     pub cylindrical_surface: HashMap<u64, CylindricalSurfaceHolder>,
     pub toroidal_surface: HashMap<u64, ToroidalSurfaceHolder>,
     pub conical_surface: HashMap<u64, ConicalSurfaceHolder>,
-    pub b_spline_surface_with_knots: HashMap<u64, BSplineSurfaceWithKnotsHolder>,
+    pub b_spline_surface_with_knots: HashMap<u64, BsplineSurfaceWithKnotsHolder>,
     pub uniform_surface: HashMap<u64, UniformSurfaceHolder>,
     pub quasi_uniform_surface: HashMap<u64, QuasiUniformSurfaceHolder>,
     pub bezier_surface: HashMap<u64, BezierSurfaceHolder>,
-    pub rational_b_spline_surface: HashMap<u64, RationalBSplineSurfaceHolder>,
+    pub rational_b_spline_surface: HashMap<u64, RationalBsplineSurfaceHolder>,
     pub surface_of_linear_extrusion: HashMap<u64, SurfaceOfLinearExtrusionHolder>,
     pub surface_of_revolution: HashMap<u64, SurfaceOfRevolutionHolder>,
 
@@ -145,7 +145,7 @@ impl Table {
                 }
                 "B_SPLINE_CURVE_WITH_KNOTS" => {
                     self.b_spline_curve_with_knots
-                        .insert(*id, Deserialize::deserialize(record)?);
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "BEZIER_CURVE" => {
                     self.bezier_curve
@@ -204,7 +204,7 @@ impl Table {
                 }
                 "B_SPLINE_SURFACE_WITH_KNOTS" => {
                     self.b_spline_surface_with_knots
-                        .insert(*id, Deserialize::deserialize(record)?);
+                        .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "UNIFORM_SURFACE" => {
                     self.uniform_surface
@@ -445,8 +445,8 @@ impl Table {
                 id,
                 subsuper: SubSuperRecord(records),
             } => {
-                use NonRationalBSplineCurveHolder as NRBC;
-                use NonRationalBSplineSurfaceHolder as NRBS;
+                use NonRationalBsplineCurveHolder as NRBC;
+                use NonRationalBsplineSurfaceHolder as NRBS;
                 if records.len() == 7 {
                     match (
                         records[0].name.as_str(),
@@ -485,9 +485,9 @@ impl Table {
                             params.extend(knots_params.clone());
                             self.rational_b_spline_curve.insert(
                                 *id,
-                                RationalBSplineCurveHolder {
+                                RationalBsplineCurveHolder {
                                     non_rational_b_spline_curve: PlaceHolder::Owned(
-                                        NRBC::BSplineCurveWithKnots(Deserialize::deserialize(
+                                        NRBC::BsplineCurveWithKnots(Deserialize::deserialize(
                                             &Parameter::List(params),
                                         )?),
                                     ),
@@ -515,7 +515,7 @@ impl Table {
                             params.extend(bsp_params.clone());
                             self.rational_b_spline_curve.insert(
                                 *id,
-                                RationalBSplineCurveHolder {
+                                RationalBsplineCurveHolder {
                                     non_rational_b_spline_curve: PlaceHolder::Owned(
                                         NRBC::BezierCurve(Deserialize::deserialize(
                                             &Parameter::List(params),
@@ -545,7 +545,7 @@ impl Table {
                             params.extend(bsp_params.iter().cloned());
                             self.rational_b_spline_curve.insert(
                                 *id,
-                                RationalBSplineCurveHolder {
+                                RationalBsplineCurveHolder {
                                     non_rational_b_spline_curve: PlaceHolder::Owned(
                                         NRBC::QuasiUniformCurve(Deserialize::deserialize(
                                             &Parameter::List(params),
@@ -575,7 +575,7 @@ impl Table {
                             params.extend(bsp_params.iter().cloned());
                             self.rational_b_spline_curve.insert(
                                 *id,
-                                RationalBSplineCurveHolder {
+                                RationalBsplineCurveHolder {
                                     non_rational_b_spline_curve: PlaceHolder::Owned(
                                         NRBC::UniformCurve(Deserialize::deserialize(
                                             &Parameter::List(params),
@@ -606,9 +606,9 @@ impl Table {
                             params.extend(knots_params.clone());
                             self.rational_b_spline_surface.insert(
                                 *id,
-                                RationalBSplineSurfaceHolder {
+                                RationalBsplineSurfaceHolder {
                                     non_rational_b_spline_surface: PlaceHolder::Owned(
-                                        NRBS::BSplineSurfaceWithKnots(Deserialize::deserialize(
+                                        NRBS::BsplineSurfaceWithKnots(Deserialize::deserialize(
                                             &Parameter::List(params),
                                         )?),
                                     ),
@@ -636,7 +636,7 @@ impl Table {
                             params.extend(bsp_params.clone());
                             self.rational_b_spline_surface.insert(
                                 *id,
-                                RationalBSplineSurfaceHolder {
+                                RationalBsplineSurfaceHolder {
                                     non_rational_b_spline_surface: PlaceHolder::Owned(
                                         NRBS::BezierSurface(Deserialize::deserialize(
                                             &Parameter::List(params),
@@ -666,7 +666,7 @@ impl Table {
                             params.extend(bsp_params.clone());
                             self.rational_b_spline_surface.insert(
                                 *id,
-                                RationalBSplineSurfaceHolder {
+                                RationalBsplineSurfaceHolder {
                                     non_rational_b_spline_surface: PlaceHolder::Owned(
                                         NRBS::QuasiUniformSurface(Deserialize::deserialize(
                                             &Parameter::List(params),
@@ -696,7 +696,7 @@ impl Table {
                             params.extend(bsp_params.clone());
                             self.rational_b_spline_surface.insert(
                                 *id,
-                                RationalBSplineSurfaceHolder {
+                                RationalBsplineSurfaceHolder {
                                     non_rational_b_spline_surface: PlaceHolder::Owned(
                                         NRBS::UniformSurface(Deserialize::deserialize(
                                             &Parameter::List(params),
@@ -1043,7 +1043,12 @@ impl From<&Axis2Placement3d> for Matrix4 {
         };
         let x = match &axis.ref_direction {
             Some(axis) => Vector3::from(axis),
-            None => Vector3::unit_x(),
+            // When z is parallel to x, using `unit_x()` produces a zero vector
+            // after projection, causing NaN. Fall back to `unit_y()` instead.
+            None => match z.near(&Vector3::unit_x()) {
+                true => Vector3::unit_y(),
+                false => Vector3::unit_x(),
+            },
         };
         let x = (x - x.dot(z) * z).normalize();
         let y = z.cross(x);
@@ -1097,7 +1102,7 @@ impl TryFrom<&CurveAny> for Curve3D {
             Line(line) => Self::Line(line.as_ref().into()),
             BoundedCurve(b) => b.as_ref().try_into()?,
             Conic(curve) => Self::Conic(curve.as_ref().try_into()?),
-            Pcurve(c) => Self::PCurve(c.as_ref().try_into()?),
+            Pcurve(c) => Self::Pcurve(c.as_ref().try_into()?),
             SurfaceCurve(c) => c.as_ref().try_into()?,
         })
     }
@@ -1136,7 +1141,7 @@ pub enum BoundedCurveAny {
     #[holder(use_place_holder)]
     Polyline(Box<Polyline>),
     #[holder(use_place_holder)]
-    BSplineCurve(Box<BSplineCurveAny>),
+    BsplineCurve(Box<BsplineCurveAny>),
 }
 
 impl TryFrom<&BoundedCurveAny> for Curve2D {
@@ -1146,7 +1151,7 @@ impl TryFrom<&BoundedCurveAny> for Curve2D {
         use BoundedCurveAny::*;
         Ok(match value {
             Polyline(x) => Self::Polyline(x.as_ref().into()),
-            BSplineCurve(x) => x.as_ref().try_into()?,
+            BsplineCurve(x) => x.as_ref().try_into()?,
         })
     }
 }
@@ -1158,7 +1163,7 @@ impl TryFrom<&BoundedCurveAny> for Curve3D {
         use BoundedCurveAny::*;
         Ok(match value {
             Polyline(x) => Self::Polyline(x.as_ref().into()),
-            BSplineCurve(x) => x.as_ref().try_into()?,
+            BsplineCurve(x) => x.as_ref().try_into()?,
         })
     }
 }
@@ -1180,7 +1185,7 @@ impl<'a, P: From<&'a CartesianPoint>> From<&'a Polyline> for PolylineCurve<P> {
 
 /// `b_spline_curve_form`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum BSplineCurveForm {
+pub enum BsplineCurveForm {
     PolylineForm,
     CircularArc,
     EllipticArc,
@@ -1203,29 +1208,29 @@ pub enum KnotType {
 #[holder(table = Table)]
 #[holder(field = b_spline_curve_with_knots)]
 #[holder(generate_deserialize)]
-pub struct BSplineCurveWithKnots {
+pub struct BsplineCurveWithKnots {
     pub label: String,
     pub degree: i64,
     #[holder(use_place_holder)]
     pub control_points_list: Vec<CartesianPoint>,
-    pub curve_form: BSplineCurveForm,
+    pub curve_form: BsplineCurveForm,
     pub closed_curve: Logical,
     pub self_intersect: Logical,
     pub knot_multiplicities: Vec<i64>,
     pub knots: Vec<f64>,
     pub knot_spec: KnotType,
 }
-impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BSplineCurveWithKnots> for BSplineCurve<P> {
+impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BsplineCurveWithKnots> for BsplineCurve<P> {
     type Error = StepConvertingError;
     #[inline(always)]
-    fn try_from(curve: &BSplineCurveWithKnots) -> Result<Self, StepConvertingError> {
+    fn try_from(curve: &BsplineCurveWithKnots) -> Result<Self, StepConvertingError> {
         let knots = curve.knots.clone();
         let multi = curve
             .knot_multiplicities
             .iter()
             .map(|n| *n as usize)
             .collect();
-        let knots = KnotVec::from_single_multi(knots, multi).unwrap();
+        let knots = KnotVector::from_single_multi(knots, multi).unwrap();
         let ctrpts = curve.control_points_list.iter().map(Into::into).collect();
         Ok(Self::try_new(knots, ctrpts)?)
     }
@@ -1241,16 +1246,16 @@ pub struct BezierCurve {
     pub degree: i64,
     #[holder(use_place_holder)]
     pub control_points_list: Vec<CartesianPoint>,
-    pub curve_form: BSplineCurveForm,
+    pub curve_form: BsplineCurveForm,
     pub closed_curve: Logical,
     pub self_intersect: Logical,
 }
-impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BezierCurve> for BSplineCurve<P> {
+impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BezierCurve> for BsplineCurve<P> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(curve: &BezierCurve) -> Result<Self, StepConvertingError> {
         let degree = curve.degree as usize;
-        let knots = KnotVec::bezier_knot(degree);
+        let knots = KnotVector::bezier_knot(degree);
         let ctrpts = curve.control_points_list.iter().map(Into::into).collect();
         Ok(Self::try_new(knots, ctrpts)?)
     }
@@ -1266,11 +1271,11 @@ pub struct QuasiUniformCurve {
     pub degree: i64,
     #[holder(use_place_holder)]
     pub control_points_list: Vec<CartesianPoint>,
-    pub curve_form: BSplineCurveForm,
+    pub curve_form: BsplineCurveForm,
     pub closed_curve: Logical,
     pub self_intersect: Logical,
 }
-impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&QuasiUniformCurve> for BSplineCurve<P> {
+impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&QuasiUniformCurve> for BsplineCurve<P> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(curve: &QuasiUniformCurve) -> Result<Self, StepConvertingError> {
@@ -1280,9 +1285,9 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&QuasiUniformCurve> for BSplin
     }
 }
 
-fn quasi_uniform_knots(num_ctrl: usize, degree: usize) -> KnotVec {
+fn quasi_uniform_knots(num_ctrl: usize, degree: usize) -> KnotVector {
     let division = num_ctrl - degree;
-    let mut knots = KnotVec::uniform_knot(degree, division);
+    let mut knots = KnotVector::uniform_knot(degree, division);
     knots.transform(division as f64, 0.0);
     knots
 }
@@ -1297,11 +1302,11 @@ pub struct UniformCurve {
     pub degree: i64,
     #[holder(use_place_holder)]
     pub control_points_list: Vec<CartesianPoint>,
-    pub curve_form: BSplineCurveForm,
+    pub curve_form: BsplineCurveForm,
     pub closed_curve: Logical,
     pub self_intersect: Logical,
 }
-impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&UniformCurve> for BSplineCurve<P> {
+impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&UniformCurve> for BsplineCurve<P> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(curve: &UniformCurve) -> Result<Self, StepConvertingError> {
@@ -1311,8 +1316,8 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&UniformCurve> for BSplineCurv
     }
 }
 
-fn uniform_knots(num_ctrl: usize, degree: usize) -> truck::Result<KnotVec> {
-    KnotVec::try_from(
+fn uniform_knots(num_ctrl: usize, degree: usize) -> truck::Result<KnotVector> {
+    KnotVector::try_from(
         (0..degree + num_ctrl + 1)
             .map(|i| i as f64 - degree as f64)
             .collect::<Vec<_>>(),
@@ -1320,13 +1325,13 @@ fn uniform_knots(num_ctrl: usize, degree: usize) -> truck::Result<KnotVec> {
 }
 
 /// Entity that does not exist in AP042.
-/// Curve before rationalization of [`RationalBSplineCurve`] defined by a complex entity
+/// Curve before rationalization of [`RationalBsplineCurve`] defined by a complex entity
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
-pub enum NonRationalBSplineCurve {
+pub enum NonRationalBsplineCurve {
     #[holder(use_place_holder)]
-    BSplineCurveWithKnots(BSplineCurveWithKnots),
+    BsplineCurveWithKnots(BsplineCurveWithKnots),
     #[holder(use_place_holder)]
     BezierCurve(BezierCurve),
     #[holder(use_place_holder)]
@@ -1335,13 +1340,13 @@ pub enum NonRationalBSplineCurve {
     UniformCurve(UniformCurve),
 }
 
-impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&NonRationalBSplineCurve> for BSplineCurve<P> {
+impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&NonRationalBsplineCurve> for BsplineCurve<P> {
     type Error = StepConvertingError;
     #[inline(always)]
-    fn try_from(curve: &NonRationalBSplineCurve) -> Result<Self, StepConvertingError> {
-        use NonRationalBSplineCurve::*;
+    fn try_from(curve: &NonRationalBsplineCurve) -> Result<Self, StepConvertingError> {
+        use NonRationalBsplineCurve::*;
         match curve {
-            BSplineCurveWithKnots(x) => x.try_into(),
+            BsplineCurveWithKnots(x) => x.try_into(),
             BezierCurve(x) => x.try_into(),
             QuasiUniformCurve(x) => x.try_into(),
             UniformCurve(x) => x.try_into(),
@@ -1358,21 +1363,21 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&NonRationalBSplineCurve> for 
 #[holder(table = Table)]
 #[holder(field = rational_b_spline_curve)]
 #[holder(generate_deserialize)]
-pub struct RationalBSplineCurve {
+pub struct RationalBsplineCurve {
     #[holder(use_place_holder)]
-    pub non_rational_b_spline_curve: NonRationalBSplineCurve,
+    pub non_rational_b_spline_curve: NonRationalBsplineCurve,
     pub weights_data: Vec<f64>,
 }
-impl<V> TryFrom<&RationalBSplineCurve> for NurbsCurve<V>
+impl<V> TryFrom<&RationalBsplineCurve> for NurbsCurve<V>
 where
     V: Homogeneous<Scalar = f64>,
     V::Point: for<'a> From<&'a CartesianPoint>,
 {
     type Error = StepConvertingError;
     #[inline(always)]
-    fn try_from(curve: &RationalBSplineCurve) -> Result<Self, StepConvertingError> {
+    fn try_from(curve: &RationalBsplineCurve) -> Result<Self, StepConvertingError> {
         Ok(Self::try_from_bspline_and_weights(
-            BSplineCurve::try_from(&curve.non_rational_b_spline_curve)?,
+            BsplineCurve::try_from(&curve.non_rational_b_spline_curve)?,
             curve.weights_data.clone(),
         )?)
     }
@@ -1382,33 +1387,33 @@ where
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
-pub enum BSplineCurveAny {
+pub enum BsplineCurveAny {
     #[holder(use_place_holder)]
-    NonRationalBSplineCurve(Box<NonRationalBSplineCurve>),
+    NonRationalBsplineCurve(Box<NonRationalBsplineCurve>),
     #[holder(use_place_holder)]
-    RationalBSplineCurve(Box<RationalBSplineCurve>),
+    RationalBsplineCurve(Box<RationalBsplineCurve>),
 }
 
-impl TryFrom<&BSplineCurveAny> for Curve2D {
+impl TryFrom<&BsplineCurveAny> for Curve2D {
     type Error = StepConvertingError;
     #[inline(always)]
-    fn try_from(value: &BSplineCurveAny) -> Result<Self, Self::Error> {
-        use BSplineCurveAny::*;
+    fn try_from(value: &BsplineCurveAny) -> Result<Self, Self::Error> {
+        use BsplineCurveAny::*;
         Ok(match value {
-            NonRationalBSplineCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
-            RationalBSplineCurve(bsp) => Self::NurbsCurve(bsp.as_ref().try_into()?),
+            NonRationalBsplineCurve(bsp) => Self::BsplineCurve(bsp.as_ref().try_into()?),
+            RationalBsplineCurve(bsp) => Self::NurbsCurve(bsp.as_ref().try_into()?),
         })
     }
 }
 
-impl TryFrom<&BSplineCurveAny> for Curve3D {
+impl TryFrom<&BsplineCurveAny> for Curve3D {
     type Error = StepConvertingError;
     #[inline(always)]
-    fn try_from(value: &BSplineCurveAny) -> Result<Self, Self::Error> {
-        use BSplineCurveAny::*;
+    fn try_from(value: &BsplineCurveAny) -> Result<Self, Self::Error> {
+        use BsplineCurveAny::*;
         Ok(match value {
-            NonRationalBSplineCurve(bsp) => Self::BSplineCurve(bsp.as_ref().try_into()?),
-            RationalBSplineCurve(bsp) => Self::NurbsCurve(bsp.as_ref().try_into()?),
+            NonRationalBsplineCurve(bsp) => Self::BsplineCurve(bsp.as_ref().try_into()?),
+            RationalBsplineCurve(bsp) => Self::NurbsCurve(bsp.as_ref().try_into()?),
         })
     }
 }
@@ -1636,7 +1641,7 @@ pub struct Pcurve {
     reference_to_curve: DefinitionalRepresentation,
 }
 
-impl TryFrom<&Pcurve> for PCurve {
+impl TryFrom<&Pcurve> for step_geometry::Pcurve {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(value: &Pcurve) -> Result<Self, Self::Error> {
@@ -1647,7 +1652,7 @@ impl TryFrom<&Pcurve> for PCurve {
             .first()
             .ok_or("no representation item")?
             .try_into()?;
-        Ok(step_geometry::PCurve::new(
+        Ok(step_geometry::Pcurve::new(
             Box::new(curve),
             Box::new(surface),
         ))
@@ -1706,14 +1711,14 @@ impl TryFrom<&SurfaceCurve> for Curve3D {
             PSCR::Curve3D => Ok((&value.curve_3d).try_into()?),
             PSCR::PcurveS1 => {
                 if let Some(PcurveOrSurface::Pcurve(x)) = value.associated_geometry.first() {
-                    Ok(Self::PCurve(x.as_ref().try_into()?))
+                    Ok(Self::Pcurve(x.as_ref().try_into()?))
                 } else {
                     Err("The 0-indexed associated geometry is nothing or not PCURVE.".into())
                 }
             }
             PSCR::PcurveS2 => {
                 if let Some(PcurveOrSurface::Pcurve(x)) = value.associated_geometry.get(1) {
-                    Ok(Self::PCurve(x.as_ref().try_into()?))
+                    Ok(Self::Pcurve(x.as_ref().try_into()?))
                 } else {
                     Err("The 1-indexed associated geometry is nothing or not PCURVE.".into())
                 }
@@ -1730,7 +1735,7 @@ pub enum SurfaceAny {
     #[holder(use_place_holder)]
     ElementarySurface(Box<ElementarySurfaceAny>),
     #[holder(use_place_holder)]
-    BSplineSurface(Box<BSplineSurfaceAny>),
+    BsplineSurface(Box<BsplineSurfaceAny>),
     #[holder(use_place_holder)]
     SweptSurface(Box<SweptSurfaceAny>),
 }
@@ -1742,7 +1747,7 @@ impl TryFrom<&SurfaceAny> for Surface {
         use SurfaceAny::*;
         Ok(match x {
             ElementarySurface(x) => Self::ElementarySurface(x.as_ref().into()),
-            BSplineSurface(x) => x.as_ref().try_into()?,
+            BsplineSurface(x) => x.as_ref().try_into()?,
             SweptSurface(x) => Self::SweptCurve(x.as_ref().try_into()?),
         })
     }
@@ -1916,28 +1921,28 @@ impl From<&ConicalSurface> for step_geometry::ConicalSurface {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
-pub enum BSplineSurfaceAny {
+pub enum BsplineSurfaceAny {
     #[holder(use_place_holder)]
-    NonRationalBSplineSurface(NonRationalBSplineSurface),
+    NonRationalBsplineSurface(NonRationalBsplineSurface),
     #[holder(use_place_holder)]
-    RationalBSplineSurface(RationalBSplineSurface),
+    RationalBsplineSurface(RationalBsplineSurface),
 }
 
-impl TryFrom<&BSplineSurfaceAny> for Surface {
+impl TryFrom<&BsplineSurfaceAny> for Surface {
     type Error = StepConvertingError;
     #[inline(always)]
-    fn try_from(value: &BSplineSurfaceAny) -> Result<Self, Self::Error> {
-        use BSplineSurfaceAny::*;
+    fn try_from(value: &BsplineSurfaceAny) -> Result<Self, Self::Error> {
+        use BsplineSurfaceAny::*;
         Ok(match value {
-            NonRationalBSplineSurface(bsp) => Surface::BSplineSurface(bsp.try_into()?),
-            RationalBSplineSurface(bsp) => Surface::NurbsSurface(bsp.try_into()?),
+            NonRationalBsplineSurface(bsp) => Surface::BsplineSurface(bsp.try_into()?),
+            RationalBsplineSurface(bsp) => Surface::NurbsSurface(bsp.try_into()?),
         })
     }
 }
 
 /// `b_spline_surface_form`
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum BSplineSurfaceForm {
+pub enum BsplineSurfaceForm {
     PlaneSurf,
     CylindricalSurf,
     ConicalSurf,
@@ -1956,13 +1961,13 @@ pub enum BSplineSurfaceForm {
 #[holder(table = Table)]
 #[holder(field = b_spline_surface_with_knots)]
 #[holder(generate_deserialize)]
-pub struct BSplineSurfaceWithKnots {
+pub struct BsplineSurfaceWithKnots {
     label: String,
     u_degree: i64,
     v_degree: i64,
     #[holder(use_place_holder)]
     control_points_list: Vec<Vec<CartesianPoint>>,
-    surface_form: BSplineSurfaceForm,
+    surface_form: BsplineSurfaceForm,
     u_closed: Logical,
     v_closed: Logical,
     self_intersect: Logical,
@@ -1973,24 +1978,24 @@ pub struct BSplineSurfaceWithKnots {
     knot_spec: KnotType,
 }
 
-impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
+impl TryFrom<&BsplineSurfaceWithKnots> for BsplineSurface<Point3> {
     type Error = StepConvertingError;
     #[inline(always)]
-    fn try_from(surface: &BSplineSurfaceWithKnots) -> Result<Self, StepConvertingError> {
+    fn try_from(surface: &BsplineSurfaceWithKnots) -> Result<Self, StepConvertingError> {
         let uknots = surface.u_knots.to_vec();
         let umulti = surface
             .u_multiplicities
             .iter()
             .map(|n| *n as usize)
             .collect();
-        let uknots = KnotVec::from_single_multi(uknots, umulti).unwrap();
+        let uknots = KnotVector::from_single_multi(uknots, umulti).unwrap();
         let vknots = surface.v_knots.to_vec();
         let vmulti = surface
             .v_multiplicities
             .iter()
             .map(|n| *n as usize)
             .collect();
-        let vknots = KnotVec::from_single_multi(vknots, vmulti).unwrap();
+        let vknots = KnotVector::from_single_multi(vknots, vmulti).unwrap();
         let ctrls = surface
             .control_points_list
             .iter()
@@ -2011,13 +2016,13 @@ pub struct UniformSurface {
     v_degree: i64,
     #[holder(use_place_holder)]
     control_points_list: Vec<Vec<CartesianPoint>>,
-    surface_form: BSplineSurfaceForm,
+    surface_form: BsplineSurfaceForm,
     u_closed: Logical,
     v_closed: Logical,
     self_intersect: Logical,
 }
 
-impl TryFrom<&UniformSurface> for BSplineSurface<Point3> {
+impl TryFrom<&UniformSurface> for BsplineSurface<Point3> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(surface: &UniformSurface) -> Result<Self, StepConvertingError> {
@@ -2047,13 +2052,13 @@ pub struct QuasiUniformSurface {
     v_degree: i64,
     #[holder(use_place_holder)]
     control_points_list: Vec<Vec<CartesianPoint>>,
-    surface_form: BSplineSurfaceForm,
+    surface_form: BsplineSurfaceForm,
     u_closed: Logical,
     v_closed: Logical,
     self_intersect: Logical,
 }
 
-impl TryFrom<&QuasiUniformSurface> for BSplineSurface<Point3> {
+impl TryFrom<&QuasiUniformSurface> for BsplineSurface<Point3> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(surface: &QuasiUniformSurface) -> Result<Self, StepConvertingError> {
@@ -2084,17 +2089,17 @@ pub struct BezierSurface {
     v_degree: i64,
     #[holder(use_place_holder)]
     control_points_list: Vec<Vec<CartesianPoint>>,
-    surface_form: BSplineSurfaceForm,
+    surface_form: BsplineSurfaceForm,
     u_closed: Logical,
     v_closed: Logical,
     self_intersect: Logical,
 }
 
-impl From<&BezierSurface> for BSplineSurface<Point3> {
+impl From<&BezierSurface> for BsplineSurface<Point3> {
     #[inline(always)]
     fn from(value: &BezierSurface) -> Self {
-        let uknots = KnotVec::bezier_knot(value.u_degree as usize);
-        let vknots = KnotVec::bezier_knot(value.v_degree as usize);
+        let uknots = KnotVector::bezier_knot(value.u_degree as usize);
+        let vknots = KnotVector::bezier_knot(value.v_degree as usize);
         let ctrls = value
             .control_points_list
             .iter()
@@ -2105,13 +2110,13 @@ impl From<&BezierSurface> for BSplineSurface<Point3> {
 }
 
 /// Entity that does not exist in AP042.
-/// Surface before rationalization of [`RationalBSplineSurface`] defined by a complex entity
+/// Surface before rationalization of [`RationalBsplineSurface`] defined by a complex entity
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Holder)]
 #[holder(table = Table)]
 #[holder(generate_deserialize)]
-pub enum NonRationalBSplineSurface {
+pub enum NonRationalBsplineSurface {
     #[holder(use_place_holder)]
-    BSplineSurfaceWithKnots(Box<BSplineSurfaceWithKnots>),
+    BsplineSurfaceWithKnots(Box<BsplineSurfaceWithKnots>),
     #[holder(use_place_holder)]
     UniformSurface(Box<UniformSurface>),
     #[holder(use_place_holder)]
@@ -2120,13 +2125,13 @@ pub enum NonRationalBSplineSurface {
     BezierSurface(Box<BezierSurface>),
 }
 
-impl TryFrom<&NonRationalBSplineSurface> for BSplineSurface<Point3> {
+impl TryFrom<&NonRationalBsplineSurface> for BsplineSurface<Point3> {
     type Error = StepConvertingError;
     #[inline(always)]
-    fn try_from(value: &NonRationalBSplineSurface) -> Result<Self, Self::Error> {
-        use NonRationalBSplineSurface::*;
+    fn try_from(value: &NonRationalBsplineSurface) -> Result<Self, Self::Error> {
+        use NonRationalBsplineSurface::*;
         match value {
-            BSplineSurfaceWithKnots(x) => x.as_ref().try_into(),
+            BsplineSurfaceWithKnots(x) => x.as_ref().try_into(),
             UniformSurface(x) => x.as_ref().try_into(),
             QuasiUniformSurface(x) => x.as_ref().try_into(),
             BezierSurface(x) => Ok(x.as_ref().into()),
@@ -2143,22 +2148,22 @@ impl TryFrom<&NonRationalBSplineSurface> for BSplineSurface<Point3> {
 #[holder(table = Table)]
 #[holder(field = rational_b_spline_surface)]
 #[holder(generate_deserialize)]
-pub struct RationalBSplineSurface {
+pub struct RationalBsplineSurface {
     #[holder(use_place_holder)]
-    non_rational_b_spline_surface: NonRationalBSplineSurface,
+    non_rational_b_spline_surface: NonRationalBsplineSurface,
     weights_data: Vec<Vec<f64>>,
 }
 
-impl TryFrom<&RationalBSplineSurface> for NurbsSurface<Vector4> {
+impl TryFrom<&RationalBsplineSurface> for NurbsSurface<Vector4> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(
-        RationalBSplineSurface {
+        RationalBsplineSurface {
             non_rational_b_spline_surface,
             weights_data,
-        }: &RationalBSplineSurface,
+        }: &RationalBsplineSurface,
     ) -> Result<Self, Self::Error> {
-        let surface: BSplineSurface<Point3> = non_rational_b_spline_surface.try_into()?;
+        let surface: BsplineSurface<Point3> = non_rational_b_spline_surface.try_into()?;
         Ok(Self::try_from_bspline_and_weights(
             surface,
             weights_data.clone(),
@@ -2537,7 +2542,10 @@ impl EdgeCurve {
                     Point2::new(v.0, v.1),
                     true,
                 )?;
-                Curve3D::PCurve(truck::PCurve::new(Box::new(curve2d), Box::new(surface)))
+                Curve3D::Pcurve(truck::ParameterCurve::new(
+                    Box::new(curve2d),
+                    Box::new(surface),
+                ))
             }
             CurveAny::SurfaceCurve(c) => {
                 if p.near(&q) {
@@ -2988,3 +2996,27 @@ impl TryFrom<&ItemDefinedTransformation> for Matrix4 {
         Ok(mat2 * mat1.invert().unwrap())
     }
 }
+
+// Deprecated aliases for types renamed per RFC 430 (C-CASE).
+#[deprecated(note = "renamed to BsplineCurveForm per RFC 430 (C-CASE)")]
+pub type BSplineCurveForm = BsplineCurveForm;
+#[deprecated(note = "renamed to BsplineCurveWithKnots per RFC 430 (C-CASE)")]
+pub type BSplineCurveWithKnots = BsplineCurveWithKnots;
+#[deprecated(note = "renamed to NonRationalBsplineCurve per RFC 430 (C-CASE)")]
+pub type NonRationalBSplineCurve = NonRationalBsplineCurve;
+#[deprecated(note = "renamed to RationalBsplineCurve per RFC 430 (C-CASE)")]
+pub type RationalBSplineCurve = RationalBsplineCurve;
+#[deprecated(note = "renamed to BsplineCurveAny per RFC 430 (C-CASE)")]
+pub type BSplineCurveAny = BsplineCurveAny;
+#[deprecated(note = "renamed to BsplineSurfaceAny per RFC 430 (C-CASE)")]
+pub type BSplineSurfaceAny = BsplineSurfaceAny;
+#[deprecated(note = "renamed to BsplineSurfaceForm per RFC 430 (C-CASE)")]
+pub type BSplineSurfaceForm = BsplineSurfaceForm;
+#[deprecated(note = "renamed to BsplineSurfaceWithKnots per RFC 430 (C-CASE)")]
+pub type BSplineSurfaceWithKnots = BsplineSurfaceWithKnots;
+#[deprecated(note = "renamed to NonRationalBsplineSurface per RFC 430 (C-CASE)")]
+pub type NonRationalBSplineSurface = NonRationalBsplineSurface;
+#[deprecated(note = "renamed to RationalBsplineSurface per RFC 430 (C-CASE)")]
+pub type RationalBSplineSurface = RationalBsplineSurface;
+#[deprecated(note = "renamed to Pcurve per RFC 430 (C-CASE)")]
+pub type PCurve = Pcurve;

@@ -1,5 +1,6 @@
 use super::*;
 use std::f64::consts::PI;
+use truck_geotrait::ParametricCurve as PcurveTrait;
 
 impl Revolution {
     fn new(origin: Point3, axis: Vector3) -> Self {
@@ -62,46 +63,46 @@ impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Vector3 {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Vector3 {
         let center = match (m, n) {
             (0, 0) => self.origin().to_vec(),
             _ => Vector3::zero(),
         };
         let u_part = match m {
-            0 => self.curve.subs(u) - self.origin(),
+            0 => self.curve.evaluate(u) - self.origin(),
             _ => self.curve.der_n(m, u),
         };
         let v_part = from_axis_angle_derivation(n, self.axis(), Rad(v));
         v_part * u_part + center
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point3 {
+    fn evaluate(&self, u: f64, v: f64) -> Point3 {
         let mat = self.revolution.rotation_matrix(v);
-        let (p, o) = (self.curve.subs(u), self.origin());
+        let (p, o) = (self.curve.evaluate(u), self.origin());
         o + mat * (p - o)
     }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_u(&self, u: f64, v: f64) -> Vector3 {
         self.revolution.rotation_matrix(v) * self.curve.der(u)
     }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector3 {
-        let u_part = self.curve.subs(u) - self.origin();
+    fn derivative_v(&self, u: f64, v: f64) -> Vector3 {
+        let u_part = self.curve.evaluate(u) - self.origin();
         let v_part = from_axis_angle_derivation(1, self.axis(), Rad(v));
         v_part * u_part
     }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_uu(&self, u: f64, v: f64) -> Vector3 {
         self.revolution.rotation_matrix(v) * self.curve.der2(u)
     }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector3 {
-        let u_part = self.curve.subs(u) - self.origin();
+    fn derivative_vv(&self, u: f64, v: f64) -> Vector3 {
+        let u_part = self.curve.evaluate(u) - self.origin();
         let v_part = from_axis_angle_derivation(2, self.axis(), Rad(v));
         v_part * u_part
     }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_uv(&self, u: f64, v: f64) -> Vector3 {
         let u_part = self.curve.der(u);
         let v_part = from_axis_angle_derivation(1, self.axis(), Rad(v));
         v_part * u_part
@@ -124,25 +125,25 @@ impl<C: ParametricCurve3D + BoundedCurve> ParametricSurface3D for RevolutedCurve
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         let (u0, u1) = self.curve.range_tuple();
         let (uder, vder) = if u.near(&u0) {
-            let pt = self.curve.subs(u);
+            let pt = self.curve.evaluate(u);
             let radius = self.axis().cross(pt - self.origin());
             if radius.so_small() {
                 let uder = self.curve.der(u);
                 (uder, self.axis().cross(uder))
             } else {
-                (self.uder(u, v), self.vder(u, v))
+                (self.derivative_u(u, v), self.derivative_v(u, v))
             }
         } else if u.near(&u1) {
-            let pt = self.curve.subs(u);
+            let pt = self.curve.evaluate(u);
             let radius = self.axis().cross(pt - self.origin());
             if radius.so_small() {
                 let uder = self.curve.der(u);
                 (uder, uder.cross(self.axis()))
             } else {
-                (self.uder(u, v), self.vder(u, v))
+                (self.derivative_u(u, v), self.derivative_v(u, v))
             }
         } else {
-            (self.uder(u, v), self.vder(u, v))
+            (self.derivative_u(u, v), self.derivative_v(u, v))
         };
         uder.cross(vder).normalize()
     }
@@ -168,29 +169,29 @@ struct ProjectedCurve<C> {
     revolution: Revolution,
 }
 
-impl<C: ParametricCurve3D> ParametricCurve for ProjectedCurve<C> {
+impl<C: ParametricCurve3D> PcurveTrait for ProjectedCurve<C> {
     type Point = Point2;
     type Vector = Vector2;
     #[inline(always)]
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector {
         match n {
-            0 => self.subs(t).to_vec(),
-            1 => self.der(t),
-            2 => self.der2(t),
+            0 => self.evaluate(t).to_vec(),
+            1 => self.derivative(t),
+            2 => self.derivative_2(t),
             _ => unimplemented!(),
         }
     }
     #[inline(always)]
-    fn subs(&self, t: f64) -> Self::Point { self.revolution.proj_point(self.curve.subs(t)) }
+    fn evaluate(&self, t: f64) -> Self::Point { self.revolution.proj_point(self.curve.evaluate(t)) }
     #[inline(always)]
-    fn der(&self, t: f64) -> Self::Vector {
+    fn derivative(&self, t: f64) -> Self::Vector {
         self.revolution
-            .proj_vector(self.curve.subs(t), self.curve.der(t))
+            .proj_vector(self.curve.evaluate(t), self.curve.derivative(t))
     }
     #[inline(always)]
-    fn der2(&self, t: f64) -> Self::Vector {
+    fn derivative_2(&self, t: f64) -> Self::Vector {
         self.revolution
-            .proj_vector2(self.curve.subs(t), self.curve.der(t), self.curve.der2(t))
+            .proj_vector2(self.curve.evaluate(t), self.curve.derivative(t), self.curve.derivative_2(t))
     }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { self.curve.parameter_range() }
@@ -202,18 +203,18 @@ impl<C: ParametricCurve3D + BoundedCurve> BoundedCurve for ProjectedCurve<C> {}
 
 impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D1> for ProjectedCurve<C> {
     type Point = Point2;
-    fn search_parameter<H: Into<SPHint1D>>(
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: Self::Point,
         hint: H,
         trials: usize,
     ) -> Option<f64> {
         let hint = match hint.into() {
-            SPHint1D::Parameter(t) => t,
-            SPHint1D::Range(x, y) => {
+            SearchParameterHint1D::Parameter(t) => t,
+            SearchParameterHint1D::Range(x, y) => {
                 algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
             }
-            SPHint1D::None => {
+            SearchParameterHint1D::None => {
                 algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
@@ -223,18 +224,18 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D1> for ProjectedCurve
 
 impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D1> for ProjectedCurve<C> {
     type Point = Point2;
-    fn search_nearest_parameter<H: Into<SPHint1D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: Self::Point,
         hint: H,
         trials: usize,
     ) -> Option<f64> {
         let hint = match hint.into() {
-            SPHint1D::Parameter(t) => t,
-            SPHint1D::Range(x, y) => {
+            SearchParameterHint1D::Parameter(t) => t,
+            SearchParameterHint1D::Range(x, y) => {
                 algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
             }
-            SPHint1D::None => {
+            SearchParameterHint1D::None => {
                 algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
@@ -270,8 +271,8 @@ impl<C: ParametricCurve3D + BoundedCurve> RevolutedCurve<C> {
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let line = BSplineCurve::new(
-    ///     KnotVec::bezier_knot(1),
+    /// let line = BsplineCurve::new(
+    ///     KnotVector::bezier_knot(1),
     ///     vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 0.0, 1.0)],
     /// );
     /// let surface0 = RevolutedCurve::by_revolution(line.clone(), Point3::origin(), Vector3::unit_y());
@@ -285,8 +286,8 @@ impl<C: ParametricCurve3D + BoundedCurve> RevolutedCurve<C> {
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let line = BSplineCurve::new(
-    ///     KnotVec::bezier_knot(1),
+    /// let line = BsplineCurve::new(
+    ///     KnotVector::bezier_knot(1),
     ///     vec![Point3::new(0.0, 0.0, 1.0), Point3::new(0.0, 0.0, 0.0)],
     /// );
     /// let surface0 = RevolutedCurve::by_revolution(line.clone(), Point3::origin(), Vector3::unit_y());
@@ -300,7 +301,7 @@ impl<C: ParametricCurve3D + BoundedCurve> RevolutedCurve<C> {
 
 impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve<C> {
     type Point = Point3;
-    fn search_parameter<H: Into<SPHint2D>>(
+    fn search_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         hint: H,
@@ -309,15 +310,15 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve
         let (t0, t1) = self.curve.range_tuple();
         if self.is_front_fixed() && self.curve.front().near(&point) {
             match hint.into() {
-                SPHint2D::Parameter(_, y) => Some((t0, y)),
-                SPHint2D::Range((_, y), _) => Some((t0, y)),
-                SPHint2D::None => Some((t0, 0.0)),
+                SearchParameterHint2D::Parameter(_, y) => Some((t0, y)),
+                SearchParameterHint2D::Range((_, y), _) => Some((t0, y)),
+                SearchParameterHint2D::None => Some((t0, 0.0)),
             }
         } else if self.is_back_fixed() && self.curve.back().near(&point) {
             match hint.into() {
-                SPHint2D::Parameter(_, y) => Some((t1, y)),
-                SPHint2D::Range(_, (_, y)) => Some((t1, y)),
-                SPHint2D::None => Some((t1, 2.0 * PI)),
+                SearchParameterHint2D::Parameter(_, y) => Some((t1, y)),
+                SearchParameterHint2D::Range(_, (_, y)) => Some((t1, y)),
+                SearchParameterHint2D::None => Some((t1, 2.0 * PI)),
             }
         } else {
             let proj_curve = ProjectedCurve {
@@ -326,9 +327,11 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve
             };
             let p = self.revolution.proj_point(point);
             let hint0 = match hint.into() {
-                SPHint2D::Parameter(x, _) => SPHint1D::Parameter(x),
-                SPHint2D::Range((x0, _), (x1, _)) => SPHint1D::Range(x0, x1),
-                SPHint2D::None => SPHint1D::None,
+                SearchParameterHint2D::Parameter(x, _) => SearchParameterHint1D::Parameter(x),
+                SearchParameterHint2D::Range((x0, _), (x1, _)) => {
+                    SearchParameterHint1D::Range(x0, x1)
+                }
+                SearchParameterHint2D::None => SearchParameterHint1D::None,
             };
             let t = proj_curve.search_parameter(p, hint0, trials)?;
             let p = self.curve.subs(t);
@@ -343,7 +346,7 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve
 
 impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for RevolutedCurve<C> {
     type Point = Point3;
-    fn search_nearest_parameter<H: Into<SPHint2D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         hint: H,
@@ -356,15 +359,15 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for Revolut
         };
         if self.is_front_fixed() && on_axis(self.curve.front(), self.normal(t0, 0.0)) {
             match hint.into() {
-                SPHint2D::Parameter(_, y) => Some((t0, y)),
-                SPHint2D::Range((_, y), _) => Some((t0, y)),
-                SPHint2D::None => Some((t0, 0.0)),
+                SearchParameterHint2D::Parameter(_, y) => Some((t0, y)),
+                SearchParameterHint2D::Range((_, y), _) => Some((t0, y)),
+                SearchParameterHint2D::None => Some((t0, 0.0)),
             }
         } else if self.is_back_fixed() && on_axis(self.curve.back(), self.normal(t1, 0.0)) {
             match hint.into() {
-                SPHint2D::Parameter(_, y) => Some((t1, y)),
-                SPHint2D::Range(_, (_, y)) => Some((t1, y)),
-                SPHint2D::None => Some((t1, 2.0 * PI)),
+                SearchParameterHint2D::Parameter(_, y) => Some((t1, y)),
+                SearchParameterHint2D::Range(_, (_, y)) => Some((t1, y)),
+                SearchParameterHint2D::None => Some((t1, 2.0 * PI)),
             }
         } else {
             let proj_curve = ProjectedCurve {
@@ -373,9 +376,11 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for Revolut
             };
             let p = self.revolution.proj_point(point);
             let hint0 = match hint.into() {
-                SPHint2D::Parameter(x, _) => SPHint1D::Parameter(x),
-                SPHint2D::Range((x0, _), (x1, _)) => SPHint1D::Range(x0, x1),
-                SPHint2D::None => SPHint1D::None,
+                SearchParameterHint2D::Parameter(x, _) => SearchParameterHint1D::Parameter(x),
+                SearchParameterHint2D::Range((x0, _), (x1, _)) => {
+                    SearchParameterHint1D::Range(x0, x1)
+                }
+                SearchParameterHint2D::None => SearchParameterHint1D::None,
             };
             let t = proj_curve.search_nearest_parameter(p, hint0, trials)?;
             let p = self.curve.subs(t);
@@ -408,7 +413,7 @@ where
             })
         })
         .all(move |t| {
-            let pt = ParametricCurve::subs(curve, t);
+            let pt = PcurveTrait::subs(curve, t);
             surface
                 .search_parameter(pt, Some(hint), INCLUDE_CURVE_TRIALS)
                 .or_else(|| surface.search_parameter(pt, None, INCLUDE_CURVE_TRIALS))
@@ -417,39 +422,39 @@ where
         })
 }
 
-impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<&BSplineCurve<Point3>> {
-    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
+impl IncludeCurve<BsplineCurve<Point3>> for RevolutedCurve<&BsplineCurve<Point3>> {
+    fn include(&self, curve: &BsplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = usize::max(2, usize::max(curve.degree(), self.curve.degree()));
         sub_include(self, curve, &knots, degree)
     }
 }
 
-impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<BSplineCurve<Point3>> {
-    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
+impl IncludeCurve<BsplineCurve<Point3>> for RevolutedCurve<BsplineCurve<Point3>> {
+    fn include(&self, curve: &BsplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = usize::max(2, usize::max(curve.degree(), self.curve.degree()));
         sub_include(self, curve, &knots, degree)
     }
 }
 
-impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<&NurbsCurve<Vector4>> {
-    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
+impl IncludeCurve<BsplineCurve<Point3>> for RevolutedCurve<&NurbsCurve<Vector4>> {
+    fn include(&self, curve: &BsplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
         sub_include(self, curve, &knots, degree)
     }
 }
 
-impl IncludeCurve<BSplineCurve<Point3>> for RevolutedCurve<NurbsCurve<Vector4>> {
-    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
+impl IncludeCurve<BsplineCurve<Point3>> for RevolutedCurve<NurbsCurve<Vector4>> {
+    fn include(&self, curve: &BsplineCurve<Point3>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
         sub_include(self, curve, &knots, degree)
     }
 }
 
-impl IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<&BSplineCurve<Point3>> {
+impl IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<&BsplineCurve<Point3>> {
     fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());
@@ -457,7 +462,7 @@ impl IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<&BSplineCurve<Point3>>
     }
 }
 
-impl IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<BSplineCurve<Point3>> {
+impl IncludeCurve<NurbsCurve<Vector4>> for RevolutedCurve<BsplineCurve<Point3>> {
     fn include(&self, curve: &NurbsCurve<Vector4>) -> bool {
         let knots = curve.knot_vec().to_single_multi().0;
         let degree = curve.degree() + usize::max(2, self.curve.degree());

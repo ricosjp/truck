@@ -14,14 +14,14 @@ struct Revolution {
 /// ```
 /// use truck_geometry::prelude::*;
 /// use std::f64::consts::PI;
-/// let knot_vec = KnotVec::bezier_knot(2);
+/// let knot_vec = KnotVector::bezier_knot(2);
 /// let control_points = vec![
 ///     Vector4::new(1.0, 0.0, 0.0, 1.0),
 ///     Vector4::new(0.0, 1.0, 0.0, 0.0),
 ///     Vector4::new(-1.0, 0.0, 0.0, 1.0),
 /// ];
 /// // upper half circle on xy-plane
-/// let uhcircle = NurbsCurve::new(BSplineCurve::new(knot_vec, control_points));
+/// let uhcircle = NurbsCurve::new(BsplineCurve::new(knot_vec, control_points));
 /// // sphere constructed by revolute circle
 /// let sphere = RevolutedCurve::by_revolution(
 ///     uhcircle, Point3::origin(), Vector3::unit_x(),
@@ -60,13 +60,13 @@ pub struct RevolutedCurve<C> {
 ///     vec![Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 1.0, 1.0)],
 ///     vec![Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 1.0)],
 /// ];
-/// let curve = BSplineCurve::new(KnotVec::bezier_knot(2), cpts);
+/// let curve = BsplineCurve::new(KnotVector::bezier_knot(2), cpts);
 ///
 /// // create extruded curve
 /// let surface0 = ExtrudedCurve::by_extrusion(curve, Vector3::unit_z());
 ///
 /// // same curve defined by B-spline description
-/// let surface1 = BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(1)), spts);
+/// let surface1 = BsplineSurface::new((KnotVector::bezier_knot(2), KnotVector::bezier_knot(1)), spts);
 ///
 /// assert_eq!(surface0.range_tuple(), surface1.range_tuple());
 ///
@@ -100,8 +100,8 @@ pub struct ExtrudedCurve<C, V> {
 /// ```
 /// use truck_geometry::prelude::*;
 ///
-/// let curve: BSplineCurve<Point3> = BSplineCurve::new(
-///     KnotVec::bezier_knot(2),
+/// let curve: BsplineCurve<Point3> = BsplineCurve::new(
+///     KnotVector::bezier_knot(2),
 ///     vec![
 ///         Point3::new(0.0, 0.0, 0.0),
 ///         Point3::new(0.0, 0.0, 1.0),
@@ -167,8 +167,8 @@ pub struct Processor<E, T> {
 /// use truck_geometry::prelude::*;
 ///
 /// // parameter curve
-/// let curve = BSplineCurve::new(
-///     KnotVec::bezier_knot(2),
+/// let curve = BsplineCurve::new(
+///     KnotVector::bezier_knot(2),
 ///     vec![
 ///         Point2::new(1.0, 1.0),
 ///         Point2::new(1.0, 0.0),
@@ -176,8 +176,8 @@ pub struct Processor<E, T> {
 ///     ],
 /// );
 /// // surface
-/// let surface = BSplineSurface::new(
-///     (KnotVec::bezier_knot(2), KnotVec::bezier_knot(1)),
+/// let surface = BsplineSurface::new(
+///     (KnotVector::bezier_knot(2), KnotVector::bezier_knot(1)),
 ///     vec![
 ///         vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 1.0, 0.0)],
 ///         vec![Point3::new(0.0, 0.0, 1.0), Point3::new(0.0, 1.0, 1.0)],
@@ -185,7 +185,7 @@ pub struct Processor<E, T> {
 ///     ],
 /// );
 /// // the composite of parameter curve and surface
-/// let pcurve = PCurve::new(curve, surface);
+/// let pcurve = ParameterCurve::new(curve, surface);
 /// assert_eq!(pcurve.range_tuple(), (0.0, 1.0));
 ///
 /// const N: usize = 100;
@@ -219,10 +219,14 @@ pub struct Processor<E, T> {
 /// assert!(pcurve.der(t).dot(pcurve.subs(t) - pt).so_small());
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
-pub struct PCurve<C, S> {
+pub struct ParameterCurve<C, S> {
     curve: C,
     surface: S,
 }
+
+/// Renamed to [`ParameterCurve`] for clarity.
+#[deprecated(note = "renamed to ParameterCurve for clarity")]
+pub type PCurve<C, S> = ParameterCurve<C, S>;
 
 /// Intersection curve between two surfaces.
 ///
@@ -236,8 +240,8 @@ pub struct PCurve<C, S> {
 /// let sphere1 = Sphere::new(Point3::new(0.0, 0.0, -1.0), f64::sqrt(2.0));
 ///
 /// // Approximating a semicircle with a parabola
-/// let bspcurve = BSplineCurve::new(
-///     KnotVec::bezier_knot(2),
+/// let bspcurve = BsplineCurve::new(
+///     KnotVector::bezier_knot(2),
 ///     vec![
 ///         Point3::new(1.0, 0.0, 0.0),
 ///         Point3::new(0.0, 2.0, 0.0),
@@ -335,7 +339,7 @@ pub struct RbfContactCurve<C, S0, S1, R> {
 /// Approximation surface of fillets
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
 pub struct ApproxFilletSurface<S0, S1> {
-    knot_vec: KnotVec,
+    knot_vec: KnotVector,
     surface0: S0,
     side_control_points0: Vec<Point2>,
     tangent_vecs0: Vec<Vector2>,
@@ -345,7 +349,7 @@ pub struct ApproxFilletSurface<S0, S1> {
     weights: Vec<f64>,
 }
 
-mod af_surface;
+mod approx_fillet_surface;
 mod extruded_curve;
 mod homotopy;
 mod intersection_curve;
@@ -354,4 +358,4 @@ mod processor;
 /// structure and trait, associated with rolling ball fillet surface
 pub mod rbf_surface;
 mod revolved_curve;
-mod trimmied_curve;
+mod trimmed_curve;

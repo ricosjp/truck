@@ -2,7 +2,7 @@ use derive_more::From;
 use truck_geometry::prelude::*;
 
 /// A parametric curve defined by a line in parameter space on a NURBS surface.
-pub type ParamCurveLinear = PCurve<Line<Point2>, NurbsSurface<Vector4>>;
+pub type ParameterCurveLinear = ParameterCurve<Line<Point2>, NurbsSurface<Vector4>>;
 
 #[allow(clippy::enum_variant_names)]
 #[derive(
@@ -19,13 +19,35 @@ pub type ParamCurveLinear = PCurve<Line<Point2>, NurbsSurface<Vector4>>;
 )]
 pub(crate) enum Curve {
     NurbsCurve(NurbsCurve<Vector4>),
-    PCurve(ParamCurveLinear),
+    ParameterCurve(ParameterCurveLinear),
     IntersectionCurve(
-        IntersectionCurve<ParamCurveLinear, Box<NurbsSurface<Vector4>>, Box<NurbsSurface<Vector4>>>,
+        IntersectionCurve<
+            ParameterCurveLinear,
+            Box<NurbsSurface<Vector4>>,
+            Box<NurbsSurface<Vector4>>,
+        >,
     ),
 }
 
 truck_topology::prelude!(Point3, Curve, NurbsSurface<Vector4>, pub(super));
+
+pub(super) fn squared_distance(a: Point3, b: Point3) -> f64 {
+    let d = a - b;
+    d.x * d.x + d.y * d.y + d.z * d.z
+}
+
+pub(super) fn approximate_edge_length(edge: &Edge, sample_count: usize) -> f64 {
+    let curve = edge.curve();
+    let (t0, t1) = curve.range_tuple();
+    let points: Vec<_> = (0..=sample_count)
+        .map(|i| t0 + (t1 - t0) * (i as f64) / (sample_count as f64))
+        .map(|t| curve.evaluate(t))
+        .collect();
+    points
+        .windows(2)
+        .map(|window| squared_distance(window[0], window[1]).sqrt())
+        .sum()
+}
 
 /// Trait alias for curves usable in fillet operations.
 pub trait FilletCurve: ParametricCurve3D + BoundedCurve + ParameterDivision1D {}

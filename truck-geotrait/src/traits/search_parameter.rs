@@ -1,10 +1,10 @@
 /// Dimension for search nearest parameter
-pub trait SPDimension {
+pub trait SearchParameterDimension {
     /// dimension
     const DIM: usize;
     /// parameter type, curve => f64, surface => (f64, f64)
     type Parameter;
-    /// hint, curve => [`SPHint1D`], surface => [`SPHint2D`]
+    /// hint, curve => [`SearchParameterHint1D`], surface => [`SearchParameterHint2D`]
     type Hint;
 }
 
@@ -12,25 +12,25 @@ pub trait SPDimension {
 #[derive(Clone, Copy, Debug)]
 pub enum D1 {}
 
-impl SPDimension for D1 {
+impl SearchParameterDimension for D1 {
     const DIM: usize = 1;
     type Parameter = f64;
-    type Hint = SPHint1D;
+    type Hint = SearchParameterHint1D;
 }
 
 /// curve geometry
 #[derive(Clone, Copy, Debug)]
 pub enum D2 {}
 
-impl SPDimension for D2 {
+impl SearchParameterDimension for D2 {
     const DIM: usize = 2;
     type Parameter = (f64, f64);
-    type Hint = SPHint2D;
+    type Hint = SearchParameterHint2D;
 }
 
 /// hint for searching parameter for curve
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum SPHint1D {
+pub enum SearchParameterHint1D {
     /// a parameter near the answer
     Parameter(f64),
     /// the range of parameter including answer
@@ -40,29 +40,35 @@ pub enum SPHint1D {
     None,
 }
 
-impl From<f64> for SPHint1D {
+impl From<f64> for SearchParameterHint1D {
     #[inline(always)]
-    fn from(x: f64) -> SPHint1D { SPHint1D::Parameter(x) }
+    fn from(x: f64) -> SearchParameterHint1D { SearchParameterHint1D::Parameter(x) }
 }
 
-impl From<(f64, f64)> for SPHint1D {
+impl From<(f64, f64)> for SearchParameterHint1D {
     #[inline(always)]
-    fn from(range: (f64, f64)) -> SPHint1D { SPHint1D::Range(range.0, range.1) }
+    fn from(range: (f64, f64)) -> SearchParameterHint1D {
+        SearchParameterHint1D::Range(range.0, range.1)
+    }
 }
 
-impl From<Option<f64>> for SPHint1D {
+impl From<Option<f64>> for SearchParameterHint1D {
     #[inline(always)]
-    fn from(x: Option<f64>) -> SPHint1D {
+    fn from(x: Option<f64>) -> SearchParameterHint1D {
         match x {
             Some(x) => x.into(),
-            None => SPHint1D::None,
+            None => SearchParameterHint1D::None,
         }
     }
 }
 
+/// Renamed to [`SearchParameterHint1D`] for clarity.
+#[deprecated(note = "renamed to SearchParameterHint1D for clarity")]
+pub type SPHint1D = SearchParameterHint1D;
+
 /// hint for searching parameter for surface
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum SPHint2D {
+pub enum SearchParameterHint2D {
     /// a parameter near the answer
     Parameter(f64, f64),
     /// the range of parameter including answer
@@ -71,31 +77,35 @@ pub enum SPHint2D {
     None,
 }
 
-impl From<(f64, f64)> for SPHint2D {
+impl From<(f64, f64)> for SearchParameterHint2D {
     #[inline(always)]
     fn from(x: (f64, f64)) -> Self { Self::Parameter(x.0, x.1) }
 }
 
-impl From<((f64, f64), (f64, f64))> for SPHint2D {
+impl From<((f64, f64), (f64, f64))> for SearchParameterHint2D {
     #[inline(always)]
     fn from(ranges: ((f64, f64), (f64, f64))) -> Self { Self::Range(ranges.0, ranges.1) }
 }
 
-impl From<Option<(f64, f64)>> for SPHint2D {
+impl From<Option<(f64, f64)>> for SearchParameterHint2D {
     #[inline(always)]
     fn from(x: Option<(f64, f64)>) -> Self {
         match x {
             Some(x) => x.into(),
-            None => SPHint2D::None,
+            None => SearchParameterHint2D::None,
         }
     }
 }
 
-/// Search parameter `t` such that `self.subs(t)` is near point.
-pub trait SearchParameter<Dim: SPDimension> {
+/// Renamed to [`SearchParameterHint2D`] for clarity.
+#[deprecated(note = "renamed to SearchParameterHint2D for clarity")]
+pub type SPHint2D = SearchParameterHint2D;
+
+/// Search parameter `t` such that `self.evaluate(t)` is near point.
+pub trait SearchParameter<Dim: SearchParameterDimension> {
     /// point
     type Point;
-    /// Search parameter `t` such that `self.subs(t)` is near point.  
+    /// Search parameter `t` such that `self.evaluate(t)` is near point.
     /// Returns `None` if could not find such parameter.
     fn search_parameter<H: Into<Dim::Hint>>(
         &self,
@@ -105,7 +115,7 @@ pub trait SearchParameter<Dim: SPDimension> {
     ) -> Option<Dim::Parameter>;
 }
 
-impl<Dim: SPDimension, T: SearchParameter<Dim>> SearchParameter<Dim> for &T {
+impl<Dim: SearchParameterDimension, T: SearchParameter<Dim>> SearchParameter<Dim> for &T {
     type Point = T::Point;
     #[inline(always)]
     fn search_parameter<H: Into<Dim::Hint>>(
@@ -118,7 +128,7 @@ impl<Dim: SPDimension, T: SearchParameter<Dim>> SearchParameter<Dim> for &T {
     }
 }
 
-impl<Dim: SPDimension, T: SearchParameter<Dim>> SearchParameter<Dim> for Box<T> {
+impl<Dim: SearchParameterDimension, T: SearchParameter<Dim>> SearchParameter<Dim> for Box<T> {
     type Point = T::Point;
     #[inline(always)]
     fn search_parameter<H: Into<Dim::Hint>>(
@@ -131,11 +141,11 @@ impl<Dim: SPDimension, T: SearchParameter<Dim>> SearchParameter<Dim> for Box<T> 
     }
 }
 
-/// Search parameter `t` such that `self.subs(t)` is nearest point.
-pub trait SearchNearestParameter<Dim: SPDimension> {
+/// Search parameter `t` such that `self.evaluate(t)` is nearest point.
+pub trait SearchNearestParameter<Dim: SearchParameterDimension> {
     /// point
     type Point;
-    /// Search nearest parameter `t` such that `self.subs(t)` is nearest point.  
+    /// Search nearest parameter `t` such that `self.evaluate(t)` is nearest point.
     /// Returns `None` if could not find such parameter.
     fn search_nearest_parameter<H: Into<Dim::Hint>>(
         &self,
@@ -145,7 +155,9 @@ pub trait SearchNearestParameter<Dim: SPDimension> {
     ) -> Option<Dim::Parameter>;
 }
 
-impl<Dim: SPDimension, T: SearchNearestParameter<Dim>> SearchNearestParameter<Dim> for &T {
+impl<Dim: SearchParameterDimension, T: SearchNearestParameter<Dim>> SearchNearestParameter<Dim>
+    for &T
+{
     type Point = T::Point;
     #[inline(always)]
     fn search_nearest_parameter<H: Into<Dim::Hint>>(
@@ -158,7 +170,9 @@ impl<Dim: SPDimension, T: SearchNearestParameter<Dim>> SearchNearestParameter<Di
     }
 }
 
-impl<Dim: SPDimension, T: SearchNearestParameter<Dim>> SearchNearestParameter<Dim> for Box<T> {
+impl<Dim: SearchParameterDimension, T: SearchNearestParameter<Dim>> SearchNearestParameter<Dim>
+    for Box<T>
+{
     type Point = T::Point;
     #[inline(always)]
     fn search_nearest_parameter<H: Into<Dim::Hint>>(

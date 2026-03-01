@@ -32,9 +32,9 @@ fn geometry() {
         "#1 = VECTOR('', #2, 6.25);\n#2 = DIRECTION('', (0.48, 0.64, 0.6));\n",
         2,
     );
-    step_test::<BSplineCurve<Point2>>(
-        BSplineCurve::new(
-            KnotVec::bezier_knot(2),
+    step_test::<BsplineCurve<Point2>>(
+        BsplineCurve::new(
+            KnotVector::bezier_knot(2),
             vec![
                 Point2::new(0.0, 0.0),
                 Point2::new(1.0, 1.0),
@@ -49,8 +49,8 @@ fn geometry() {
     4,
     );
     step_test::<NurbsCurve<Vector3>>(
-        NurbsCurve::new(BSplineCurve::new(
-            KnotVec::bezier_knot(2),
+        NurbsCurve::new(BsplineCurve::new(
+            KnotVector::bezier_knot(2),
             vec![
                 Vector3::new(0.0, 0.0, 1.0),
                 Vector3::new(1.0, 1.0, 2.0),
@@ -200,8 +200,8 @@ fn geometry() {
 #5 = DIRECTION('', (0.0, 1.0, 0.0));\n",
         5,
     );
-    step_test::<PCurve<Line<Point2>, Plane>>(
-        PCurve::new(
+    step_test::<ParameterCurve<Line<Point2>, Plane>>(
+        ParameterCurve::new(
             Line(Point2::new(0.0, 0.0), Point2::new(3.0, 4.0)),
             Plane::new(
                 Point3::new(1.0, 2.0, 3.0),
@@ -276,9 +276,9 @@ fn geometry() {
 #5 = DIRECTION('', (0.0, 1.0, 0.0));\n",
         5,
     );
-    step_test::<BSplineSurface<Point2>>(
-        BSplineSurface::new(
-            (KnotVec::bezier_knot(2), KnotVec::uniform_knot(2, 2)),
+    step_test::<BsplineSurface<Point2>>(
+        BsplineSurface::new(
+            (KnotVector::bezier_knot(2), KnotVector::uniform_knot(2, 2)),
             vec![
                 vec![
                     Point2::new(0.0, 0.0),
@@ -319,8 +319,8 @@ fn geometry() {
     );
 
     step_test::<NurbsSurface<Vector3>>(
-        NurbsSurface::new(BSplineSurface::new(
-            (KnotVec::bezier_knot(2), KnotVec::uniform_knot(2, 2)),
+        NurbsSurface::new(BsplineSurface::new(
+            (KnotVector::bezier_knot(2), KnotVector::uniform_knot(2, 2)),
             vec![
                 vec![
                     Vector3::new(0.0, 0.0, 4.0),

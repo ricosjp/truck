@@ -24,15 +24,15 @@ fn body_shell(bottom: f64, height: f64, width: f64, thickness: f64) -> Shell {
     let arc0 = builder::circle_arc(&vertex0, &vertex1, transit);
     let arc1 = builder::rotated(&arc0, Point3::origin(), Vector3::unit_y(), Rad(PI));
     let face = builder::homotopy(&arc0, &arc1.inverse());
-    let solid = builder::tsweep(&face, Vector3::new(0.0, height, 0.0));
+    let solid = builder::extrude(&face, Vector3::new(0.0, height, 0.0));
     solid.into_boundaries().pop().unwrap()
 }
 
 fn cylinder(bottom: f64, height: f64, radius: f64) -> Shell {
     let vertex = builder::vertex(Point3::new(0.0, bottom, radius));
-    let circle = builder::rsweep(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0), 2);
+    let circle = builder::revolve(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0), 2);
     let disk = builder::try_attach_plane(&[circle]).unwrap();
-    let solid = builder::tsweep(&disk, Vector3::new(0.0, height, 0.0));
+    let solid = builder::extrude(&disk, Vector3::new(0.0, height, 0.0));
     solid.into_boundaries().pop().unwrap()
 }
 

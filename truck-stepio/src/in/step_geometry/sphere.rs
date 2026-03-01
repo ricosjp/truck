@@ -5,21 +5,21 @@ impl ParametricSurface for Sphere {
     type Point = Point3;
     type Vector = Vector3;
     #[inline]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
-        self.0.der_mn(m, n, PI / 2.0 - v, u) * (-1f64).powi(m as i32)
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        self.0.derivative_mn(m, n, PI / 2.0 - v, u) * (-1f64).powi(m as i32)
     }
     #[inline]
-    fn subs(&self, u: f64, v: f64) -> Point3 { self.0.subs(PI / 2.0 - v, u) }
+    fn evaluate(&self, u: f64, v: f64) -> Point3 { self.0.evaluate(PI / 2.0 - v, u) }
     #[inline]
-    fn uder(&self, u: f64, v: f64) -> Vector3 { self.0.vder(PI / 2.0 - v, u) }
+    fn derivative_u(&self, u: f64, v: f64) -> Vector3 { self.0.derivative_v(PI / 2.0 - v, u) }
     #[inline]
-    fn vder(&self, u: f64, v: f64) -> Vector3 { -self.0.uder(PI / 2.0 - v, u) }
+    fn derivative_v(&self, u: f64, v: f64) -> Vector3 { -self.0.derivative_u(PI / 2.0 - v, u) }
     #[inline]
-    fn uuder(&self, u: f64, v: f64) -> Vector3 { self.0.vvder(PI / 2.0 - v, u) }
+    fn derivative_uu(&self, u: f64, v: f64) -> Vector3 { self.0.derivative_vv(PI / 2.0 - v, u) }
     #[inline]
-    fn uvder(&self, u: f64, v: f64) -> Vector3 { -self.0.uvder(PI / 2.0 - v, u) }
+    fn derivative_uv(&self, u: f64, v: f64) -> Vector3 { -self.0.derivative_uv(PI / 2.0 - v, u) }
     #[inline]
-    fn vvder(&self, u: f64, v: f64) -> Vector3 { self.0.uuder(PI / 2.0 - v, u) }
+    fn derivative_vv(&self, u: f64, v: f64) -> Vector3 { self.0.derivative_uu(PI / 2.0 - v, u) }
     #[inline]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         (
@@ -37,7 +37,7 @@ impl ParametricSurface3D for Sphere {
 impl SearchNearestParameter<D2> for Sphere {
     type Point = Point3;
     #[inline]
-    fn search_nearest_parameter<H: Into<SPHint2D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Self::Point,
         hint: H,
@@ -51,7 +51,7 @@ impl SearchNearestParameter<D2> for Sphere {
 impl SearchParameter<D2> for Sphere {
     type Point = Point3;
     #[inline]
-    fn search_parameter<H: Into<SPHint2D>>(
+    fn search_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Self::Point,
         hint: H,

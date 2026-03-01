@@ -1,4 +1,5 @@
 use super::*;
+use truck_geotrait::ParametricCurve as PcurveTrait;
 
 /// trait for attach rolling fillet
 pub(super) trait FilletableSurface:
@@ -60,19 +61,19 @@ impl ContactCircle {
     }
 }
 
-impl ParametricCurve for ContactCircle {
+impl PcurveTrait for ContactCircle {
     type Point = Point3;
     type Vector = Vector3;
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector {
         let radius = self.contact_point0.point - self.center;
         let angle = Rad(PI / 2.0) * n as f64 + self.angle * t;
         let rot = Matrix3::from_axis_angle(self.axis, angle);
         let c = self.center.to_vec() * if n == 0 { 1.0 } else { 0.0 };
         c + rot * radius * self.angle.0.powi(n as i32)
     }
-    fn subs(&self, t: f64) -> Self::Point { Point3::from_vec(self.der_n(0, t)) }
-    fn der(&self, t: f64) -> Self::Vector { self.der_n(1, t) }
-    fn der2(&self, t: f64) -> Self::Vector { self.der_n(2, t) }
+    fn evaluate(&self, t: f64) -> Self::Point { Point3::from_vec(self.derivative_n(0, t)) }
+    fn derivative(&self, t: f64) -> Self::Vector { self.derivative_n(1, t) }
+    fn derivative_2(&self, t: f64) -> Self::Vector { self.derivative_n(2, t) }
     fn parameter_range(&self) -> ParameterRange {
         use std::ops::Bound;
         (Bound::Included(0.0), Bound::Included(1.0))
@@ -91,8 +92,8 @@ impl ToSameGeometry<NurbsCurve<Vector4>> for ContactCircle {
             z_axis.extend(0.0),
             self.center.to_homogeneous(),
         );
-        NurbsCurve::new(BSplineCurve::new_unchecked(
-            KnotVec::bezier_knot(2),
+        NurbsCurve::new(BsplineCurve::new_unchecked(
+            KnotVector::bezier_knot(2),
             vec![
                 mat * Vector4::new(1.0, 0.0, 0.0, 1.0),
                 mat * Vector4::new(cos2, sin2, 0.0, cos2),
@@ -132,7 +133,7 @@ fn next_point(
     (u, v): (f64, f64),
     (p, q): (Point3, Point3),
 ) -> (Point3, (f64, f64)) {
-    let ders = surface.ders(2, u, v);
+    let ders = surface.derivatives(2, u, v);
     let (uder, vder) = (ders[1][0], ders[0][1]);
     let d = q - p;
     let uu = uder.dot(uder);
@@ -142,5 +143,5 @@ fn next_point(
     let vec = Vector2::new(uder.dot(d), vder.dot(d));
     let del = mat.invert().unwrap() * vec;
     let (u, v) = (u + del.x, v + del.y);
-    (surface.subs(u, v), (u, v))
+    (surface.evaluate(u, v), (u, v))
 }

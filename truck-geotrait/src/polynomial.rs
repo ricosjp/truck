@@ -11,7 +11,7 @@ pub struct PolynomialCurve<P: EuclideanSpace<Scalar = f64>>(pub Vec<P::Diff>);
 impl<P: EuclideanSpace<Scalar = f64>> ParametricCurve for PolynomialCurve<P> {
     type Point = P;
     type Vector = P::Diff;
-    fn der_n(&self, n: usize, t: f64) -> P::Diff {
+    fn derivative_n(&self, n: usize, t: f64) -> P::Diff {
         let iter = self.0.iter().enumerate().skip(n);
         let (_, res) = iter.fold((1.0, P::Diff::zero()), |(s, res), (deg, a)| {
             let p = (0..n).fold(1, |p, i| p * (deg - i));
@@ -20,11 +20,11 @@ impl<P: EuclideanSpace<Scalar = f64>> ParametricCurve for PolynomialCurve<P> {
         res
     }
     #[inline(always)]
-    fn subs(&self, t: f64) -> P { P::from_vec(self.der_n(0, t)) }
+    fn evaluate(&self, t: f64) -> P { P::from_vec(self.derivative_n(0, t)) }
     #[inline(always)]
-    fn der(&self, t: f64) -> P::Diff { self.der_n(1, t) }
+    fn derivative(&self, t: f64) -> P::Diff { self.derivative_n(1, t) }
     #[inline(always)]
-    fn der2(&self, t: f64) -> P::Diff { self.der_n(2, t) }
+    fn derivative_2(&self, t: f64) -> P::Diff { self.derivative_n(2, t) }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {
         (Bound::Included(-100.0), Bound::Included(100.0))
@@ -48,18 +48,18 @@ where
     <P as EuclideanSpace>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
-    fn search_nearest_parameter<H: Into<SPHint1D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: P,
         hint: H,
         trials: usize,
     ) -> Option<f64> {
         let hint = match hint.into() {
-            SPHint1D::Parameter(hint) => hint,
-            SPHint1D::Range(x, y) => {
+            SearchParameterHint1D::Parameter(hint) => hint,
+            SearchParameterHint1D::Range(x, y) => {
                 algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
             }
-            SPHint1D::None => {
+            SearchParameterHint1D::None => {
                 algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
@@ -73,13 +73,18 @@ where
     <P as EuclideanSpace>::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
-    fn search_parameter<H: Into<SPHint1D>>(&self, point: P, hint: H, trials: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
+        &self,
+        point: P,
+        hint: H,
+        trials: usize,
+    ) -> Option<f64> {
         let hint = match hint.into() {
-            SPHint1D::Parameter(hint) => hint,
-            SPHint1D::Range(x, y) => {
+            SearchParameterHint1D::Parameter(hint) => hint,
+            SearchParameterHint1D::Range(x, y) => {
                 algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
             }
-            SPHint1D::None => {
+            SearchParameterHint1D::None => {
                 algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
@@ -135,7 +140,7 @@ impl<P: EuclideanSpace<Scalar = f64>> ParametricSurface for PolynomialSurface<P>
     type Point = P;
     type Vector = P::Diff;
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         let iter = self.0.iter().enumerate().skip(m);
         let (_, res) = iter.fold((1.0, P::Diff::zero()), |(us, res), (udeg, vec)| {
             let up = (0..m).fold(1, |p, i| p * (udeg - i));
@@ -149,17 +154,17 @@ impl<P: EuclideanSpace<Scalar = f64>> ParametricSurface for PolynomialSurface<P>
         res
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> P { P::from_vec(self.der_mn(0, 0, u, v)) }
+    fn evaluate(&self, u: f64, v: f64) -> P { P::from_vec(self.derivative_mn(0, 0, u, v)) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(1, 0, u, v) }
+    fn derivative_u(&self, u: f64, v: f64) -> P::Diff { self.derivative_mn(1, 0, u, v) }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(0, 1, u, v) }
+    fn derivative_v(&self, u: f64, v: f64) -> P::Diff { self.derivative_mn(0, 1, u, v) }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(2, 0, u, v) }
+    fn derivative_uu(&self, u: f64, v: f64) -> P::Diff { self.derivative_mn(2, 0, u, v) }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(1, 1, u, v) }
+    fn derivative_uv(&self, u: f64, v: f64) -> P::Diff { self.derivative_mn(1, 1, u, v) }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> P::Diff { self.der_mn(0, 2, u, v) }
+    fn derivative_vv(&self, u: f64, v: f64) -> P::Diff { self.derivative_mn(0, 2, u, v) }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         (
@@ -172,7 +177,7 @@ impl<P: EuclideanSpace<Scalar = f64>> ParametricSurface for PolynomialSurface<P>
 impl ParametricSurface3D for PolynomialSurface<Point3> {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
-        self.uder(u, v).cross(self.vder(u, v)).normalize()
+        self.derivative_u(u, v).cross(self.derivative_v(u, v)).normalize()
     }
 }
 

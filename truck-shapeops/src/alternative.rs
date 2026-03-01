@@ -51,10 +51,10 @@ where
 {
     type Point = C0::Point;
     type Vector = C0::Vector;
-    derive_method!(subs, C0::Point, t: f64);
-    derive_method!(der, C0::Vector, t: f64);
-    derive_method!(der2, C0::Vector, t: f64);
-    derive_method!(der_n, C0::Vector, n: usize, t: f64);
+    derive_method!(evaluate, C0::Point, t: f64);
+    derive_method!(derivative, C0::Vector, t: f64);
+    derive_method!(derivative_2, C0::Vector, t: f64);
+    derive_method!(derivative_n, C0::Vector, n: usize, t: f64);
     derive_method!(
         parameter_range,
         (std::ops::Bound<f64>, std::ops::Bound<f64>),
@@ -75,13 +75,13 @@ where
 {
     type Point = S0::Point;
     type Vector = S0::Vector;
-    derive_method!(subs, S0::Point, u: f64, v: f64);
-    derive_method!(uder, S0::Vector, u: f64, v: f64);
-    derive_method!(vder, S0::Vector, u: f64, v: f64);
-    derive_method!(uuder, S0::Vector, u: f64, v: f64);
-    derive_method!(uvder, S0::Vector, u: f64, v: f64);
-    derive_method!(vvder, S0::Vector, u: f64, v: f64);
-    derive_method!(der_mn, S0::Vector, m: usize, n: usize, u: f64, v: f64);
+    derive_method!(evaluate, S0::Point, u: f64, v: f64);
+    derive_method!(derivative_u, S0::Vector, u: f64, v: f64);
+    derive_method!(derivative_v, S0::Vector, u: f64, v: f64);
+    derive_method!(derivative_uu, S0::Vector, u: f64, v: f64);
+    derive_method!(derivative_uv, S0::Vector, u: f64, v: f64);
+    derive_method!(derivative_vv, S0::Vector, u: f64, v: f64);
+    derive_method!(derivative_mn, S0::Vector, m: usize, n: usize, u: f64, v: f64);
 }
 
 impl<S0, S1> ParametricSurface3D for Alternative<S0, S1>
@@ -132,7 +132,7 @@ where
     );
 }
 
-impl<D: SPDimension, T, U> SearchParameter<D> for Alternative<T, U>
+impl<D: SearchParameterDimension, T, U> SearchParameter<D> for Alternative<T, U>
 where
     T: SearchParameter<D>,
     U: SearchParameter<D, Point = T::Point>,
@@ -147,7 +147,7 @@ where
     );
 }
 
-impl<D: SPDimension, T, U> SearchNearestParameter<D> for Alternative<T, U>
+impl<D: SearchParameterDimension, T, U> SearchNearestParameter<D> for Alternative<T, U>
 where
     T: SearchNearestParameter<D>,
     U: SearchNearestParameter<D, Point = T::Point>,

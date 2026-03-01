@@ -44,7 +44,7 @@ where
         + Cut
         + ParameterDivision1D<Point = Point3>
         + SearchNearestParameter<D1, Point = Point3>
-        + TryFrom<PCurve<Line<Point2>, S>>,
+        + TryFrom<ParameterCurve<Line<Point2>, S>>,
     S: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
 {
     fn split_closed_edges_and_faces(&mut self, tol: f64) {
@@ -64,7 +64,7 @@ where
         + Cut
         + ParameterDivision1D<Point = Point3>
         + SearchNearestParameter<D1, Point = Point3>
-        + TryFrom<PCurve<Line<Point2>, S>>,
+        + TryFrom<ParameterCurve<Line<Point2>, S>>,
     S: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
 {
     fn split_closed_edges_and_faces(&mut self, tol: f64) {
@@ -90,7 +90,7 @@ where
         + Cut
         + ParameterDivision1D<Point = Point3>
         + SearchNearestParameter<D1, Point = Point3>
-        + TryFrom<PCurve<Line<Point2>, S>>,
+        + TryFrom<ParameterCurve<Line<Point2>, S>>,
     S: ParametricSurface3D
         + SearchParameter<D2, Point = Point3>
         + SearchNearestParameter<D2, Point = Point3>,
@@ -117,7 +117,7 @@ where
         + Cut
         + ParameterDivision1D<Point = Point3>
         + SearchNearestParameter<D1, Point = Point3>
-        + TryFrom<PCurve<Line<Point2>, S>>,
+        + TryFrom<ParameterCurve<Line<Point2>, S>>,
     S: ParametricSurface3D
         + SearchParameter<D2, Point = Point3>
         + SearchNearestParameter<D2, Point = Point3>,
@@ -126,6 +126,32 @@ where
         let fs = RobustSplitClosedEdgesAndFaces::robust_split_closed_edges_and_faces;
         self.boundaries.iter_mut().for_each(|shell| fs(shell, tol))
     }
+}
+
+/// Convenience function: heal a compressed shell and extract it.
+///
+/// Applies [`RobustSplitClosedEdgesAndFaces`] before calling
+/// [`Shell::extract`](truck_topology::Shell::extract), which avoids
+/// `NotSimpleWire` errors from STEP files with repeated vertices.
+pub fn extract_healed<C, S>(
+    mut cshell: CompressedShell<Point3, C, S>,
+    tol: f64,
+) -> truck_topology::Result<truck_topology::Shell<Point3, C, S>>
+where
+    C: ParametricCurve3D
+        + BoundedCurve
+        + Cut
+        + ParameterDivision1D<Point = Point3>
+        + SearchNearestParameter<D1, Point = Point3>
+        + TryFrom<ParameterCurve<Line<Point2>, S>>
+        + Clone,
+    S: ParametricSurface3D
+        + SearchParameter<D2, Point = Point3>
+        + SearchNearestParameter<D2, Point = Point3>
+        + Clone,
+{
+    cshell.robust_split_closed_edges_and_faces(tol);
+    truck_topology::Shell::extract(cshell)
 }
 
 #[cfg(test)]

@@ -3,13 +3,13 @@ use truck_geometry::prelude::*;
 type PResult = std::result::Result<(), TestCaseError>;
 
 fn exec_compatible_with_bspcurve(ycoords: [f64; 7], mat: [f64; 9]) -> PResult {
-    let knot_vec = KnotVec::uniform_knot(3, 4);
+    let knot_vec = KnotVector::uniform_knot(3, 4);
     let control_points: Vec<Point3> = ycoords
         .into_iter()
         .enumerate()
         .map(|(i, y)| Point3::new(i as f64, y, 0.0))
         .collect();
-    let mut curve = BSplineCurve::new(knot_vec, control_points);
+    let mut curve = BsplineCurve::new(knot_vec, control_points);
     let mut processor = Processor::new(curve.clone());
     let mat = *<&Matrix3>::from(&mat);
     prop_assume!(!mat.determinant().so_small(), "omitted: {:?}", mat);
@@ -53,7 +53,7 @@ fn exec_compatible_with_bspsurface(
     mat: [f64; 9],
     (u, v): (f64, f64),
 ) -> PResult {
-    let knot_vec = KnotVec::uniform_knot(3, 4);
+    let knot_vec = KnotVector::uniform_knot(3, 4);
     let knot_vecs = (knot_vec.clone(), knot_vec);
     let control_points: Vec<Vec<Point3>> = ycoords
         .into_iter()
@@ -66,7 +66,7 @@ fn exec_compatible_with_bspsurface(
         })
         .collect();
 
-    let mut surface = BSplineSurface::new(knot_vecs, control_points);
+    let mut surface = BsplineSurface::new(knot_vecs, control_points);
     let mut processor = Processor::new(surface.clone());
     let mat = *<&Matrix3>::from(&mat);
     prop_assume!(!mat.determinant().so_small(), "omitted: {:?}", mat);

@@ -40,11 +40,17 @@ impl PolylineCurve<Point2> {
     /// assert!(!hexagon.include(p1));
     /// ```
     pub fn include(&self, c: Point2) -> bool {
+        if self.iter().any(|p| (*p - c).so_small()) {
+            return true;
+        }
         let t = 2.0 * std::f64::consts::PI * HashGen::hash1(c);
         let r = Vector2::new(f64::cos(t), f64::sin(t));
         self.iter()
             .circular_tuple_windows()
             .try_fold(0_i32, move |counter, (p0, p1)| {
+                if (*p0 - c).so_small() {
+                    return None;
+                }
                 let a = p0 - c;
                 let b = p1 - c;
                 let s0 = r.x * a.y - r.y * a.x; // v times a
@@ -62,7 +68,7 @@ impl PolylineCurve<Point2> {
                 }
             })
             .map(|counter| counter > 0)
-            .unwrap_or(false)
+            .unwrap_or(true)
     }
 }
 
@@ -123,6 +129,9 @@ pub fn include<'a>(
         .into_iter()
         .flat_map(|boundary| boundary.iter().circular_tuple_windows())
         .try_fold(0_i32, move |counter, (p0, p1)| {
+            if (*p0 - c).so_small() {
+                return None;
+            }
             let a = p0 - c;
             let b = p1 - c;
             let s0 = r.x * a.y - r.y * a.x; // v times a
@@ -140,7 +149,8 @@ pub fn include<'a>(
             }
         })
         .map(|counter| counter > 0)
-        .unwrap_or(false)
+        // If the point is on the boundary, treat it as included (closed-set semantics).
+        .unwrap_or(true)
 }
 
 impl<P> AsRef<Vec<P>> for PolylineCurve<P> {
@@ -207,15 +217,15 @@ impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
     type Point = P;
     type Vector = P::Diff;
     #[inline(always)]
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector {
         match n {
-            0 => self.subs(t).to_vec(),
-            1 => self.der(t),
+            0 => self.evaluate(t).to_vec(),
+            1 => self.derivative(t),
             _ => Self::Vector::zero(),
         }
     }
     #[inline(always)]
-    fn subs(&self, t: f64) -> P {
+    fn evaluate(&self, t: f64) -> P {
         if self.is_empty() {
             P::origin()
         } else if t <= 0.0 {
@@ -229,7 +239,7 @@ impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
         }
     }
     #[inline(always)]
-    fn der(&self, t: f64) -> P::Diff {
+    fn derivative(&self, t: f64) -> P::Diff {
         if t < 0.0 || (self.len() as f64) < t + 1.0 {
             P::Diff::zero()
         } else {
@@ -242,7 +252,7 @@ impl<P: ControlPoint<f64>> ParametricCurve for PolylineCurve<P> {
         }
     }
     #[inline(always)]
-    fn der2(&self, _: f64) -> P::Diff { P::Diff::zero() }
+    fn derivative_2(&self, _: f64) -> P::Diff { P::Diff::zero() }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {
         (
@@ -294,7 +304,12 @@ where
     P::Diff: InnerSpace<Scalar = f64> + Tolerance,
 {
     type Point = P;
-    fn search_parameter<H: Into<SPHint1D>>(&self, point: P, _: H, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
+        &self,
+        point: P,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         for (i, p) in self.0.windows(2).enumerate() {
             let a = point - p[0];
             let b = p[1] - p[0];
@@ -314,7 +329,12 @@ where
     P::Diff: InnerSpace<Scalar = f64>,
 {
     type Point = P;
-    fn search_nearest_parameter<H: Into<SPHint1D>>(&self, point: P, _: H, _: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
+        &self,
+        point: P,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         let (mut t0, mut dist2) = (0.0, f64::INFINITY);
         for (i, p) in self.0.windows(2).enumerate() {
             let a = point - p[0];

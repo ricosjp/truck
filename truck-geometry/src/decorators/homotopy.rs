@@ -1,7 +1,8 @@
 use super::*;
-use algo::surface::{SsnpVector, SspVector};
+use algo::surface::{SearchNearestParameterVector, SearchParameterVector};
 use control_point::ControlPoint;
 use std::ops::RangeBounds;
+use truck_geotrait::ParametricCurve as PcurveTrait;
 
 impl<C0, C1> HomotopySurface<C0, C1> {
     /// constructor
@@ -23,15 +24,15 @@ impl<C0, C1> HomotopySurface<C0, C1> {
 
 impl<C0, C1> ParametricSurface for HomotopySurface<C0, C1>
 where
-    C0: ParametricCurve,
-    C1: ParametricCurve<Point = C0::Point, Vector = C0::Vector>,
+    C0: PcurveTrait,
+    C1: PcurveTrait<Point = C0::Point, Vector = C0::Vector>,
     C0::Point: EuclideanSpace<Scalar = f64, Diff = C0::Vector>,
     C0::Vector: VectorSpace<Scalar = f64>,
 {
     type Point = C0::Point;
     type Vector = C0::Vector;
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         match (m, n) {
             (_, 0) => {
                 let v0 = self.curve0.der_n(m, u);
@@ -47,29 +48,29 @@ where
         }
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point {
-        let p0 = self.curve0.subs(u);
-        let p1 = self.curve1.subs(u);
+    fn evaluate(&self, u: f64, v: f64) -> Self::Point {
+        let p0 = self.curve0.evaluate(u);
+        let p1 = self.curve1.evaluate(u);
         p0 + (p1 - p0) * v
     }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector {
+    fn derivative_u(&self, u: f64, v: f64) -> Self::Vector {
         let v0 = self.curve0.der(u);
         let v1 = self.curve1.der(u);
         v0 + (v1 - v0) * v
     }
     #[inline(always)]
-    fn vder(&self, u: f64, _: f64) -> Self::Vector { self.curve1.subs(u) - self.curve0.subs(u) }
+    fn derivative_v(&self, u: f64, _: f64) -> Self::Vector { self.curve1.evaluate(u) - self.curve0.evaluate(u) }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector {
+    fn derivative_uu(&self, u: f64, v: f64) -> Self::Vector {
         let v0 = self.curve0.der2(u);
         let v1 = self.curve1.der2(u);
         v0 + (v1 - v0) * v
     }
     #[inline(always)]
-    fn uvder(&self, u: f64, _: f64) -> Self::Vector { self.curve1.der(u) - self.curve0.der(u) }
+    fn derivative_uv(&self, u: f64, _: f64) -> Self::Vector { self.curve1.der(u) - self.curve0.der(u) }
     #[inline(always)]
-    fn vvder(&self, _: f64, _: f64) -> Self::Vector { Self::Vector::zero() }
+    fn derivative_vv(&self, _: f64, _: f64) -> Self::Vector { Self::Vector::zero() }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         let range0 = self.curve0.parameter_range();
@@ -118,21 +119,21 @@ where
     C0: BoundedCurve,
     C1: BoundedCurve<Point = C0::Point, Vector = C0::Vector>,
     C0::Point: EuclideanSpace<Scalar = f64, Diff = C0::Vector> + MetricSpace<Metric = f64>,
-    C0::Vector: SsnpVector<Point = C0::Point>,
+    C0::Vector: SearchNearestParameterVector<Point = C0::Point>,
 {
     type Point = C0::Point;
-    fn search_nearest_parameter<H: Into<SPHint2D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Self::Point,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         let hint = match hint.into() {
-            SPHint2D::Parameter(x, y) => (x, y),
-            SPHint2D::Range(range0, range1) => {
+            SearchParameterHint2D::Parameter(x, y) => (x, y),
+            SearchParameterHint2D::Range(range0, range1) => {
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
-            SPHint2D::None => {
+            SearchParameterHint2D::None => {
                 algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
@@ -146,21 +147,21 @@ where
     C1: BoundedCurve<Point = C0::Point, Vector = C0::Vector>,
     C0::Point:
         EuclideanSpace<Scalar = f64, Diff = C0::Vector> + MetricSpace<Metric = f64> + Tolerance,
-    C0::Vector: SspVector<Point = C0::Point>,
+    C0::Vector: SearchParameterVector<Point = C0::Point>,
 {
     type Point = C0::Point;
-    fn search_parameter<H: Into<SPHint2D>>(
+    fn search_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Self::Point,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         let hint = match hint.into() {
-            SPHint2D::Parameter(x, y) => (x, y),
-            SPHint2D::Range(range0, range1) => {
+            SearchParameterHint2D::Parameter(x, y) => (x, y),
+            SearchParameterHint2D::Range(range0, range1) => {
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
-            SPHint2D::None => {
+            SearchParameterHint2D::None => {
                 algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
@@ -168,10 +169,10 @@ where
     }
 }
 
-impl<P> From<HomotopySurface<BSplineCurve<P>, BSplineCurve<P>>> for BSplineSurface<P>
+impl<P> From<HomotopySurface<BsplineCurve<P>, BsplineCurve<P>>> for BsplineSurface<P>
 where P: ControlPoint<f64> + Tolerance
 {
-    fn from(value: HomotopySurface<BSplineCurve<P>, BSplineCurve<P>>) -> Self {
+    fn from(value: HomotopySurface<BsplineCurve<P>, BsplineCurve<P>>) -> Self {
         let HomotopySurface {
             curve0: mut bspcurve0,
             curve1: mut bspcurve1,
@@ -179,12 +180,12 @@ where P: ControlPoint<f64> + Tolerance
         bspcurve0.syncro_degree(&mut bspcurve1);
         bspcurve0.syncro_knots(&mut bspcurve1);
 
-        let uknot_vec = bspcurve0.knot_vec().clone();
-        let vknot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
+        let knot_vector_u = bspcurve0.knot_vec().clone();
+        let knot_vector_v = KnotVector::from(vec![0.0, 0.0, 1.0, 1.0]);
         let control_points: Vec<Vec<_>> = (0..bspcurve0.control_points().len())
             .map(|i| vec![*bspcurve0.control_point(i), *bspcurve1.control_point(i)])
             .collect();
-        BSplineSurface::new_unchecked((uknot_vec, vknot_vec), control_points)
+        BsplineSurface::new_unchecked((knot_vector_u, knot_vector_v), control_points)
     }
 }
 

@@ -5,7 +5,7 @@ use truck_topology::*;
 #[derive(Clone, Debug)]
 pub struct FacesClassification<P, C, S> {
     shell: Shell<P, C, S>,
-    status: HashMap<FaceID<S>, ShapesOpStatus>,
+    status: HashMap<FaceId<S>, ShapesOpStatus>,
 }
 
 impl<P, C, S> Default for FacesClassification<P, C, S> {

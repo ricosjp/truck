@@ -20,7 +20,7 @@ impl ParametricSurface for Sphere {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         let ((su, cu), (sv, cv)) = (u.sin_cos(), v.sin_cos());
         let center = match (m, n) {
             (0, 0) => self.center().to_vec(),
@@ -42,9 +42,9 @@ impl ParametricSurface for Sphere {
         center + self.radius * u_part.mul_element_wise(v_part)
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point3 { self.center() + self.radius * self.normal(u, v) }
+    fn evaluate(&self, u: f64, v: f64) -> Point3 { self.center() + self.radius * self.normal(u, v) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_u(&self, u: f64, v: f64) -> Vector3 {
         self.radius
             * Vector3::new(
                 f64::cos(u) * f64::cos(v),
@@ -53,17 +53,17 @@ impl ParametricSurface for Sphere {
             )
     }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_v(&self, u: f64, v: f64) -> Vector3 {
         self.radius * f64::sin(u) * Vector3::new(-f64::sin(v), f64::cos(v), 0.0)
     }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector3 { -self.radius * self.normal(u, v) }
+    fn derivative_uu(&self, u: f64, v: f64) -> Vector3 { -self.radius * self.normal(u, v) }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_uv(&self, u: f64, v: f64) -> Vector3 {
         self.radius * f64::cos(u) * Vector3::new(-f64::sin(v), f64::cos(v), 0.0)
     }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_vv(&self, u: f64, v: f64) -> Vector3 {
         -self.radius * f64::sin(u) * Vector3::new(f64::cos(v), f64::sin(v), 0.0)
     }
     #[inline(always)]
@@ -102,9 +102,9 @@ impl ParametricSurface3D for Sphere {
 
 impl BoundedSurface for Sphere {}
 
-impl IncludeCurve<BSplineCurve<Point3>> for Sphere {
+impl IncludeCurve<BsplineCurve<Point3>> for Sphere {
     #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
+    fn include(&self, curve: &BsplineCurve<Point3>) -> bool {
         curve.is_const() && self.include(curve.front())
     }
 }
@@ -153,7 +153,7 @@ impl ParameterDivision2D for Sphere {
 impl SearchParameter<D2> for Sphere {
     type Point = Point3;
     #[inline(always)]
-    fn search_parameter<H: Into<SPHint2D>>(
+    fn search_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         hint: H,
@@ -167,7 +167,7 @@ impl SearchParameter<D2> for Sphere {
             let cosv = f64::clamp(radius[0] / sinu, -1.0, 1.0);
             let v = if sinu.so_small() {
                 match hint.into() {
-                    SPHint2D::Parameter(_, hint) => hint,
+                    SearchParameterHint2D::Parameter(_, hint) => hint,
                     _ => 0.0,
                 }
             } else if radius[1] > 0.0 {
@@ -185,7 +185,7 @@ impl SearchParameter<D2> for Sphere {
 impl SearchNearestParameter<D2> for Sphere {
     type Point = Point3;
     #[inline(always)]
-    fn search_nearest_parameter<H: Into<SPHint2D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         _: H,

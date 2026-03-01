@@ -98,19 +98,19 @@ impl<P: ControlPoint<f64>> ParametricCurve for Line<P> {
     type Point = P;
     type Vector = P::Diff;
     #[inline]
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector {
         match n {
-            0 => self.subs(t).to_vec(),
+            0 => self.evaluate(t).to_vec(),
             1 => self.1 - self.0,
             _ => Self::Vector::zero(),
         }
     }
     #[inline]
-    fn subs(&self, t: f64) -> Self::Point { self.0 + (self.1 - self.0) * t }
+    fn evaluate(&self, t: f64) -> Self::Point { self.0 + (self.1 - self.0) * t }
     #[inline]
-    fn der(&self, _: f64) -> Self::Vector { self.1 - self.0 }
+    fn derivative(&self, _: f64) -> Self::Vector { self.1 - self.0 }
     #[inline]
-    fn der2(&self, _: f64) -> Self::Vector { Self::Vector::zero() }
+    fn derivative_2(&self, _: f64) -> Self::Vector { Self::Vector::zero() }
     /// Return `0.0..=1.0` i.e. we regard it as a segment
     #[inline]
     fn parameter_range(&self) -> ParameterRange { (Bound::Included(0.0), Bound::Included(1.0)) }
@@ -153,7 +153,12 @@ where
 {
     type Point = P;
     #[inline]
-    fn search_nearest_parameter<H: Into<SPHint1D>>(&self, pt: P, _: H, _: usize) -> Option<f64> {
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
+        &self,
+        pt: P,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         let b = self.1 - self.0;
         Some((pt - self.0).dot(b) / b.dot(b))
     }
@@ -166,7 +171,12 @@ where
 {
     type Point = P;
     #[inline]
-    fn search_parameter<H: Into<SPHint1D>>(&self, pt: P, _: H, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
+        &self,
+        pt: P,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         let b = self.1 - self.0;
         let t = (pt - self.0).dot(b) / b.dot(b);
         match self.subs(t).near(&pt) {
@@ -188,14 +198,14 @@ impl<P: EuclideanSpace, M: Transform<P>> Transformed<M> for Line<P> {
     }
 }
 
-impl<P> From<Line<P>> for BSplineCurve<P> {
+impl<P> From<Line<P>> for BsplineCurve<P> {
     fn from(Line(p, q): Line<P>) -> Self {
-        BSplineCurve::new_unchecked(KnotVec::bezier_knot(1), vec![p, q])
+        BsplineCurve::new_unchecked(KnotVector::bezier_knot(1), vec![p, q])
     }
 }
 
-impl<P: Copy> ToSameGeometry<BSplineCurve<P>> for Line<P> {
-    fn to_same_geometry(&self) -> BSplineCurve<P> { BSplineCurve::from(*self) }
+impl<P: Copy> ToSameGeometry<BsplineCurve<P>> for Line<P> {
+    fn to_same_geometry(&self) -> BsplineCurve<P> { BsplineCurve::from(*self) }
 }
 
 #[test]

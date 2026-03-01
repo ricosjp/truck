@@ -1,5 +1,6 @@
 use super::*;
-use algo::surface::SsnpVector;
+use algo::surface::SearchNearestParameterVector;
+use truck_geotrait::ParametricCurve as PcurveTrait;
 
 impl<E, T: One> Processor<E, T> {
     /// Creates new processor
@@ -99,7 +100,7 @@ impl<C: BoundedCurve, T> Processor<C, T> {
     }
 }
 
-impl<C, T> ParametricCurve for Processor<C, T>
+impl<C, T> PcurveTrait for Processor<C, T>
 where
     C: BoundedCurve,
     C::Point: EuclideanSpace<Diff = C::Vector>,
@@ -109,28 +110,28 @@ where
     type Point = C::Point;
     type Vector = C::Vector;
     #[inline(always)]
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector {
         if n == 0 {
-            self.subs(t).to_vec()
+            self.evaluate(t).to_vec()
         } else {
             let t = self.get_curve_parameter(t);
-            self.transform.transform_vector(self.entity.der_n(n, t))
+            self.transform.transform_vector(self.entity.derivative_n(n, t))
         }
     }
     #[inline(always)]
-    fn subs(&self, t: f64) -> C::Point {
+    fn evaluate(&self, t: f64) -> C::Point {
         let t = self.get_curve_parameter(t);
-        self.transform.transform_point(self.entity.subs(t))
+        self.transform.transform_point(self.entity.evaluate(t))
     }
     #[inline(always)]
-    fn der(&self, t: f64) -> Self::Vector {
+    fn derivative(&self, t: f64) -> Self::Vector {
         let t = self.get_curve_parameter(t);
-        self.transform.transform_vector(self.entity.der(t)) * self.sign()
+        self.transform.transform_vector(self.entity.derivative(t)) * self.sign()
     }
     #[inline(always)]
-    fn der2(&self, t: f64) -> Self::Vector {
+    fn derivative_2(&self, t: f64) -> Self::Vector {
         let t = self.get_curve_parameter(t);
-        self.transform.transform_vector(self.entity.der2(t))
+        self.transform.transform_vector(self.entity.derivative_2(t))
     }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { self.entity.parameter_range() }
@@ -177,60 +178,60 @@ where
     type Point = S::Point;
     type Vector = S::Vector;
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         if (m, n) == (0, 0) {
-            self.subs(u, v).to_vec()
+            self.evaluate(u, v).to_vec()
         } else {
             match self.orientation {
                 true => self
                     .transform
-                    .transform_vector(self.entity.der_mn(m, n, u, v)),
+                    .transform_vector(self.entity.derivative_mn(m, n, u, v)),
                 false => self
                     .transform
-                    .transform_vector(self.entity.der_mn(n, m, v, u)),
+                    .transform_vector(self.entity.derivative_mn(n, m, v, u)),
             }
         }
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point {
+    fn evaluate(&self, u: f64, v: f64) -> Self::Point {
         match self.orientation {
-            true => self.transform.transform_point(self.entity.subs(u, v)),
-            false => self.transform.transform_point(self.entity.subs(v, u)),
+            true => self.transform.transform_point(self.entity.evaluate(u, v)),
+            false => self.transform.transform_point(self.entity.evaluate(v, u)),
         }
     }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector {
+    fn derivative_u(&self, u: f64, v: f64) -> Self::Vector {
         match self.orientation {
-            true => self.transform.transform_vector(self.entity.uder(u, v)),
-            false => self.transform.transform_vector(self.entity.vder(v, u)),
+            true => self.transform.transform_vector(self.entity.derivative_u(u, v)),
+            false => self.transform.transform_vector(self.entity.derivative_v(v, u)),
         }
     }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector {
+    fn derivative_v(&self, u: f64, v: f64) -> Self::Vector {
         match self.orientation {
-            true => self.transform.transform_vector(self.entity.vder(u, v)),
-            false => self.transform.transform_vector(self.entity.uder(v, u)),
+            true => self.transform.transform_vector(self.entity.derivative_v(u, v)),
+            false => self.transform.transform_vector(self.entity.derivative_u(v, u)),
         }
     }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector {
+    fn derivative_uu(&self, u: f64, v: f64) -> Self::Vector {
         match self.orientation {
-            true => self.transform.transform_vector(self.entity.uuder(u, v)),
-            false => self.transform.transform_vector(self.entity.vvder(v, u)),
+            true => self.transform.transform_vector(self.entity.derivative_uu(u, v)),
+            false => self.transform.transform_vector(self.entity.derivative_vv(v, u)),
         }
     }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector {
+    fn derivative_uv(&self, u: f64, v: f64) -> Self::Vector {
         match self.orientation {
-            true => self.transform.transform_vector(self.entity.uvder(u, v)),
-            false => self.transform.transform_vector(self.entity.uvder(v, u)),
+            true => self.transform.transform_vector(self.entity.derivative_uv(u, v)),
+            false => self.transform.transform_vector(self.entity.derivative_uv(v, u)),
         }
     }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector {
+    fn derivative_vv(&self, u: f64, v: f64) -> Self::Vector {
         match self.orientation {
-            true => self.transform.transform_vector(self.entity.vvder(u, v)),
-            false => self.transform.transform_vector(self.entity.uuder(v, u)),
+            true => self.transform.transform_vector(self.entity.derivative_vv(u, v)),
+            false => self.transform.transform_vector(self.entity.derivative_uu(v, u)),
         }
     }
     #[inline(always)]
@@ -313,7 +314,7 @@ where
 
 impl<E, T, C> IncludeCurve<C> for Processor<E, T>
 where
-    C: ParametricCurve + Transformed<T> + Clone,
+    C: PcurveTrait + Transformed<T> + Clone,
     C::Point: EuclideanSpace,
     E: IncludeCurve<C>,
     T: Transform<C::Point>,
@@ -453,7 +454,7 @@ where
     T: Transform<<E as SearchParameter<D1>>::Point>,
 {
     type Point = <E as SearchParameter<D1>>::Point;
-    fn search_parameter<H: Into<SPHint1D>>(
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: <E as SearchParameter<D1>>::Point,
         hint: H,
@@ -474,7 +475,7 @@ where
     T: Transform<E::Point>,
 {
     type Point = E::Point;
-    fn search_parameter<H: Into<SPHint2D>>(
+    fn search_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: E::Point,
         hint: H,
@@ -499,7 +500,7 @@ where
     T: Transform<P> + Clone,
 {
     type Point = P;
-    fn search_nearest_parameter<H: Into<SPHint1D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: Self::Point,
         hint: H,
@@ -518,11 +519,11 @@ impl<P, E, T> SearchNearestParameter<D2> for Processor<E, T>
 where
     E: ParametricSurface<Point = P> + SearchNearestParameter<D2, Point = P>,
     P: EuclideanSpace<Scalar = f64, Diff = E::Vector> + MetricSpace<Metric = f64> + Tolerance,
-    E::Vector: SsnpVector<Point = P>,
+    E::Vector: SearchNearestParameterVector<Point = P>,
     T: Transform<P> + SquareMatrix<Scalar = f64> + Clone,
 {
     type Point = P;
-    fn search_nearest_parameter<H: Into<SPHint2D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Self::Point,
         hint: H,

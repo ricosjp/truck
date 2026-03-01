@@ -15,7 +15,7 @@ type Result<T> = std::result::Result<T, FilletError>;
 pub fn fillet(
     face0: &Face,
     face1: &Face,
-    filleted_edge_id: EdgeID,
+    filleted_edge_id: EdgeId,
     options: &FilletOptions,
 ) -> Result<(Face, Face, Face)> {
     let is_filleted_edge = move |edge: &Edge| edge.id() == filleted_edge_id;
@@ -105,7 +105,7 @@ pub fn fillet(
 pub fn fillet_with_side(
     face0: &Face,
     face1: &Face,
-    filleted_edge_id: EdgeID,
+    filleted_edge_id: EdgeId,
     side0: Option<&Face>,
     side1: Option<&Face>,
     options: &FilletOptions,
@@ -195,18 +195,36 @@ pub fn fillet_along_wire(shell: &mut Shell, wire: &Wire, options: &FilletOptions
             division,
             &options.profile,
         ),
-        RadiusSpec::PerEdge(radii) => match radii.first() {
-            Some(&r) => fillet_surfaces_along_wire(
+        RadiusSpec::PerEdge(radii) => {
+            if radii.len() != wire.len() {
+                return Err(FilletError::PerEdgeRadiusMismatch {
+                    given: radii.len(),
+                    expected: wire.len(),
+                });
+            }
+            let (starts, spans) = wire_edge_starts_and_spans(wire)
+                .ok_or(FilletError::FilletSurfaceComputationFailed)?;
+            let ends: Vec<f64> = starts
+                .iter()
+                .zip(spans.iter())
+                .map(|(start, span)| start + span)
+                .collect();
+            fillet_surfaces_along_wire(
                 shell,
                 wire,
                 shared_face_index,
                 &adjacent_faces,
-                move |_| r,
+                |t| {
+                    let global_t = t.clamp(0.0, 1.0);
+                    let index = ends
+                        .partition_point(|&end| end < global_t)
+                        .min(radii.len() - 1);
+                    radii[index]
+                },
                 division,
                 &options.profile,
-            ),
-            None => None,
-        },
+            )
+        }
     }
     .ok_or(FilletError::FilletSurfaceComputationFailed)?;
 
@@ -265,7 +283,7 @@ fn fillet_along_wire_open(
 ) -> Result<()> {
     type CffTuple<'a> = (&'a [NurbsSurface<Vector4>], &'a FaceBoundaryEdgeIndex);
     let create_fillet_face = |(surfaces, face_index): CffTuple<'_>| {
-        let fillet_surface = concat_fillet_surface(surfaces);
+        let fillet_surface = concat_fillet_surface(surfaces)?;
         let edge0 = create_free_edge(surfaces[1].column_curve(0).into());
 
         let edge1 = cut_face_by_last_bezier(shell, *face_index, &fillet_surface)?;
@@ -274,7 +292,7 @@ fn fillet_along_wire_open(
             let (v0, v1) = (edge0.front(), edge1.back());
             let (u, v) = fillet_surface.search_parameter(v1.point(), (1.0, 1.0), 100)?;
             let param_line = Line((0.0, 1.0).into(), (u, v).into());
-            let pcurve = ParamCurveLinear::new(param_line, fillet_surface.clone());
+            let pcurve = ParameterCurveLinear::new(param_line, fillet_surface.clone());
             Edge::new(v0, v1, pcurve.into())
         };
 
@@ -282,7 +300,7 @@ fn fillet_along_wire_open(
             let (v0, v1) = (edge0.back(), edge1.front());
             let (u, v) = fillet_surface.search_parameter(v1.point(), (1.0, 2.0), 100)?;
             let param_line = Line((0.0, 2.0).into(), (u, v).into());
-            let pcurve = ParamCurveLinear::new(param_line, fillet_surface.clone());
+            let pcurve = ParameterCurveLinear::new(param_line, fillet_surface.clone());
             Edge::new(v0, v1, pcurve.into())
         };
 
@@ -300,7 +318,10 @@ fn fillet_along_wire_open(
         })?;
 
     let first_fillet = {
-        let fillet_surface = concat_fillet_surface(&fillet_surfaces[0..=1]);
+        let fillet_surface =
+            concat_fillet_surface(&fillet_surfaces[0..=1]).ok_or(FilletError::GeometryFailed {
+                context: "concat first fillet surface",
+            })?;
 
         let (front_edge, _) =
             find_adjacent_edge(&shell[shared_face_index.face_index], wire[0].id()).ok_or(
@@ -338,7 +359,7 @@ fn fillet_along_wire_open(
                     context: "search parameter for first fillet edge2",
                 })?;
             let param_line = Line((0.0, t0).into(), (u, v).into());
-            let pcurve = ParamCurveLinear::new(param_line, fillet_surface.clone());
+            let pcurve = ParameterCurveLinear::new(param_line, fillet_surface.clone());
             Edge::new(v0, v1, pcurve.into())
         };
 
@@ -350,7 +371,7 @@ fn fillet_along_wire_open(
                     context: "search parameter for first fillet edge3",
                 })?;
             let param_line = Line((0.0, 1.0).into(), (u, v).into());
-            let pcurve = ParamCurveLinear::new(param_line, fillet_surface.clone());
+            let pcurve = ParameterCurveLinear::new(param_line, fillet_surface.clone());
             Edge::new(v0, v1, pcurve.into())
         };
 
@@ -383,7 +404,11 @@ fn fillet_along_wire_open(
             Edge::new(&v0, &v1, bezier.into())
         };
 
-        let fillet_surface = concat_fillet_surface(&fillet_surfaces[len - 2..len]);
+        let fillet_surface = concat_fillet_surface(&fillet_surfaces[len - 2..len]).ok_or(
+            FilletError::GeometryFailed {
+                context: "concat last fillet surface",
+            },
+        )?;
 
         let edge1 = cut_face_by_last_bezier(shell, adjacent_faces[len - 1], &fillet_surface)
             .ok_or(FilletError::GeometryFailed {
@@ -398,7 +423,7 @@ fn fillet_along_wire_open(
                     context: "search parameter for last fillet edge2",
                 })?;
             let param_line = Line((0.0, 1.0).into(), (u, v).into());
-            let pcurve = ParamCurveLinear::new(param_line, fillet_surface.clone());
+            let pcurve = ParameterCurveLinear::new(param_line, fillet_surface.clone());
             Edge::new(v0, v1, pcurve.into())
         };
 
@@ -411,7 +436,7 @@ fn fillet_along_wire_open(
                     context: "search parameter for last fillet edge3",
                 })?;
             let param_line = Line((0.0, t0 + 1.0).into(), (u, v).into());
-            let pcurve = ParamCurveLinear::new(param_line, fillet_surface.clone());
+            let pcurve = ParameterCurveLinear::new(param_line, fillet_surface.clone());
             Edge::new(v0, v1, pcurve.into())
         };
 
@@ -449,16 +474,22 @@ fn fillet_along_wire_open(
         )?;
 
         let mut boundaries = shared_face.boundaries();
+        let front_vertex = new_wire.front_vertex().ok_or(FilletError::GeometryFailed {
+            context: "front vertex of reconstructed wire",
+        })?;
+        let back_vertex = new_wire.back_vertex().ok_or(FilletError::GeometryFailed {
+            context: "back vertex of reconstructed wire",
+        })?;
 
         if front_edge == back_edge {
             let pre_new_edge = front_edge
-                .not_strictly_cut(new_wire.front_vertex().unwrap())
+                .not_strictly_cut(front_vertex)
                 .ok_or(FilletError::GeometryFailed {
                     context: "cut front edge (same as back)",
                 })?
                 .0;
             let new_edge = pre_new_edge
-                .not_strictly_cut(new_wire.back_vertex().unwrap())
+                .not_strictly_cut(back_vertex)
                 .ok_or(FilletError::GeometryFailed {
                     context: "cut back edge (same as front)",
                 })?
@@ -466,13 +497,13 @@ fn fillet_along_wire_open(
             new_wire.push_front(new_edge);
         } else {
             let new_front_edge = front_edge
-                .not_strictly_cut(new_wire.front_vertex().unwrap())
+                .not_strictly_cut(front_vertex)
                 .ok_or(FilletError::GeometryFailed {
                     context: "cut front edge",
                 })?
                 .0;
             let new_back_edge = back_edge
-                .not_strictly_cut(new_wire.back_vertex().unwrap())
+                .not_strictly_cut(back_vertex)
                 .ok_or(FilletError::GeometryFailed {
                     context: "cut back edge",
                 })?
@@ -519,7 +550,10 @@ fn fillet_along_wire_closed(
             fillet_surfaces[i].clone(),
             fillet_surfaces[next].clone(),
         ];
-        let fillet_surface = concat_fillet_surface(&surfaces);
+        let fillet_surface =
+            concat_fillet_surface(&surfaces).ok_or(FilletError::GeometryFailed {
+                context: "concat closed fillet surface",
+            })?;
         let edge0 = create_free_edge(surfaces[1].column_curve(0).into());
 
         let edge1 = cut_face_by_last_bezier(shell, adjacent_faces[i], &fillet_surface).ok_or(
@@ -536,7 +570,7 @@ fn fillet_along_wire_closed(
                     context: "search parameter for closed fillet edge2",
                 })?;
             let param_line = Line((0.0, 1.0).into(), (u, v).into());
-            let pcurve = ParamCurveLinear::new(param_line, fillet_surface.clone());
+            let pcurve = ParameterCurveLinear::new(param_line, fillet_surface.clone());
             Edge::new(v0, v1, pcurve.into())
         };
 
@@ -548,7 +582,7 @@ fn fillet_along_wire_closed(
                     context: "search parameter for closed fillet edge3",
                 })?;
             let param_line = Line((0.0, 2.0).into(), (u, v).into());
-            let pcurve = ParamCurveLinear::new(param_line, fillet_surface.clone());
+            let pcurve = ParameterCurveLinear::new(param_line, fillet_surface.clone());
             Edge::new(v0, v1, pcurve.into())
         };
 

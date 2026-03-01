@@ -119,14 +119,14 @@ where Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>: ToSameGeometry<C> {
 /// # }
 /// ```
 pub fn bezier<C>(vertex0: &Vertex, vertex1: &Vertex, mut inter_points: Vec<Point3>) -> Edge<C>
-where BSplineCurve<Point3>: ToSameGeometry<C> {
+where BsplineCurve<Point3>: ToSameGeometry<C> {
     let pt0 = vertex0.point();
     let pt1 = vertex1.point();
-    let mut ctrl_pts = vec![pt0];
-    ctrl_pts.append(&mut inter_points);
-    ctrl_pts.push(pt1);
-    let knot_vec = KnotVec::bezier_knot(ctrl_pts.len() - 1);
-    let curve = BSplineCurve::new(knot_vec, ctrl_pts);
+    let mut control_points = vec![pt0];
+    control_points.append(&mut inter_points);
+    control_points.push(pt1);
+    let knot_vec = KnotVector::bezier_knot(control_points.len() - 1);
+    let curve = BsplineCurve::new(knot_vec, control_points);
     Edge::new(vertex0, vertex1, curve.to_same_geometry())
 }
 
@@ -289,7 +289,7 @@ where
 ///
 /// // make a disk by attaching a plane into circle
 /// let vertex: Vertex = builder::vertex(Point3::new(1.0, 0.0, 0.0));
-/// let circle: Wire = builder::rsweep(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0), 2);
+/// let circle: Wire = builder::revolve(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0), 2);
 /// let disk: Face = builder::try_attach_plane(vec![circle]).unwrap();
 /// # let surface = disk.oriented_surface();
 /// # let normal = surface.normal(0.5, 0.5);
@@ -401,9 +401,9 @@ pub fn scaled<T: Mapped<Matrix4>>(elem: &T, origin: Point3, scalars: Vector3) ->
 /// ```
 /// use truck_modeling::*;
 /// let vertex = builder::vertex(Point3::new(0.0, 0.0, 0.0));
-/// let line = builder::tsweep(&vertex, Vector3::unit_x());
-/// let square = builder::tsweep(&line, Vector3::unit_y());
-/// let cube: Solid = builder::tsweep(&square, Vector3::unit_z());
+/// let line = builder::extrude(&vertex, Vector3::unit_x());
+/// let square = builder::extrude(&line, Vector3::unit_y());
+/// let cube: Solid = builder::extrude(&square, Vector3::unit_z());
 /// #
 /// # let b_shell = &cube.boundaries()[0];
 /// # assert_eq!(b_shell.len(), 6); // This solid is a cube!
@@ -442,7 +442,7 @@ pub fn scaled<T: Mapped<Matrix4>>(elem: &T, origin: Point3, scalars: Vector3) ->
 /// Line<Point3>: ToSameGeometry<C>,
 /// ExtrudedCurve<C, Vector3>: ToSameGeometry<S>
 /// ```
-pub fn tsweep<T, Swept>(elem: &T, vector: Vector3) -> Swept
+pub fn extrude<T, Swept>(elem: &T, vector: Vector3) -> Swept
 where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
     let trsl = Matrix4::from_translation(vector);
     elem.sweep(trsl, LineConnector, ExtrudeConnector { vector })
@@ -464,8 +464,8 @@ where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
 /// const PI: Rad<f64> = Rad(std::f64::consts::PI);
 ///
 /// let v = builder::vertex(Point3::new(3.0, 0.0, 0.0));
-/// let circle = builder::rsweep(&v, Point3::new(2.0, 0.0, 0.0), Vector3::unit_z(), PI * 2.0, 2);
-/// let torus = builder::rsweep(&circle, Point3::origin(), Vector3::unit_y(), PI * 2.0, 2);
+/// let circle = builder::revolve(&v, Point3::new(2.0, 0.0, 0.0), Vector3::unit_z(), PI * 2.0, 2);
+/// let torus = builder::revolve(&circle, Point3::origin(), Vector3::unit_y(), PI * 2.0, 2);
 /// let solid: Solid = Solid::new(vec![torus]);
 /// #
 /// # assert!(solid.is_geometric_consistent());
@@ -494,13 +494,13 @@ where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
 ///
 /// // Creates the base circle
 /// let v: Vertex = builder::vertex(Point3::new(1.0, 0.0, 4.0));
-/// let circle: Wire = builder::rsweep(&v, Point3::new(2.0, 0.0, 4.0), -Vector3::unit_z(), PI * 2.0, 2);
+/// let circle: Wire = builder::revolve(&v, Point3::new(2.0, 0.0, 4.0), -Vector3::unit_z(), PI * 2.0, 2);
 ///
 /// // the result shell of the pipe.
 /// let mut pipe: Shell = Shell::new();
 ///
 /// // Draw the first line pipe
-/// let mut first_line_part: Shell = builder::tsweep(&circle, Vector3::new(0.0, 0.0, -4.0));
+/// let mut first_line_part: Shell = builder::extrude(&circle, Vector3::new(0.0, 0.0, -4.0));
 /// pipe.append(&mut first_line_part);
 ///
 /// // Get the new wire
@@ -508,7 +508,7 @@ where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
 /// let another_circle: Wire = boundaries.into_iter().find(|wire| wire != &circle).unwrap().inverse();
 ///
 /// // Draw the bent part
-/// let mut bend_part: Shell = builder::rsweep(
+/// let mut bend_part: Shell = builder::revolve(
 ///     &another_circle,
 ///     Point3::origin(),
 ///     Vector3::unit_y(),
@@ -523,7 +523,7 @@ where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
 /// let another_circle: Wire = boundaries.into_iter().find(|wire| wire != &circle).unwrap().inverse();
 ///
 /// // Draw the second line pipe
-/// let mut second_line_part: Shell = builder::tsweep(&another_circle, Vector3::new(-4.0, 0.0, 0.0));
+/// let mut second_line_part: Shell = builder::extrude(&another_circle, Vector3::new(-4.0, 0.0, 0.0));
 /// pipe.append(&mut second_line_part);
 ///
 /// assert_eq!(pipe.shell_condition(), ShellCondition::Oriented);
@@ -554,7 +554,7 @@ where T: Sweep<Matrix4, LineConnector, ExtrudeConnector, Swept> {
 /// Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>: ToSameGeometry<C>,
 /// RevolutedCurve<C>: ToSameGeometry<S>,
 /// ```
-pub fn rsweep<T, Swept, R>(
+pub fn revolve<T, Swept, R>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
@@ -570,18 +570,18 @@ where
     let sign = f64::signum(angle.0);
     if angle.0.abs() >= 2.0 * PI.0 {
         if division < 2 {
-            panic!("division must be 2 or greater for whole rsweep.");
+            panic!("division must be 2 or greater for whole revolve.");
         }
-        whole_rsweep(elem, origin, sign * axis, division)
+        whole_revolve(elem, origin, sign * axis, division)
     } else {
         if division == 0 {
             panic!("division must be 1 or greater.");
         }
-        partial_rsweep(elem, origin, sign * axis, angle * sign, division)
+        partial_revolve(elem, origin, sign * axis, angle * sign, division)
     }
 }
 
-fn partial_rsweep<T: MultiSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>, Swept>(
+fn partial_revolve<T: MultiSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>, Swept>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
@@ -604,7 +604,7 @@ fn partial_rsweep<T: MultiSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>
     )
 }
 
-fn whole_rsweep<T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>, Swept>(
+fn whole_revolve<T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>, Swept>(
     elem: &T,
     origin: Point3,
     axis: Vector3,
@@ -639,7 +639,7 @@ fn whole_rsweep<T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>,
 ///     builder::line(&v1, &v2),
 /// ].into();
 /// let cone = builder::cone(&wire, Vector3::unit_y(), Rad(2.0 * PI), 4);
-/// let irregular: Shell = builder::rsweep(&wire, Point3::origin(), Vector3::unit_y(), Rad(2.0 * PI), 4);
+/// let irregular: Shell = builder::revolve(&wire, Point3::origin(), Vector3::unit_y(), Rad(2.0 * PI), 4);
 ///
 /// // the degenerate edge of cone is removed!
 /// assert_eq!(cone[0].boundaries()[0].len(), 3);
@@ -682,7 +682,7 @@ where
         wire.push_back(Edge::debug_new(&v0, &v1, curve));
         wire.push_back(Edge::debug_new(&v1, &v2, curve1));
     }
-    let mut shell = rsweep(&wire, pt0, axis, angle, division);
+    let mut shell = revolve(&wire, pt0, axis, angle, division);
     let mut edge = shell[0].boundaries()[0][0].clone();
     for i in 0..shell.len() / wire.len() {
         let idx = i * wire.len();
@@ -775,7 +775,7 @@ mod partial_torus {
     #[test]
     fn partial_torus() {
         let v = builder::vertex(Point3::new(0.5, 0.0, 0.0));
-        let w = builder::rsweep(
+        let w = builder::revolve(
             &v,
             Point3::new(0.75, 0.0, 0.0),
             Vector3::unit_y(),
@@ -784,16 +784,16 @@ mod partial_torus {
         );
         let face = builder::try_attach_plane(&[w]).unwrap();
         test_shell(&shell![face.clone()], 1.0);
-        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(2.0), 1);
+        let torus = builder::revolve(&face, Point3::origin(), Vector3::unit_z(), Rad(2.0), 1);
         test_shell(&torus.boundaries()[0], 1.0);
         assert!(torus.is_geometric_consistent());
-        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(5.0), 2);
+        let torus = builder::revolve(&face, Point3::origin(), Vector3::unit_z(), Rad(5.0), 2);
         test_shell(&torus.boundaries()[0], 1.0);
         assert!(torus.is_geometric_consistent());
-        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-2.0), 1);
+        let torus = builder::revolve(&face, Point3::origin(), Vector3::unit_z(), Rad(-2.0), 1);
         test_shell(&torus.boundaries()[0], -1.0);
         assert!(torus.is_geometric_consistent());
-        let torus = builder::rsweep(&face, Point3::origin(), Vector3::unit_z(), Rad(-5.0), 2);
+        let torus = builder::revolve(&face, Point3::origin(), Vector3::unit_z(), Rad(-5.0), 2);
         test_shell(&torus.boundaries()[0], -1.0);
         assert!(torus.is_geometric_consistent());
     }

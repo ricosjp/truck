@@ -16,9 +16,9 @@ type Result<T> = std::result::Result<T, FilletError>;
 /// so `SmallVec<[usize; 2]>` avoids heap allocation.
 type FaceList = SmallVec<[usize; 2]>;
 
-/// Builds a map from [`EdgeID`] to the face indices that contain it.
-fn build_edge_face_map(shell: &Shell) -> HashMap<EdgeID, FaceList> {
-    let mut map: HashMap<EdgeID, FaceList> = HashMap::new();
+/// Builds a map from [`EdgeId`] to the face indices that contain it.
+fn build_edge_face_map(shell: &Shell) -> HashMap<EdgeId, FaceList> {
+    let mut map: HashMap<EdgeId, FaceList> = HashMap::new();
     shell.iter().enumerate().for_each(|(face_idx, face)| {
         face.edge_iter().for_each(|edge| {
             map.entry(edge.id())
@@ -33,10 +33,48 @@ fn build_edge_face_map(shell: &Shell) -> HashMap<EdgeID, FaceList> {
     map
 }
 
+fn sampled_curve_distance_squared(curve: &Curve, point: Point3, sample_count: usize) -> f64 {
+    let (t0, t1) = curve.range_tuple();
+    (0..=sample_count)
+        .map(|i| {
+            let t = t0 + (t1 - t0) * (i as f64) / (sample_count as f64);
+            squared_distance(curve.subs(t), point)
+        })
+        .fold(f64::INFINITY, f64::min)
+}
+
+fn sampled_variable_radius_upper_bound(radius: &dyn Fn(f64) -> f64, sample_count: usize) -> f64 {
+    (0..=sample_count)
+        .map(|i| radius(i as f64 / sample_count as f64))
+        .fold(f64::NEG_INFINITY, f64::max)
+}
+
+fn rematch_selected_edge_id(
+    shell: &Shell,
+    original_curve: &Curve,
+    used_ids: &HashSet<EdgeId>,
+) -> Option<EdgeId> {
+    let tolerance = 1.0e-6;
+    let tolerance_squared = tolerance * tolerance;
+    shell
+        .edge_iter()
+        .filter(|edge| !used_ids.contains(&edge.id()))
+        .filter(|edge| {
+            let (front, back) = edge.ends();
+            sampled_curve_distance_squared(original_curve, front.point(), 24) < tolerance_squared
+                && sampled_curve_distance_squared(original_curve, back.point(), 24)
+                    < tolerance_squared
+        })
+        .max_by(|left, right| {
+            approximate_edge_length(left, 8).total_cmp(&approximate_edge_length(right, 8))
+        })
+        .map(|edge| edge.id())
+}
+
 /// Scans all face boundaries and extracts contiguous runs of selected edges.
 ///
 /// Returns `(face_idx, ordered edge IDs)` for each maximal run.
-fn collect_boundary_runs(shell: &Shell, selected: &HashSet<EdgeID>) -> Vec<(usize, Vec<EdgeID>)> {
+fn collect_boundary_runs(shell: &Shell, selected: &HashSet<EdgeId>) -> Vec<(usize, Vec<EdgeId>)> {
     let mut candidate_runs = Vec::new();
 
     for (face_idx, face) in shell.iter().enumerate() {
@@ -59,7 +97,7 @@ fn collect_boundary_runs(shell: &Shell, selected: &HashSet<EdgeID>) -> Vec<(usiz
                 // Find a non-selected edge to start from so runs don't
                 // get split at the wrap-around seam.
                 if let Some(start) = is_selected.iter().position(|&s| !s) {
-                    let mut run: Vec<EdgeID> = Vec::new();
+                    let mut run: Vec<EdgeId> = Vec::new();
                     for offset in 1..=n {
                         let idx = (start + offset) % n;
                         if is_selected[idx] {
@@ -73,12 +111,12 @@ fn collect_boundary_runs(shell: &Shell, selected: &HashSet<EdgeID>) -> Vec<(usiz
                     }
                 } else {
                     // ALL edges selected → one closed run covering entire boundary.
-                    let ids: Vec<EdgeID> = boundary_edges.iter().map(|e| e.id()).collect();
+                    let ids: Vec<EdgeId> = boundary_edges.iter().map(|e| e.id()).collect();
                     candidate_runs.push((face_idx, ids));
                 }
             } else {
                 // Open boundary: linear scan, split on non-selected gaps.
-                let mut run: Vec<EdgeID> = Vec::new();
+                let mut run: Vec<EdgeId> = Vec::new();
                 for (i, &sel) in is_selected.iter().enumerate() {
                     if sel {
                         run.push(boundary_edges[i].id());
@@ -103,7 +141,7 @@ fn collect_boundary_runs(shell: &Shell, selected: &HashSet<EdgeID>) -> Vec<(usiz
 /// earlier chains mutate the shell).
 #[derive(Debug)]
 struct Chain {
-    edge_ids: Vec<EdgeID>,
+    edge_ids: Vec<EdgeId>,
     shared_face_idx: usize,
 }
 
@@ -116,8 +154,8 @@ struct Chain {
 /// index). Final chains are sorted longest-first for processing stability.
 fn group_edges_into_chains(
     shell: &Shell,
-    edge_ids: &[EdgeID],
-    edge_face_map: &HashMap<EdgeID, FaceList>,
+    edge_ids: &[EdgeId],
+    edge_face_map: &HashMap<EdgeId, FaceList>,
 ) -> Result<Vec<Chain>> {
     // 1. Validate all edges are manifold.
     for &eid in edge_ids {
@@ -127,14 +165,14 @@ fn group_edges_into_chains(
         }
     }
 
-    let selected: HashSet<EdgeID> = edge_ids.iter().copied().collect();
+    let selected: HashSet<EdgeId> = edge_ids.iter().copied().collect();
 
     // 2. For each face boundary, find contiguous runs of selected edges.
     let candidate_runs = collect_boundary_runs(shell, &selected);
 
     // 3. Each selected edge appears in exactly 2 candidate runs (one per face).
     //    Assign each edge to its longest run (tiebreak: lower face_idx).
-    let mut edge_best_run: HashMap<EdgeID, usize> = HashMap::new();
+    let mut edge_best_run: HashMap<EdgeId, usize> = HashMap::new();
     for (run_idx, (face_idx, run_edges)) in candidate_runs.iter().enumerate() {
         for &eid in run_edges {
             let replace = match edge_best_run.get(&eid) {
@@ -163,13 +201,13 @@ fn group_edges_into_chains(
             .then(candidate_runs[a].0.cmp(&candidate_runs[b].0))
     });
 
-    let mut globally_claimed: HashSet<EdgeID> = HashSet::new();
+    let mut globally_claimed: HashSet<EdgeId> = HashSet::new();
     let mut chains: Vec<Chain> = Vec::new();
 
     for run_idx in run_order {
         let (face_idx, ref run_edges) = candidate_runs[run_idx];
         // Split this run on already-claimed edges, producing sub-chains.
-        let mut current_run: Vec<EdgeID> = Vec::new();
+        let mut current_run: Vec<EdgeId> = Vec::new();
         for &eid in run_edges {
             if globally_claimed.contains(&eid) {
                 if !current_run.is_empty() {
@@ -211,8 +249,8 @@ fn find_side_face(
     shell: &Shell,
     face_a_idx: usize,
     face_b_idx: usize,
-    vertex_id: VertexID,
-    edge_face_map: &HashMap<EdgeID, FaceList>,
+    vertex_id: VertexId,
+    edge_face_map: &HashMap<EdgeId, FaceList>,
 ) -> Option<usize> {
     // Find edges incident to vertex_id in face_a or face_b.
     [face_a_idx, face_b_idx]
@@ -242,7 +280,7 @@ fn find_side_face(
 /// for single edges or [`fillet_along_wire`](super::fillet_along_wire) for multi-edge chains.
 pub fn fillet_edges(
     shell: &mut Shell,
-    edge_ids: &[EdgeID],
+    edge_ids: &[EdgeId],
     params: Option<&FilletOptions>,
 ) -> Result<()> {
     let default_options = FilletOptions::default();
@@ -271,28 +309,22 @@ pub fn fillet_edges(
 
     // Reject edges that are too short for the requested fillet radius.
     {
+        let variable_radius_upper_bound = if let RadiusSpec::Variable(f) = &options.radius {
+            sampled_variable_radius_upper_bound(f.as_ref(), 32)
+        } else {
+            0.0
+        };
         for (i, &eid) in edge_ids.iter().enumerate() {
             let effective_radius = match &options.radius {
                 RadiusSpec::Constant(r) => *r,
-                RadiusSpec::Variable(f) => f(0.5),
+                RadiusSpec::Variable(_) => variable_radius_upper_bound,
                 RadiusSpec::PerEdge(radii) => radii[i],
             };
             let edge = shell
                 .edge_iter()
                 .find(|e| e.id() == eid)
                 .ok_or(FilletError::EdgeNotFound)?;
-            let curve = edge.curve();
-            let (t0, t1) = curve.range_tuple();
-            let n = 10usize;
-            let mut length = 0.0f64;
-            let mut prev = curve.subs(t0);
-            for i in 1..=n {
-                let t = t0 + (t1 - t0) * (i as f64) / (n as f64);
-                let pt = curve.subs(t);
-                let d = pt - prev;
-                length += (d.x * d.x + d.y * d.y + d.z * d.z).sqrt();
-                prev = pt;
-            }
+            let length = approximate_edge_length(&edge, 16);
             if length < 2.0 * effective_radius {
                 return Err(FilletError::DegenerateEdge);
             }
@@ -305,20 +337,60 @@ pub fn fillet_edges(
         group_edges_into_chains(shell, edge_ids, &edge_face_map)?
     };
 
-    // Build EdgeID→index map for PerEdge radius lookup.
-    let edge_id_to_idx: HashMap<EdgeID, usize> = edge_ids
+    // Build EdgeId→index map for PerEdge radius lookup.
+    let edge_id_to_idx: HashMap<EdgeId, usize> = edge_ids
         .iter()
         .enumerate()
         .map(|(i, &eid)| (eid, i))
         .collect();
+    let original_edge_curves: HashMap<EdgeId, Curve> = edge_ids
+        .iter()
+        .copied()
+        .map(|eid| {
+            shell
+                .edge_iter()
+                .find(|edge| edge.id() == eid)
+                .map(|edge| (eid, edge.oriented_curve()))
+                .ok_or(FilletError::EdgeNotFound)
+        })
+        .collect::<Result<_>>()?;
 
     // Process each chain with a fresh edge-face map, so that mutations from
     // earlier chains don't cause stale face indices.
     for chain in &chains {
         let edge_face_map = build_edge_face_map(shell);
+        let mut used_ids = HashSet::<EdgeId>::new();
+        let resolved_pairs: Vec<(EdgeId, EdgeId)> = chain
+            .edge_ids
+            .iter()
+            .copied()
+            .map(|original_eid| {
+                let resolved_eid = if edge_face_map.contains_key(&original_eid)
+                    && !used_ids.contains(&original_eid)
+                {
+                    original_eid
+                } else {
+                    let original_curve = original_edge_curves
+                        .get(&original_eid)
+                        .ok_or(FilletError::EdgeNotFound)?;
+                    rematch_selected_edge_id(shell, original_curve, &used_ids)
+                        .ok_or(FilletError::EdgeNotFound)?
+                };
+                used_ids.insert(resolved_eid);
+                Ok((original_eid, resolved_eid))
+            })
+            .collect::<Result<_>>()?;
+        let resolved_edge_ids: Vec<EdgeId> = resolved_pairs
+            .iter()
+            .map(|(_, resolved_eid)| *resolved_eid)
+            .collect();
+        let resolved_to_original: HashMap<EdgeId, EdgeId> = resolved_pairs
+            .iter()
+            .map(|(original_eid, resolved_eid)| (*resolved_eid, *original_eid))
+            .collect();
 
         // Resolve face_a (shared face from grouping) and face_b from current map.
-        let first_eid = chain.edge_ids[0];
+        let first_eid = resolved_edge_ids[0];
         let faces = edge_face_map
             .get(&first_eid)
             .ok_or(FilletError::EdgeNotFound)?;
@@ -326,7 +398,11 @@ pub fn fillet_edges(
             return Err(FilletError::NonManifoldEdge(faces.len()));
         }
         // face_a is the shared face from boundary-run grouping; face_b is the other.
-        let face_a_idx = chain.shared_face_idx;
+        let face_a_idx = if faces.contains(&chain.shared_face_idx) {
+            chain.shared_face_idx
+        } else {
+            faces[0]
+        };
         let face_b_idx = *faces
             .iter()
             .find(|&&f| f != face_a_idx)
@@ -355,8 +431,9 @@ pub fn fillet_edges(
 
             let chain_opts;
             let opts = if let RadiusSpec::PerEdge(radii) = &options.radius {
+                let original_eid = chain.edge_ids[0];
                 chain_opts = FilletOptions {
-                    radius: RadiusSpec::Constant(radii[edge_id_to_idx[&eid]]),
+                    radius: RadiusSpec::Constant(radii[edge_id_to_idx[&original_eid]]),
                     divisions: options.divisions,
                     profile: options.profile.clone(),
                 };
@@ -384,27 +461,32 @@ pub fn fillet_edges(
         } else {
             // Multi-edge chain: build a Wire from the shared face's boundary
             // to get edges in the correct orientation for that face.
-            let chain_id_set: HashSet<EdgeID> = chain.edge_ids.iter().copied().collect();
+            let chain_id_set: HashSet<EdgeId> = resolved_edge_ids.iter().copied().collect();
             let wire: Wire = shell[face_a_idx]
                 .boundary_iters()
                 .into_iter()
-                .flatten()
-                .filter(|e| chain_id_set.contains(&e.id()))
-                .collect();
+                .find_map(|boundary| {
+                    let edges = boundary
+                        .filter(|edge| chain_id_set.contains(&edge.id()))
+                        .collect::<Vec<_>>();
+                    (edges.len() == resolved_edge_ids.len()).then_some(edges.into())
+                })
+                .ok_or(FilletError::EdgeNotFound)?;
 
             let chain_opts;
             let opts = if let RadiusSpec::PerEdge(radii) = &options.radius {
-                let chain_radii: Vec<f64> = chain
-                    .edge_ids
-                    .iter()
-                    .map(|eid| radii[edge_id_to_idx[eid]])
-                    .collect();
-                let n = chain_radii.len();
+                let chain_radii: Vec<f64> = wire
+                    .edge_iter()
+                    .map(|edge| {
+                        resolved_to_original
+                            .get(&edge.id())
+                            .copied()
+                            .ok_or(FilletError::EdgeNotFound)
+                            .map(|eid| radii[edge_id_to_idx[&eid]])
+                    })
+                    .collect::<Result<_>>()?;
                 chain_opts = FilletOptions {
-                    radius: RadiusSpec::Variable(Box::new(move |t: f64| {
-                        let idx = ((t * n as f64).floor() as usize).min(n - 1);
-                        chain_radii[idx]
-                    })),
+                    radius: RadiusSpec::PerEdge(chain_radii),
                     divisions: options.divisions,
                     profile: options.profile.clone(),
                 };

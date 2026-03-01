@@ -7,7 +7,7 @@ impl<S0, S1> ApproxFilletSurface<S0, S1> {
     /// Returns the second surface.
     pub const fn surface1(&self) -> &S1 { &self.surface1 }
     /// Returns the knot vector for the parameter `v`.
-    pub const fn vknot_vec(&self) -> &KnotVector { &self.knot_vec }
+    pub const fn knot_vector_v(&self) -> &KnotVector { &self.knot_vec }
     /// Returns side curve on the first surface.
     pub fn side_pcurve0(&self) -> ParameterCurve<BsplineCurve<Point2>, S0>
     where S0: Clone {
@@ -126,7 +126,7 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
-    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Vector3> {
+    fn derivatives(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Vector3> {
         let degree = self.vdegree();
         let [mut uv0_ders, mut uv1_ders, mut b0_ders, mut b1_ders] =
             [CurveDers::<Vector2>::new(max_order + 1); 4];
@@ -140,9 +140,9 @@ where
             w_ders[order] = basis.iter().zip(&self.weights).map(tmul).sum();
         });
         let Vector2 { x: u0, y: v0 } = uv0_ders[0];
-        let s0_ders = self.surface0.ders(max_order + 1, u0, v0);
+        let s0_ders = self.surface0.derivatives(max_order + 1, u0, v0);
         let Vector2 { x: u1, y: v1 } = uv1_ders[0];
-        let s1_ders = self.surface1.ders(max_order + 1, u1, v1);
+        let s1_ders = self.surface1.derivatives(max_order + 1, u1, v1);
 
         let (lift_p0_ders, lift_q0_ders) =
             subders::control_points_ders(&s0_ders, &uv0_ders, &b0_ders, &w_ders);
@@ -161,10 +161,10 @@ where
         });
         homog_ders.rat_ders()
     }
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
-        self.ders(m + n, u, v)[m][n]
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        self.derivatives(m + n, u, v)[m][n]
     }
-    fn subs(&self, u: f64, v: f64) -> Point3 {
+    fn evaluate(&self, u: f64, v: f64) -> Point3 {
         let Self {
             knot_vec,
             surface0,
@@ -186,11 +186,11 @@ where
         let b = bezier_3rd_basis(0, u);
         Point3::from_homogeneous(b[0] * pt0 + b[1] * pt1 + b[2] * pt2 + b[3] * pt3)
     }
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(1, 0, u, v) }
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(0, 1, u, v) }
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(2, 0, u, v) }
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(1, 1, u, v) }
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(0, 2, u, v) }
+    fn derivative_u(&self, u: f64, v: f64) -> Self::Vector { self.derivative_mn(1, 0, u, v) }
+    fn derivative_v(&self, u: f64, v: f64) -> Self::Vector { self.derivative_mn(0, 1, u, v) }
+    fn derivative_uu(&self, u: f64, v: f64) -> Self::Vector { self.derivative_mn(2, 0, u, v) }
+    fn derivative_uv(&self, u: f64, v: f64) -> Self::Vector { self.derivative_mn(1, 1, u, v) }
+    fn derivative_vv(&self, u: f64, v: f64) -> Self::Vector { self.derivative_mn(0, 2, u, v) }
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         use std::ops::Bound::*;
         let (a, b) = (self.knot_vec[0], *self.knot_vec.last().unwrap());
@@ -204,7 +204,7 @@ where
     S1: ParametricSurface3D,
 {
     fn normal(&self, u: f64, v: f64) -> Vector3 {
-        let ders = self.ders(1, u, v);
+        let ders = self.derivatives(1, u, v);
         ders[1][0].cross(ders[0][1]).normalize()
     }
 }

@@ -77,8 +77,14 @@ fn collide_parabola() {
 		vec![Point3::new(0.0, -1.0, 1.0), Point3::new(0.0, 0.0, 5.0), Point3::new(0.0, 1.0, 1.0)],
 		vec![Point3::new(1.0, -1.0, -3.0), Point3::new(1.0, 0.0, 1.0), Point3::new(1.0, 1.0, -3.0)],
 	];
-    let surface0 = BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)), ctrl0);
-    let surface1 = BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)), ctrl1);
+    let surface0 = BsplineSurface::new(
+        (KnotVector::bezier_knot(2), KnotVector::bezier_knot(2)),
+        ctrl0,
+    );
+    let surface1 = BsplineSurface::new(
+        (KnotVector::bezier_knot(2), KnotVector::bezier_knot(2)),
+        ctrl1,
+    );
 
     // meshing surface
     let instant = std::time::Instant::now();

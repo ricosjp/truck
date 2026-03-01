@@ -546,14 +546,16 @@ impl<P> Tmesh<P> {
     ///
     /// - `TmeshControlPointNotFound` if an edge condition is unexpectedly found (internal edge condition)
     ///
-    /// - `Ok((KnotVec, KnotVec))` if knot vectors are successfully generated
+    /// - `Ok((KnotVector, KnotVector))` if knot vectors are successfully generated
     ///
     /// # Borrows
     /// Immutably borrows `p` and all points connected to `p` in all directions for a distance of two knot intervals.
     /// In the case that `p` is not connected to a point in a direction, but instead a T-junction, any points
     /// that are a part of the face which `p` is a part of and the next face in that direction may be borrowed,
     /// with no guarantees as to which or how many.
-    fn point_knot_vectors(p: Arc<RwLock<TmeshControlPoint<P>>>) -> Result<(KnotVec, KnotVec)> {
+    fn point_knot_vectors(
+        p: Arc<RwLock<TmeshControlPoint<P>>>,
+    ) -> Result<(KnotVector, KnotVector)> {
         let mut s_vec: Vec<f64> = vec![0.0; 5];
         let mut t_vec: Vec<f64> = vec![0.0; 5];
 
@@ -599,7 +601,7 @@ impl<P> Tmesh<P> {
                 }
             }
         }
-        Ok((KnotVec::from(s_vec), KnotVec::from(t_vec)))
+        Ok((KnotVector::from(s_vec), KnotVector::from(t_vec)))
     }
 
     /// Generates the knot vectors for each control point using the method in \[Sederberg et al. 2003\].
@@ -617,7 +619,7 @@ impl<P> Tmesh<P> {
     /// # Borrows
     /// Immutably borrows every point in `self.control_points`.
     fn generate_knot_vectors(&self) -> Result<()> {
-        let mut knot_vecs: Vec<(KnotVec, KnotVec)> = Vec::new();
+        let mut knot_vecs: Vec<(KnotVector, KnotVector)> = Vec::new();
 
         for control_point in self.control_points.iter() {
             knot_vecs.push(Tmesh::point_knot_vectors(Arc::clone(control_point))?);
@@ -1123,7 +1125,7 @@ where P: ControlPoint<f64>
         });
 
         // Store the first knot vector to compare it to the rest. If any do not match, return an error
-        let knot_vec_compare: KnotVec = {
+        let knot_vec_compare: KnotVector = {
             let point_knots = Tmesh::point_knot_vectors(Arc::clone(&center_points[1]))?;
 
             // Depending on the direction of insertion, the S or T knot vectors are needed.
@@ -1934,7 +1936,7 @@ where P: ControlPoint<f64> + Debug + Clone
         tnurcc.to_tmesh(subdivision_levels)
     }
 
-    /// Converts a cubic `BSplineSurface` into a T-mesh with a regular rectangular grid.
+    /// Converts a cubic `BsplineSurface` into a T-mesh with a regular rectangular grid.
     ///
     /// Any cubic B-spline surface is trivially a T-spline with no T-junctions.
     /// This enables converting existing NURBS/B-spline geometry into T-splines
@@ -1942,14 +1944,14 @@ where P: ControlPoint<f64> + Debug + Clone
     ///
     /// # Errors
     /// Returns `TmeshNonCubicDegree` if the surface is not degree 3 in both directions.
-    pub fn from_bspline_surface(surface: &BSplineSurface<P>) -> Result<Self> {
+    pub fn from_bspline_surface(surface: &BsplineSurface<P>) -> Result<Self> {
         let (udeg, vdeg) = surface.degrees();
         if udeg != 3 || vdeg != 3 {
             return Err(Error::TmeshNonCubicDegree(udeg, vdeg));
         }
 
-        let u_kv = surface.uknot_vec();
-        let v_kv = surface.vknot_vec();
+        let u_kv = surface.knot_vector_u();
+        let v_kv = surface.knot_vector_v();
         let cps = surface.control_points();
         let nv = cps[0].len();
 
@@ -2315,19 +2317,19 @@ impl ParametricSurface for Tmesh<Point3> {
     type Point = Point3;
     type Vector = Vector3;
 
-    fn subs(&self, u: f64, v: f64) -> Point3 {
+    fn evaluate(&self, u: f64, v: f64) -> Point3 {
         Tmesh::subs(self, u, v).expect("T-mesh evaluation failed")
     }
 
-    fn uder(&self, u: f64, v: f64) -> Vector3 { self.der_mn(1, 0, u, v) }
-    fn vder(&self, u: f64, v: f64) -> Vector3 { self.der_mn(0, 1, u, v) }
-    fn uuder(&self, u: f64, v: f64) -> Vector3 { self.der_mn(2, 0, u, v) }
-    fn uvder(&self, u: f64, v: f64) -> Vector3 { self.der_mn(1, 1, u, v) }
-    fn vvder(&self, u: f64, v: f64) -> Vector3 { self.der_mn(0, 2, u, v) }
+    fn derivative_u(&self, u: f64, v: f64) -> Vector3 { self.derivative_mn(1, 0, u, v) }
+    fn derivative_v(&self, u: f64, v: f64) -> Vector3 { self.derivative_mn(0, 1, u, v) }
+    fn derivative_uu(&self, u: f64, v: f64) -> Vector3 { self.derivative_mn(2, 0, u, v) }
+    fn derivative_uv(&self, u: f64, v: f64) -> Vector3 { self.derivative_mn(1, 1, u, v) }
+    fn derivative_vv(&self, u: f64, v: f64) -> Vector3 { self.derivative_mn(0, 2, u, v) }
 
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Vector3 {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Vector3 {
         if m == 0 && n == 0 {
-            let p = <Self as ParametricSurface>::subs(self, u, v);
+            let p = <Self as ParametricSurface>::evaluate(self, u, v);
             return Vector3::new(p.x, p.y, p.z);
         }
         // Use analytical derivatives for orders up to 2.
@@ -2337,12 +2339,12 @@ impl ParametricSurface for Tmesh<Point3> {
         // Fall back to finite differences for higher orders.
         let h = DIFF_EPS;
         if m > 0 {
-            let forward = self.der_mn(m - 1, n, u + h, v);
-            let backward = self.der_mn(m - 1, n, u - h, v);
+            let forward = self.derivative_mn(m - 1, n, u + h, v);
+            let backward = self.derivative_mn(m - 1, n, u - h, v);
             (forward - backward) / (2.0 * h)
         } else {
-            let forward = self.der_mn(m, n - 1, u, v + h);
-            let backward = self.der_mn(m, n - 1, u, v - h);
+            let forward = self.derivative_mn(m, n - 1, u, v + h);
+            let backward = self.derivative_mn(m, n - 1, u, v - h);
             (forward - backward) / (2.0 * h)
         }
     }
@@ -2402,16 +2404,20 @@ impl Transformed<Matrix4> for Tmesh<Point3> {
 
 impl SearchParameter<D2> for Tmesh<Point3> {
     type Point = Point3;
-    fn search_parameter<H: Into<SPHint2D>>(
+    fn search_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         let hint = match hint.into() {
-            SPHint2D::Parameter(u, v) => (u, v),
-            SPHint2D::Range(x, y) => algo::surface::presearch(self, point, (x, y), 100),
-            SPHint2D::None => algo::surface::presearch(self, point, self.range_tuple(), 100),
+            SearchParameterHint2D::Parameter(u, v) => (u, v),
+            SearchParameterHint2D::Range(x, y) => {
+                algo::surface::presearch(self, point, (x, y), 100)
+            }
+            SearchParameterHint2D::None => {
+                algo::surface::presearch(self, point, self.range_tuple(), 100)
+            }
         };
         algo::surface::search_parameter(self, point, hint, trials)
     }
@@ -2419,16 +2425,20 @@ impl SearchParameter<D2> for Tmesh<Point3> {
 
 impl SearchNearestParameter<D2> for Tmesh<Point3> {
     type Point = Point3;
-    fn search_nearest_parameter<H: Into<SPHint2D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         let hint = match hint.into() {
-            SPHint2D::Parameter(u, v) => (u, v),
-            SPHint2D::Range(x, y) => algo::surface::presearch(self, point, (x, y), 100),
-            SPHint2D::None => algo::surface::presearch(self, point, self.range_tuple(), 100),
+            SearchParameterHint2D::Parameter(u, v) => (u, v),
+            SearchParameterHint2D::Range(x, y) => {
+                algo::surface::presearch(self, point, (x, y), 100)
+            }
+            SearchParameterHint2D::None => {
+                algo::surface::presearch(self, point, self.range_tuple(), 100)
+            }
         };
         algo::surface::search_nearest_parameter(self, point, hint, trials)
     }
@@ -2549,7 +2559,7 @@ impl<'de> Deserialize<'de> for Tmesh<Point3> {
 
 /// Computes the Greville abscissae for a knot vector of given degree.
 /// These are the optimal parameter values for B-spline interpolation.
-fn greville_abscissae(knots: &KnotVec, degree: usize) -> Vec<f64> {
+fn greville_abscissae(knots: &KnotVector, degree: usize) -> Vec<f64> {
     let n = knots.len() - degree - 1;
     (0..n)
         .map(|i| (1..=degree).map(|j| knots[i + j]).sum::<f64>() / degree as f64)
@@ -2557,7 +2567,7 @@ fn greville_abscissae(knots: &KnotVec, degree: usize) -> Vec<f64> {
 }
 
 impl Tmesh<Point3> {
-    /// Converts this T-spline surface to an approximate `BSplineSurface`.
+    /// Converts this T-spline surface to an approximate `BsplineSurface`.
     ///
     /// STEP (ISO 10303) has no T-spline entity, so T-spline surfaces must be
     /// decomposed into B-spline patches for export. This method evaluates the
@@ -2567,9 +2577,9 @@ impl Tmesh<Point3> {
     /// `division` controls the number of spans in each parametric direction.
     /// Higher values give better approximation at the cost of more control
     /// points: `division + 3` control points per direction.
-    pub fn to_bspline_surface(&self, division: usize) -> BSplineSurface<Point3> {
-        let u_knots = KnotVec::uniform_knot(3, division);
-        let v_knots = KnotVec::uniform_knot(3, division);
+    pub fn to_bspline_surface(&self, division: usize) -> BsplineSurface<Point3> {
+        let u_knots = KnotVector::uniform_knot(3, division);
+        let v_knots = KnotVector::uniform_knot(3, division);
         let n = division + 3;
 
         let u_grev = greville_abscissae(&u_knots, 3);
@@ -2587,12 +2597,12 @@ impl Tmesh<Point3> {
             .collect();
 
         // Tensor-product interpolation: first interpolate each row (v-direction).
-        let row_curves: Vec<BSplineCurve<Point3>> = surface_points
+        let row_curves: Vec<BsplineCurve<Point3>> = surface_points
             .iter()
             .map(|row| {
                 let params: Vec<(f64, Point3)> =
                     v_grev.iter().copied().zip(row.iter().copied()).collect();
-                BSplineCurve::try_interpolate(v_knots.clone(), params)
+                BsplineCurve::try_interpolate(v_knots.clone(), params)
                     .expect("V-direction interpolation failed")
             })
             .collect();
@@ -2612,18 +2622,18 @@ impl Tmesh<Point3> {
                     .copied()
                     .zip(intermediate.iter().map(|row| row[j]))
                     .collect();
-                let col_curve = BSplineCurve::try_interpolate(u_knots.clone(), params)
+                let col_curve = BsplineCurve::try_interpolate(u_knots.clone(), params)
                     .expect("U-direction interpolation failed");
                 col_curve.control_points().to_vec()
             })
             .collect();
 
-        // Transpose from [V][U] to [U][V] for BSplineSurface.
+        // Transpose from [V][U] to [U][V] for BsplineSurface.
         let control_points: Vec<Vec<Point3>> = (0..n)
             .map(|i| (0..n).map(|j| col_cps[j][i]).collect())
             .collect();
 
-        BSplineSurface::new((u_knots, v_knots), control_points)
+        BsplineSurface::new((u_knots, v_knots), control_points)
     }
 }
 
@@ -4274,13 +4284,13 @@ mod tests {
         );
     }
 
-    /// Round-trip test: BSplineSurface → Tmesh → evaluate, compare with original.
+    /// Round-trip test: BsplineSurface → Tmesh → evaluate, compare with original.
     #[test]
     fn test_from_bspline_surface_round_trip() {
         use truck_base::cgmath64::*;
 
-        let u_knots = KnotVec::uniform_knot(3, 3);
-        let v_knots = KnotVec::uniform_knot(3, 3);
+        let u_knots = KnotVector::uniform_knot(3, 3);
+        let v_knots = KnotVector::uniform_knot(3, 3);
         // 3 (degree) + 3 (divisions).
         let nu = 6;
         let nv = 6;
@@ -4298,7 +4308,7 @@ mod tests {
                     .collect()
             })
             .collect();
-        let bsp = BSplineSurface::new((u_knots, v_knots), cps);
+        let bsp = BsplineSurface::new((u_knots, v_knots), cps);
 
         let tmesh = Tmesh::from_bspline_surface(&bsp).expect("Conversion should succeed");
 
@@ -4317,15 +4327,15 @@ mod tests {
         }
         assert!(
             max_err < 1.0e-6,
-            "BSpline → Tmesh round-trip max error: {max_err:.2e} (expected < 1e-6)"
+            "Bspline → Tmesh round-trip max error: {max_err:.2e} (expected < 1e-6)"
         );
     }
 
     /// Verifies correct structure: control point count and interior connectivity.
     #[test]
     fn test_from_bspline_surface_structure() {
-        let u_knots = KnotVec::uniform_knot(3, 2);
-        let v_knots = KnotVec::uniform_knot(3, 3);
+        let u_knots = KnotVector::uniform_knot(3, 2);
+        let v_knots = KnotVector::uniform_knot(3, 3);
         let nu = 5;
         let nv = 6;
 
@@ -4336,7 +4346,7 @@ mod tests {
                     .collect()
             })
             .collect();
-        let bsp = BSplineSurface::new((u_knots, v_knots), cps);
+        let bsp = BsplineSurface::new((u_knots, v_knots), cps);
 
         let tmesh = Tmesh::from_bspline_surface(&bsp).expect("Conversion should succeed");
 
@@ -4367,8 +4377,8 @@ mod tests {
     #[test]
     fn test_from_bspline_surface_non_cubic() {
         // Degree 2 in u, degree 2 in v.
-        let u_knots = KnotVec::uniform_knot(2, 2);
-        let v_knots = KnotVec::uniform_knot(2, 2);
+        let u_knots = KnotVector::uniform_knot(2, 2);
+        let v_knots = KnotVector::uniform_knot(2, 2);
         let nu = 4;
         let nv = 4;
 
@@ -4379,7 +4389,7 @@ mod tests {
                     .collect()
             })
             .collect();
-        let bsp = BSplineSurface::new((u_knots, v_knots), cps);
+        let bsp = BsplineSurface::new((u_knots, v_knots), cps);
 
         let result = Tmesh::from_bspline_surface(&bsp);
         assert!(result.is_err(), "Non-cubic surface should be rejected");

@@ -5,7 +5,7 @@ fn into_bspline() {
     let pt1 = Point3::new(1.0, 1.0, 3.0);
     let pt2 = Point3::new(0.0, 2.0, 3.0);
     let plane: Plane = Plane::new(pt0, pt1, pt2);
-    let surface: BSplineSurface<Point3> = plane.into();
+    let surface: BsplineSurface<Point3> = plane.into();
     assert_eq!(surface.range_tuple(), ((0.0, 1.0), (0.0, 1.0)));
 
     const N: usize = 100;

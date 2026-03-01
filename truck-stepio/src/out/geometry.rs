@@ -119,7 +119,7 @@ impl<P: ConstStepLength> StepLength for PolylineCurve<P> {
 
 impl<P> StepCurve for PolylineCurve<P> {}
 
-impl<P> DisplayByStep for BSplineCurve<P>
+impl<P> DisplayByStep for BsplineCurve<P>
 where P: Copy + ConstStepLength + DisplayByStep
 {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
@@ -141,12 +141,12 @@ where P: Copy + ConstStepLength + DisplayByStep
     }
 }
 
-impl<P> StepLength for BSplineCurve<P> {
+impl<P> StepLength for BsplineCurve<P> {
     #[inline(always)]
     fn step_length(&self) -> usize { self.control_points().len() + 1 }
 }
 
-impl<P> StepCurve for BSplineCurve<P> {}
+impl<P> StepCurve for BsplineCurve<P> {}
 
 impl<V> DisplayByStep for NurbsCurve<V>
 where
@@ -392,7 +392,7 @@ impl<C: StepCurve, S0, S1> StepCurve for IntersectionCurve<C, S0, S1> {
     fn same_sense(&self) -> bool { self.leader().same_sense() }
 }
 
-impl<C, S> DisplayByStep for PCurve<C, S>
+impl<C, S> DisplayByStep for ParameterCurve<C, S>
 where
     C: DisplayByStep,
     S: DisplayByStep + StepLength,
@@ -417,11 +417,11 @@ where
     }
 }
 
-impl<C: StepLength, S: StepLength> StepLength for PCurve<C, S> {
+impl<C: StepLength, S: StepLength> StepLength for ParameterCurve<C, S> {
     fn step_length(&self) -> usize { 3 + self.curve().step_length() + self.surface().step_length() }
 }
 
-impl<C, S> ConstStepLength for PCurve<C, S>
+impl<C, S> ConstStepLength for ParameterCurve<C, S>
 where
     C: ConstStepLength,
     S: ConstStepLength,
@@ -429,7 +429,7 @@ where
     const LENGTH: usize = 3 + C::LENGTH + S::LENGTH;
 }
 
-impl<C: StepCurve, S> StepCurve for PCurve<C, S> {
+impl<C: StepCurve, S> StepCurve for ParameterCurve<C, S> {
     #[inline(always)]
     fn same_sense(&self) -> bool { self.curve().same_sense() }
 }
@@ -438,7 +438,7 @@ impl DisplayByStep for ModelingCurve {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
         match self {
             ModelingCurve::Line(x) => DisplayByStep::fmt(x, idx, f),
-            ModelingCurve::BSplineCurve(x) => DisplayByStep::fmt(x, idx, f),
+            ModelingCurve::BsplineCurve(x) => DisplayByStep::fmt(x, idx, f),
             ModelingCurve::NurbsCurve(x) => DisplayByStep::fmt(x, idx, f),
             ModelingCurve::IntersectionCurve(x) => DisplayByStep::fmt(x, idx, f),
         }
@@ -449,7 +449,7 @@ impl StepLength for ModelingCurve {
     fn step_length(&self) -> usize {
         match self {
             ModelingCurve::Line(_) => Line::<Point3>::LENGTH,
-            ModelingCurve::BSplineCurve(x) => x.step_length(),
+            ModelingCurve::BsplineCurve(x) => x.step_length(),
             ModelingCurve::NurbsCurve(x) => x.step_length(),
             ModelingCurve::IntersectionCurve(x) => x.step_length(),
         }
@@ -558,7 +558,7 @@ impl DisplayByStep for Torus {
 impl_const_step_length!(Torus, 5);
 impl StepSurface for Torus {}
 
-impl<P> DisplayByStep for BSplineSurface<P>
+impl<P> DisplayByStep for BsplineSurface<P>
 where P: Copy + DisplayByStep
 {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
@@ -578,8 +578,8 @@ where P: Copy + DisplayByStep
                 IndexSliceDisplay(idx + counter - slice.len() + 1..=idx + counter)
             })
             .collect::<Vec<_>>();
-        let (uknots, umulti) = self.uknot_vec().to_single_multi();
-        let (vknots, vmulti) = self.vknot_vec().to_single_multi();
+        let (uknots, umulti) = self.knot_vector_u().to_single_multi();
+        let (vknots, vmulti) = self.knot_vector_v().to_single_multi();
         f.write_fmt(format_args!(
             "#{idx} = B_SPLINE_SURFACE_WITH_KNOTS('', {u_degree}, {v_degree}, {control_points_list}, .UNSPECIFIED., .U., .U., .U., \
 {u_multiplicities}, {v_multiplicities}, {u_knots}, {v_knots}, .UNSPECIFIED.);\n{control_points_instances}",
@@ -595,11 +595,11 @@ where P: Copy + DisplayByStep
     }
 }
 
-impl<P> StepLength for BSplineSurface<P> {
+impl<P> StepLength for BsplineSurface<P> {
     #[inline(always)]
     fn step_length(&self) -> usize { 1 + self.control_points().iter().map(Vec::len).sum::<usize>() }
 }
-impl<P> StepSurface for BSplineSurface<P> {}
+impl<P> StepSurface for BsplineSurface<P> {}
 
 impl<V> DisplayByStep for NurbsSurface<V>
 where
@@ -632,8 +632,8 @@ where
             .iter()
             .map(|slice| SliceDisplay(slice))
             .collect::<Vec<_>>();
-        let (uknots, umulti) = self.uknot_vec().to_single_multi();
-        let (vknots, vmulti) = self.vknot_vec().to_single_multi();
+        let (uknots, umulti) = self.knot_vector_u().to_single_multi();
+        let (vknots, vmulti) = self.knot_vector_v().to_single_multi();
         f.write_fmt(format_args!(
             "#{idx} = (
     BOUNDED_SURFACE()
@@ -761,7 +761,7 @@ impl DisplayByStep for ModelingSurface {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
         match self {
             ModelingSurface::Plane(x) => DisplayByStep::fmt(x, idx, f),
-            ModelingSurface::BSplineSurface(x) => DisplayByStep::fmt(x, idx, f),
+            ModelingSurface::BsplineSurface(x) => DisplayByStep::fmt(x, idx, f),
             ModelingSurface::NurbsSurface(x) => DisplayByStep::fmt(x, idx, f),
             ModelingSurface::RevolutedCurve(x) => DisplayByStep::fmt(x, idx, f),
             ModelingSurface::TSplineSurface(tmesh) => {
@@ -776,7 +776,7 @@ impl StepLength for ModelingSurface {
     fn step_length(&self) -> usize {
         match self {
             ModelingSurface::Plane(_) => Plane::LENGTH,
-            ModelingSurface::BSplineSurface(x) => x.step_length(),
+            ModelingSurface::BsplineSurface(x) => x.step_length(),
             ModelingSurface::NurbsSurface(x) => x.step_length(),
             ModelingSurface::RevolutedCurve(x) => x.entity().step_length(),
             ModelingSurface::TSplineSurface(tmesh) => {

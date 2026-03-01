@@ -521,11 +521,11 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
             let methods = methods!(
                 variants,
                 trait_name,
-                fn subs(&self, t: f64) -> Self::Point,
-                fn der(&self, t: f64) -> Self::Vector,
-                fn der2(&self, t: f64) -> Self::Vector,
-                fn der_n(&self, n: usize, t: f64) -> Self::Vector,
-                fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector>,
+                fn evaluate(&self, t: f64) -> Self::Point,
+                fn derivative(&self, t: f64) -> Self::Vector,
+                fn derivative_2(&self, t: f64) -> Self::Vector,
+                fn derivative_n(&self, n: usize, t: f64) -> Self::Vector,
+                fn derivatives(&self, n: usize, t: f64) -> CurveDerivatives<Self::Vector>,
                 fn parameter_range(&self,) -> ParameterRange,
                 fn period(&self,) -> Option<f64>,
             );
@@ -555,11 +555,11 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                       Self: Clone, {
                     type Point = <#field_type as #trait_name>::Point;
                     type Vector = <#field_type as #trait_name>::Vector;
-                    fn subs(&self, t: f64) -> Self::Point { self.0.subs(t) }
-                    fn der(&self, t: f64) -> Self::Vector { self.0.der(t) }
-                    fn der2(&self, t: f64) -> Self::Vector { self.0.der2(t) }
-                    fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.0.der_n(n, t) }
-                    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> { self.0.ders(n, t) }
+                    fn evaluate(&self, t: f64) -> Self::Point { self.0.evaluate(t) }
+                    fn derivative(&self, t: f64) -> Self::Vector { self.0.derivative(t) }
+                    fn derivative_2(&self, t: f64) -> Self::Vector { self.0.derivative_2(t) }
+                    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector { self.0.derivative_n(n, t) }
+                    fn derivatives(&self, n: usize, t: f64) -> CurveDerivatives<Self::Vector> { self.0.derivatives(n, t) }
                     fn parameter_range(&self) -> ParameterRange { self.0.parameter_range() }
                     fn period(&self) -> Option<f64> { self.0.period() }
                 }
@@ -587,14 +587,14 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
             let methods = methods!(
                 variants,
                 trait_name,
-                fn subs(&self, s: f64, t: f64) -> Self::Point,
-                fn uder(&self, s: f64, t: f64) -> Self::Vector,
-                fn vder(&self, s: f64, t: f64) -> Self::Vector,
-                fn uuder(&self, s: f64, t: f64) -> Self::Vector,
-                fn uvder(&self, s: f64, t: f64) -> Self::Vector,
-                fn vvder(&self, s: f64, t: f64) -> Self::Vector,
-                fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector,
-                fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector>,
+                fn evaluate(&self, s: f64, t: f64) -> Self::Point,
+                fn derivative_u(&self, s: f64, t: f64) -> Self::Vector,
+                fn derivative_v(&self, s: f64, t: f64) -> Self::Vector,
+                fn derivative_uu(&self, s: f64, t: f64) -> Self::Vector,
+                fn derivative_uv(&self, s: f64, t: f64) -> Self::Vector,
+                fn derivative_vv(&self, s: f64, t: f64) -> Self::Vector,
+                fn derivative_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector,
+                fn derivatives(&self, max_order: usize, u: f64, v: f64) -> SurfaceDerivatives<Self::Vector>,
                 fn parameter_range(&self,) -> (truck_geotrait::ParameterRange, truck_geotrait::ParameterRange),
                 fn u_period(&self,) -> Option<f64>,
                 fn v_period(&self,) -> Option<f64>,
@@ -626,22 +626,22 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
                     type Point = <#field_type as #trait_name>::Point;
                     type Vector = <#field_type as #trait_name>::Vector;
                     #[inline(always)]
-                    fn subs(&self, s: f64, t: f64) -> Self::Point { self.0.subs(s, t) }
+                    fn evaluate(&self, s: f64, t: f64) -> Self::Point { self.0.evaluate(s, t) }
                     #[inline(always)]
-                    fn uder(&self, s: f64, t: f64) -> Self::Vector { self.0.uder(s, t) }
+                    fn derivative_u(&self, s: f64, t: f64) -> Self::Vector { self.0.derivative_u(s, t) }
                     #[inline(always)]
-                    fn vder(&self, s: f64, t: f64) -> Self::Vector { self.0.vder(s, t) }
+                    fn derivative_v(&self, s: f64, t: f64) -> Self::Vector { self.0.derivative_v(s, t) }
                     #[inline(always)]
-                    fn uuder(&self, s: f64, t: f64) -> Self::Vector { self.0.uuder(s, t) }
+                    fn derivative_uu(&self, s: f64, t: f64) -> Self::Vector { self.0.derivative_uu(s, t) }
                     #[inline(always)]
-                    fn uvder(&self, s: f64, t: f64) -> Self::Vector { self.0.uvder(s, t) }
+                    fn derivative_uv(&self, s: f64, t: f64) -> Self::Vector { self.0.derivative_uv(s, t) }
                     #[inline(always)]
-                    fn vvder(&self, s: f64, t: f64) -> Self::Vector { self.0.vvder(s, t) }
+                    fn derivative_vv(&self, s: f64, t: f64) -> Self::Vector { self.0.derivative_vv(s, t) }
                     #[inline(always)]
-                    fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector { self.0.der_mn(m, n, s, t) }
+                    fn derivative_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector { self.0.derivative_mn(m, n, s, t) }
                     #[inline(always)]
-                    fn ders(&self, max_order: usize, s: f64, t: f64) -> SurfaceDers<Self::Vector> {
-                        self.0.ders(max_order, s, t)
+                    fn derivatives(&self, max_order: usize, s: f64, t: f64) -> SurfaceDerivatives<Self::Vector> {
+                        self.0.derivatives(max_order, s, t)
                     }
                     #[inline(always)]
                     fn parameter_range(&self,) -> ((std::ops::Bound<f64>, std::ops::Bound<f64>), (std::ops::Bound<f64>, std::ops::Bound<f64>)) {
@@ -680,14 +680,14 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
             let methods0 = methods!(
                 variants,
                 trait_name0,
-                fn subs(&self, s: f64, t: f64) -> Self::Point,
-                fn uder(&self, s: f64, t: f64) -> Self::Vector,
-                fn vder(&self, s: f64, t: f64) -> Self::Vector,
-                fn uuder(&self, s: f64, t: f64) -> Self::Vector,
-                fn uvder(&self, s: f64, t: f64) -> Self::Vector,
-                fn vvder(&self, s: f64, t: f64) -> Self::Vector,
-                fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector,
-                fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector>,
+                fn evaluate(&self, s: f64, t: f64) -> Self::Point,
+                fn derivative_u(&self, s: f64, t: f64) -> Self::Vector,
+                fn derivative_v(&self, s: f64, t: f64) -> Self::Vector,
+                fn derivative_uu(&self, s: f64, t: f64) -> Self::Vector,
+                fn derivative_uv(&self, s: f64, t: f64) -> Self::Vector,
+                fn derivative_vv(&self, s: f64, t: f64) -> Self::Vector,
+                fn derivative_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector,
+                fn derivatives(&self, max_order: usize, u: f64, v: f64) -> SurfaceDerivatives<Self::Vector>,
                 fn parameter_range(&self,) -> (truck_geotrait::ParameterRange, truck_geotrait::ParameterRange),
                 fn u_period(&self,) -> Option<f64>,
                 fn v_period(&self,) -> Option<f64>,
@@ -731,17 +731,17 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                     #field_type: #trait_name0, {
                     type Point = Point3;
                     type Vector = Vector3;
-                    fn subs(&self, s: f64, t: f64) -> Self::Point { self.0.subs(s, t) }
-                    fn uder(&self, s: f64, t: f64) -> Self::Vector { self.0.uder(s, t) }
-                    fn vder(&self, s: f64, t: f64) -> Self::Vector { self.0.vder(s, t) }
-                    fn uuder(&self, s: f64, t: f64) -> Self::Vector { self.0.uuder(s, t) }
-                    fn uvder(&self, s: f64, t: f64) -> Self::Vector { self.0.uvder(s, t) }
-                    fn vvder(&self, s: f64, t: f64) -> Self::Vector { self.0.vvder(s, t) }
-                    fn der_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector { self.0.der_mn(m, n, u, v) }
-                    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
-                        self.0.ders(max_order, u, v)
+                    fn evaluate(&self, s: f64, t: f64) -> Self::Point { self.0.evaluate(s, t) }
+                    fn derivative_u(&self, s: f64, t: f64) -> Self::Vector { self.0.derivative_u(s, t) }
+                    fn derivative_v(&self, s: f64, t: f64) -> Self::Vector { self.0.derivative_v(s, t) }
+                    fn derivative_uu(&self, s: f64, t: f64) -> Self::Vector { self.0.derivative_uu(s, t) }
+                    fn derivative_uv(&self, s: f64, t: f64) -> Self::Vector { self.0.derivative_uv(s, t) }
+                    fn derivative_vv(&self, s: f64, t: f64) -> Self::Vector { self.0.derivative_vv(s, t) }
+                    fn derivative_mn(&self, m: usize, n: usize, s: f64, t: f64) -> Self::Vector { self.0.derivative_mn(m, n, s, t) }
+                    fn derivatives(&self, max_order: usize, u: f64, v: f64) -> SurfaceDerivatives<Self::Vector> {
+                        self.0.derivatives(max_order, u, v)
                     }
-                    fn parameter_range(&self,) -> (truck_geotrait::ParmaterRange, truck_geotrait::ParameterRange) {
+                    fn parameter_range(&self,) -> (truck_geotrait::ParameterRange, truck_geotrait::ParameterRange) {
                         self.0.parameter_range()
                     }
                     fn u_period(&self) -> Option<f64> { self.0.u_period() }
@@ -778,7 +778,7 @@ pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
             let methods = methods!(
                 variants,
                 trait_name,
-                fn search_nearest_parameter<H: Into<SPHint1D>>(
+                fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
                     &self,
                     pt: Self::Point,
                     hint: H,
@@ -809,7 +809,7 @@ pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
                     type Point = <#field_type as #trait_name>::Point;
-                    fn search_nearest_parameter<H: Into<SPHint1D>>(
+                    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
                         &self,
                         pt: Self::Point,
                         hint: H,
@@ -842,7 +842,7 @@ pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
             let methods = methods!(
                 variants,
                 trait_name,
-                fn search_nearest_parameter<H: Into<SPHint2D>>(
+                fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
                     &self,
                     pt: Self::Point,
                     hint: H,
@@ -873,7 +873,7 @@ pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
                     type Point = <#field_type as #trait_name>::Point;
-                    fn search_nearest_parameter<H: Into<SPHint2D>>(
+                    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
                         &self,
                         pt: Self::Point,
                         hint: H,
@@ -907,7 +907,7 @@ pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
             let methods = methods!(
                 variants,
                 trait_name,
-                fn search_parameter<H: Into<SPHint1D>>(
+                fn search_parameter<H: Into<SearchParameterHint1D>>(
                     &self,
                     pt: Self::Point,
                     hint: H,
@@ -939,7 +939,7 @@ pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
                     type Point = <#field_type as #trait_name>::Point;
-                    fn search_parameter<H: Into<SPHint1D>>(
+                    fn search_parameter<H: Into<SearchParameterHint1D>>(
                         &self,
                         pt: Self::Point,
                         hint: H,
@@ -972,7 +972,7 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
             let methods = methods!(
                 variants,
                 trait_name,
-                fn search_parameter<H: Into<SPHint2D>>(
+                fn search_parameter<H: Into<SearchParameterHint2D>>(
                     &self,
                     pt: Self::Point,
                     hint: H,
@@ -1003,7 +1003,7 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
                     type Point = <#field_type as #trait_name>::Point;
-                    fn search_parameter<H: Into<SPHint2D>>(
+                    fn search_parameter<H: Into<SearchParameterHint2D>>(
                         &self,
                         pt: Self::Point,
                         hint: H,

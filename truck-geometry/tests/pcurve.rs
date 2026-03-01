@@ -18,7 +18,7 @@ fn exec_pcurve_derivation(
     let vcurve = PolynomialCurve::<Point3>(surface_vcoef);
     let surface = PolynomialSurface::by_tensor(ucurve, vcurve);
 
-    let pcurve0 = PCurve::new(curve, surface);
+    let pcurve0 = ParameterCurve::new(curve, surface);
     let pcurve1 = pcurve0.surface().composite(pcurve0.curve());
 
     prop_assert_near!(pcurve0.der_n(n, t), pcurve1.der_n(n, t));

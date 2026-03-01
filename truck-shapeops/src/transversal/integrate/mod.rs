@@ -31,7 +31,7 @@ pub trait ShapeOpsCurve<S: ShapeOpsSurface>:
     + ParameterDivision1D<Point = Point3>
     + Cut
     + Invertible
-    + From<IntersectionCurve<BSplineCurve<Point3>, S, S>>
+    + From<IntersectionCurve<BsplineCurve<Point3>, S, S>>
     + SearchParameter<D1, Point = Point3>
     + SearchNearestParameter<D1, Point = Point3>
     + Send
@@ -41,7 +41,7 @@ impl<C, S: ShapeOpsSurface> ShapeOpsCurve<S> for C where C: ParametricCurve3D
         + ParameterDivision1D<Point = Point3>
         + Cut
         + Invertible
-        + From<IntersectionCurve<BSplineCurve<Point3>, S, S>>
+        + From<IntersectionCurve<BsplineCurve<Point3>, S, S>>
         + SearchParameter<D1, Point = Point3>
         + SearchNearestParameter<D1, Point = Point3>
         + Send
@@ -61,7 +61,7 @@ fn altshell_to_shell<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
         |c| match c {
             Alternative::FirstType(c) => Some(c.clone()),
             Alternative::SecondType(ic) => {
-                let bsp = BSplineCurve::quadratic_approximation(ic, ic.range_tuple(), tol, 100)?;
+                let bsp = BsplineCurve::quadratic_approximation(ic, ic.range_tuple(), tol, 100)?;
                 Some(
                     IntersectionCurve::new(ic.surface0().clone(), ic.surface1().clone(), bsp)
                         .into(),
@@ -175,6 +175,28 @@ pub fn or<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     }
     let boundaries = or_shell.connected_components();
     Some(Solid::new(boundaries))
+}
+
+/// Difference: the region inside solid0 but outside solid1.
+pub fn difference<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
+    solid0: &Solid<Point3, C, S>,
+    solid1: &Solid<Point3, C, S>,
+    tol: f64,
+) -> Option<Solid<Point3, C, S>> {
+    let mut neg = solid1.clone();
+    neg.not();
+    and(solid0, &neg, tol)
+}
+
+/// Symmetric difference (XOR): the region inside exactly one of the two solids.
+pub fn symmetric_difference<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
+    solid0: &Solid<Point3, C, S>,
+    solid1: &Solid<Point3, C, S>,
+    tol: f64,
+) -> Option<Solid<Point3, C, S>> {
+    let d0 = difference(solid0, solid1, tol)?;
+    let d1 = difference(solid1, solid0, tol)?;
+    or(&d0, &d1, tol)
 }
 
 #[cfg(test)]

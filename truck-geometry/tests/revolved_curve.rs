@@ -5,7 +5,7 @@ use truck_geometry::prelude::*;
 fn revolve_test() {
     let pt0 = Point3::new(0.0, 2.0, 1.0);
     let pt1 = Point3::new(1.0, 0.0, 0.0);
-    let curve = BSplineCurve::new(KnotVec::bezier_knot(1), vec![pt0, pt1]);
+    let curve = BsplineCurve::new(KnotVector::bezier_knot(1), vec![pt0, pt1]);
     let surface = RevolutedCurve::by_revolution(curve, Point3::origin(), Vector3::unit_y());
     const N: usize = 100;
     for i in 0..=N {
@@ -53,8 +53,8 @@ fn revolve_test() {
 
 #[test]
 fn search_parameter() {
-    let line = BSplineCurve::new(
-        KnotVec::bezier_knot(1),
+    let line = BsplineCurve::new(
+        KnotVector::bezier_knot(1),
         vec![Point3::new(0.0, 2.0, 1.0), Point3::new(1.0, 0.0, 0.0)],
     );
     let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
@@ -65,8 +65,8 @@ fn search_parameter() {
 
 #[test]
 fn search_parameter_with_fixed_points() {
-    let line = BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let line = BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Point3::new(0.0, 1.0, 0.0),
             Point3::new(0.0, 0.0, 1.0),
@@ -88,8 +88,8 @@ fn search_parameter_with_fixed_points() {
 
 #[test]
 fn search_nearest_parameter() {
-    let line = BSplineCurve::new(
-        KnotVec::bezier_knot(1),
+    let line = BsplineCurve::new(
+        KnotVector::bezier_knot(1),
         vec![Point3::new(0.0, 2.0, 1.0), Point3::new(1.0, 0.0, 0.0)],
     );
     let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
@@ -102,8 +102,8 @@ fn search_nearest_parameter() {
 
 #[test]
 fn search_nearest_parameter_with_fixed_points() {
-    let line = BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let line = BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Point3::new(0.0, 1.0, 0.0),
             Point3::new(0.0, 0.0, 1.0),
@@ -125,13 +125,13 @@ fn search_nearest_parameter_with_fixed_points() {
 
 #[test]
 fn include_curve_normal() {
-    let line = BSplineCurve::new(
-        KnotVec::bezier_knot(1),
+    let line = BsplineCurve::new(
+        KnotVector::bezier_knot(1),
         vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 2.0, 2.0)],
     );
     let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
-    let parabola = BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let parabola = BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Point3::new(1.0, 1.0, 0.0),
             Point3::new(0.0, 0.0, 1.0),
@@ -143,13 +143,13 @@ fn include_curve_normal() {
 
 #[test]
 fn include_curve_abnormal0() {
-    let line = BSplineCurve::new(
-        KnotVec::bezier_knot(1),
+    let line = BsplineCurve::new(
+        KnotVector::bezier_knot(1),
         vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 2.0, 2.0)],
     );
     let surface = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_y());
-    let parabola = BSplineCurve::new(
-        KnotVec::bezier_knot(2),
+    let parabola = BsplineCurve::new(
+        KnotVector::bezier_knot(2),
         vec![
             Point3::new(1.0, 1.0, 0.0),
             Point3::new(0.0, 0.0, 2.0),
@@ -161,8 +161,8 @@ fn include_curve_abnormal0() {
 
 #[test]
 fn include_curve_abnormal1() {
-    let curve = NurbsCurve::new(BSplineCurve::new(
-        KnotVec::bezier_knot(3),
+    let curve = NurbsCurve::new(BsplineCurve::new(
+        KnotVector::bezier_knot(3),
         vec![
             Vector4::new(0.0, 3.0, 0.0, 1.0),
             Vector4::new(0.0, 3.0, 3.0, 0.5),
@@ -173,6 +173,6 @@ fn include_curve_abnormal1() {
     let pt0 = curve.subs(0.2);
     let pt1 = curve.subs(0.6);
     let surface = RevolutedCurve::by_revolution(curve, Point3::origin(), Vector3::unit_y());
-    let line = BSplineCurve::new(KnotVec::bezier_knot(1), vec![pt0, pt1]);
+    let line = BsplineCurve::new(KnotVector::bezier_knot(1), vec![pt0, pt1]);
     assert!(!surface.include(&line));
 }

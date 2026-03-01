@@ -21,22 +21,22 @@ impl Segment {
 impl ParametricCurve for Segment {
     type Point = Point3;
     type Vector = Vector3;
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector {
         match n {
-            0 => self.subs(t).to_vec(),
-            1 => self.der(t),
+            0 => self.evaluate(t).to_vec(),
+            1 => self.derivative(t),
             _ => Vector3::zero(),
         }
     }
     #[inline(always)]
-    fn subs(&self, t: f64) -> Point3 {
+    fn evaluate(&self, t: f64) -> Point3 {
         self.ends.0
             + (self.ends.1 - self.ends.0) * (t - self.range.0) / (self.range.1 - self.range.0)
     }
     #[inline(always)]
-    fn der(&self, _: f64) -> Vector3 { (self.ends.1 - self.ends.0) / (self.range.1 - self.range.0) }
+    fn derivative(&self, _: f64) -> Vector3 { (self.ends.1 - self.ends.0) / (self.range.1 - self.range.0) }
     #[inline(always)]
-    fn der2(&self, _: f64) -> Vector3 { Vector3::zero() }
+    fn derivative_2(&self, _: f64) -> Vector3 { Vector3::zero() }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {
         (Bound::Included(self.range.0), Bound::Included(self.range.1))
@@ -95,7 +95,12 @@ impl Concat<Segment> for Segment {
 
 impl SearchParameter<D1> for Segment {
     type Point = Point3;
-    fn search_parameter<H: Into<SPHint1D>>(&self, point: Point3, _: H, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
+        &self,
+        point: Point3,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         let p = point - self.ends.0;
         let r = self.ends.1 - self.ends.0;
         let t = p.dot(r) / r.dot(r);

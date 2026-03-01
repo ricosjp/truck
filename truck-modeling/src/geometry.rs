@@ -26,7 +26,7 @@ pub enum Curve {
     /// line
     Line(Line<Point3>),
     /// 3-dimensional B-spline curve
-    BSplineCurve(BSplineCurve<Point3>),
+    BsplineCurve(BsplineCurve<Point3>),
     /// 3-dimensional NURBS curve
     NurbsCurve(NurbsCurve<Vector4>),
     /// intersection curve
@@ -37,7 +37,7 @@ macro_rules! derive_curve_method {
     ($curve: expr, $method: expr, $($ver: ident),*) => {
         match $curve {
             Curve::Line(got) => $method(got, $($ver), *),
-            Curve::BSplineCurve(got) => $method(got, $($ver), *),
+            Curve::BsplineCurve(got) => $method(got, $($ver), *),
             Curve::NurbsCurve(got) => $method(got, $($ver), *),
             Curve::IntersectionCurve(got) => $method(got, $($ver), *),
         }
@@ -48,7 +48,7 @@ macro_rules! derive_curve_self_method {
     ($curve: expr, $method: expr, $($ver: ident),*) => {
         match $curve {
             Curve::Line(got) => Curve::Line($method(got, $($ver), *)),
-            Curve::BSplineCurve(got) => Curve::BSplineCurve($method(got, $($ver), *)),
+            Curve::BsplineCurve(got) => Curve::BsplineCurve($method(got, $($ver), *)),
             Curve::NurbsCurve(got) => Curve::NurbsCurve($method(got, $($ver), *)),
             Curve::IntersectionCurve(got) => Curve::IntersectionCurve($method(got, $($ver), *)),
         }
@@ -64,8 +64,8 @@ impl Transformed<Matrix4> for Curve {
     }
 }
 
-impl From<IntersectionCurve<BSplineCurve<Point3>, Surface, Surface>> for Curve {
-    fn from(c: IntersectionCurve<BSplineCurve<Point3>, Surface, Surface>) -> Curve {
+impl From<IntersectionCurve<BsplineCurve<Point3>, Surface, Surface>> for Curve {
+    fn from(c: IntersectionCurve<BsplineCurve<Point3>, Surface, Surface>) -> Curve {
         let (surface0, surface1, leader) = c.destruct();
         Curve::IntersectionCurve(IntersectionCurve::new(
             Box::new(surface0),
@@ -85,17 +85,17 @@ impl ToSameGeometry<Curve> for Processor<TrimmedCurve<UnitCircle<Point3>>, Matri
     fn to_same_geometry(&self) -> Curve { Curve::NurbsCurve(self.to_same_geometry()) }
 }
 
-impl ToSameGeometry<Curve> for BSplineCurve<Point3> {
+impl ToSameGeometry<Curve> for BsplineCurve<Point3> {
     #[inline]
     fn to_same_geometry(&self) -> Curve { Curve::from(self.clone()) }
 }
 
 impl Curve {
     /// Into non-ratinalized 4-dimensional B-spline curve
-    pub fn lift_up(&self) -> BSplineCurve<Vector4> {
+    pub fn lift_up(&self) -> BsplineCurve<Vector4> {
         match self {
-            Curve::Line(curve) => Curve::BSplineCurve((*curve).into()).lift_up(),
-            Curve::BSplineCurve(curve) => BSplineCurve::new(
+            Curve::Line(curve) => Curve::BsplineCurve((*curve).into()).lift_up(),
+            Curve::BsplineCurve(curve) => BsplineCurve::new(
                 curve.knot_vec().clone(),
                 curve
                     .control_points()
@@ -128,7 +128,7 @@ pub enum Surface {
     /// Plane
     Plane(Plane),
     /// 3-dimensional B-spline surface
-    BSplineSurface(BSplineSurface<Point3>),
+    BsplineSurface(BsplineSurface<Point3>),
     /// 3-dimensional NURBS Surface
     NurbsSurface(NurbsSurface<Vector4>),
     /// revoluted curve
@@ -141,7 +141,7 @@ macro_rules! derive_surface_method {
     ($surface: expr, $method: expr, $($ver: ident),*) => {
         match $surface {
             Self::Plane(got) => $method(got, $($ver), *),
-            Self::BSplineSurface(got) => $method(got, $($ver), *),
+            Self::BsplineSurface(got) => $method(got, $($ver), *),
             Self::NurbsSurface(got) => $method(got, $($ver), *),
             Self::RevolutedCurve(got) => $method(got, $($ver), *),
             Self::TSplineSurface(got) => $method(got, $($ver), *),
@@ -153,7 +153,7 @@ macro_rules! derive_surface_self_method {
     ($surface: expr, $method: expr, $($ver: ident),*) => {
         match $surface {
             Self::Plane(got) => Self::Plane($method(got, $($ver), *)),
-            Self::BSplineSurface(got) => Self::BSplineSurface($method(got, $($ver), *)),
+            Self::BsplineSurface(got) => Self::BsplineSurface($method(got, $($ver), *)),
             Self::NurbsSurface(got) => Self::NurbsSurface($method(got, $($ver), *)),
             Self::RevolutedCurve(got) => Self::RevolutedCurve($method(got, $($ver), *)),
             Self::TSplineSurface(got) => Self::TSplineSurface($method(got, $($ver), *)),
@@ -181,21 +181,21 @@ impl IncludeCurve<Curve> for Surface {
     #[inline(always)]
     fn include(&self, curve: &Curve) -> bool {
         match self {
-            Surface::BSplineSurface(surface) => match curve {
-                &Curve::Line(curve) => surface.include(&BSplineCurve::from(curve)),
-                Curve::BSplineCurve(curve) => surface.include(curve),
+            Surface::BsplineSurface(surface) => match curve {
+                &Curve::Line(curve) => surface.include(&BsplineCurve::from(curve)),
+                Curve::BsplineCurve(curve) => surface.include(curve),
                 Curve::NurbsCurve(curve) => surface.include(curve),
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::NurbsSurface(surface) => match curve {
-                &Curve::Line(curve) => surface.include(&BSplineCurve::from(curve)),
-                Curve::BSplineCurve(curve) => surface.include(curve),
+                &Curve::Line(curve) => surface.include(&BsplineCurve::from(curve)),
+                Curve::BsplineCurve(curve) => surface.include(curve),
                 Curve::NurbsCurve(curve) => surface.include(curve),
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::Plane(surface) => match curve {
-                &Curve::Line(curve) => surface.include(&BSplineCurve::from(curve)),
-                Curve::BSplineCurve(curve) => surface.include(curve),
+                &Curve::Line(curve) => surface.include(&BsplineCurve::from(curve)),
+                Curve::BsplineCurve(curve) => surface.include(curve),
                 Curve::NurbsCurve(curve) => surface.include(curve),
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
@@ -204,18 +204,29 @@ impl IncludeCurve<Curve> for Surface {
                 surface.search_parameter(p, None, 1).is_some()
             }),
             Surface::RevolutedCurve(surface) => match surface.entity_curve() {
-                &Curve::Line(curve) => {
-                    self.include(&Curve::BSplineCurve(BSplineCurve::from(curve)))
+                &Curve::Line(entity_line) => {
+                    let entity_bsp = BsplineCurve::from(entity_line);
+                    let surface = RevolutedCurve::by_revolution(
+                        &entity_bsp,
+                        surface.origin(),
+                        surface.axis(),
+                    );
+                    match curve {
+                        &Curve::Line(curve) => surface.include(&BsplineCurve::from(curve)),
+                        Curve::BsplineCurve(curve) => surface.include(curve),
+                        Curve::NurbsCurve(curve) => surface.include(curve),
+                        Curve::IntersectionCurve(_) => unimplemented!(),
+                    }
                 }
-                Curve::BSplineCurve(entity_curve) => {
+                Curve::BsplineCurve(entity_curve) => {
                     let surface = RevolutedCurve::by_revolution(
                         entity_curve,
                         surface.origin(),
                         surface.axis(),
                     );
                     match curve {
-                        &Curve::Line(curve) => surface.include(&BSplineCurve::from(curve)),
-                        Curve::BSplineCurve(curve) => surface.include(curve),
+                        &Curve::Line(curve) => surface.include(&BsplineCurve::from(curve)),
+                        Curve::BsplineCurve(curve) => surface.include(curve),
                         Curve::NurbsCurve(curve) => surface.include(curve),
                         Curve::IntersectionCurve(_) => unimplemented!(),
                     }
@@ -227,8 +238,8 @@ impl IncludeCurve<Curve> for Surface {
                         surface.axis(),
                     );
                     match curve {
-                        &Curve::Line(curve) => surface.include(&BSplineCurve::from(curve)),
-                        Curve::BSplineCurve(curve) => surface.include(curve),
+                        &Curve::Line(curve) => surface.include(&BsplineCurve::from(curve)),
+                        Curve::BsplineCurve(curve) => surface.include(curve),
                         Curve::NurbsCurve(curve) => surface.include(curve),
                         Curve::IntersectionCurve(_) => unimplemented!(),
                     }
@@ -258,7 +269,7 @@ impl ToSameGeometry<Surface> for RevolutedCurve<Curve> {
 
 impl SearchNearestParameter<D2> for Surface {
     type Point = Point3;
-    fn search_nearest_parameter<H: Into<SPHint2D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         hint: H,
@@ -266,7 +277,7 @@ impl SearchNearestParameter<D2> for Surface {
     ) -> Option<(f64, f64)> {
         match self {
             Surface::Plane(plane) => plane.search_nearest_parameter(point, hint, trials),
-            Surface::BSplineSurface(bspsurface) => {
+            Surface::BsplineSurface(bspsurface) => {
                 bspsurface.search_nearest_parameter(point, hint, trials)
             }
             Surface::NurbsSurface(surface) => surface.search_nearest_parameter(point, hint, trials),
@@ -275,9 +286,11 @@ impl SearchNearestParameter<D2> for Surface {
             }
             Surface::RevolutedCurve(rotted) => {
                 let hint = match hint.into() {
-                    SPHint2D::Parameter(hint0, hint1) => (hint0, hint1),
-                    SPHint2D::Range(x, y) => algo::surface::presearch(rotted, point, (x, y), 100),
-                    SPHint2D::None => {
+                    SearchParameterHint2D::Parameter(hint0, hint1) => (hint0, hint1),
+                    SearchParameterHint2D::Range(x, y) => {
+                        algo::surface::presearch(rotted, point, (x, y), 100)
+                    }
+                    SearchParameterHint2D::None => {
                         algo::surface::presearch(rotted, point, rotted.range_tuple(), 100)
                     }
                 };
@@ -291,7 +304,7 @@ impl ToSameGeometry<Surface> for HomotopySurface<Curve, Curve> {
     fn to_same_geometry(&self) -> Surface {
         let curve0 = self.first_curve().clone().lift_up();
         let curve1 = self.second_curve().clone().lift_up();
-        NurbsSurface::new(BSplineSurface::homotopy(curve0, curve1)).into()
+        NurbsSurface::new(BsplineSurface::homotopy(curve0, curve1)).into()
     }
 }
 
@@ -304,11 +317,11 @@ impl ToSameGeometry<Surface> for ExtrudedCurve<Curve, Vector3> {
             (Curve::Line(line), Curve::Line(_)) => {
                 Plane::new(line.0, line.1, line.0 + vector).into()
             }
-            (Curve::BSplineCurve(curve0), Curve::BSplineCurve(curve1)) => {
-                BSplineSurface::homotopy(curve0.clone(), curve1.clone()).into()
+            (Curve::BsplineCurve(curve0), Curve::BsplineCurve(curve1)) => {
+                BsplineSurface::homotopy(curve0.clone(), curve1.clone()).into()
             }
             (Curve::NurbsCurve(curve0), Curve::NurbsCurve(curve1)) => {
-                NurbsSurface::new(BSplineSurface::homotopy(
+                NurbsSurface::new(BsplineSurface::homotopy(
                     curve0.non_rationalized().clone(),
                     curve1.non_rationalized().clone(),
                 ))

@@ -1,5 +1,6 @@
 use super::*;
-use algo::surface::SspVector;
+use algo::surface::SearchParameterVector;
+use truck_geotrait::ParametricCurve as PcurveTrait;
 
 impl<C, V: Copy> ExtrudedCurve<C, V> {
     /// Creates a linear extruded curve by extrusion.
@@ -20,33 +21,33 @@ impl<C, V: Copy> ExtrudedCurve<C, V> {
 
 impl<C> ParametricSurface for ExtrudedCurve<C, C::Vector>
 where
-    C: ParametricCurve,
+    C: PcurveTrait,
     C::Point: EuclideanSpace<Scalar = f64, Diff = C::Vector>,
     C::Vector: VectorSpace<Scalar = f64>,
 {
     type Point = C::Point;
     type Vector = C::Vector;
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         match (m, n) {
-            (0, 0) => self.subs(u, v).to_vec(),
+            (0, 0) => self.evaluate(u, v).to_vec(),
             (0, 1) => self.vector,
             (_, 0) => self.curve.der_n(m, u),
             _ => C::Vector::zero(),
         }
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> C::Point { self.curve.subs(u) + self.vector * v }
+    fn evaluate(&self, u: f64, v: f64) -> C::Point { self.curve.evaluate(u) + self.vector * v }
     #[inline(always)]
-    fn uder(&self, u: f64, _: f64) -> C::Vector { self.curve.der(u) }
+    fn derivative_u(&self, u: f64, _: f64) -> C::Vector { self.curve.der(u) }
     #[inline(always)]
-    fn vder(&self, _: f64, _: f64) -> C::Vector { self.vector }
+    fn derivative_v(&self, _: f64, _: f64) -> C::Vector { self.vector }
     #[inline(always)]
-    fn uuder(&self, u: f64, _: f64) -> C::Vector { self.curve.der2(u) }
+    fn derivative_uu(&self, u: f64, _: f64) -> C::Vector { self.curve.der2(u) }
     #[inline(always)]
-    fn uvder(&self, _: f64, _: f64) -> C::Vector { C::Vector::zero() }
+    fn derivative_uv(&self, _: f64, _: f64) -> C::Vector { C::Vector::zero() }
     #[inline(always)]
-    fn vvder(&self, _: f64, _: f64) -> C::Vector { C::Vector::zero() }
+    fn derivative_vv(&self, _: f64, _: f64) -> C::Vector { C::Vector::zero() }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         (
@@ -89,23 +90,23 @@ impl<C: ParameterDivision1D, V> ParameterDivision2D for ExtrudedCurve<C, V> {
 impl<P, C> SearchParameter<D2> for ExtrudedCurve<C, P::Diff>
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + Tolerance,
-    P::Diff: SspVector<Point = P>,
-    C: ParametricCurve<Point = P, Vector = P::Diff> + BoundedCurve,
+    P::Diff: SearchParameterVector<Point = P>,
+    C: PcurveTrait<Point = P, Vector = P::Diff> + BoundedCurve,
 {
     type Point = P;
     #[inline(always)]
-    fn search_parameter<H: Into<SPHint2D>>(
+    fn search_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: P,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         let hint = match hint.into() {
-            SPHint2D::Parameter(x, y) => (x, y),
-            SPHint2D::Range(range0, range1) => {
+            SearchParameterHint2D::Parameter(x, y) => (x, y),
+            SearchParameterHint2D::Range(range0, range1) => {
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
-            SPHint2D::None => {
+            SearchParameterHint2D::None => {
                 algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
@@ -116,18 +117,18 @@ where
 impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for ExtrudedCurve<C, Vector3> {
     type Point = Point3;
     #[inline(always)]
-    fn search_nearest_parameter<H: Into<SPHint2D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         let hint = match hint.into() {
-            SPHint2D::Parameter(x, y) => (x, y),
-            SPHint2D::Range(range0, range1) => {
+            SearchParameterHint2D::Parameter(x, y) => (x, y),
+            SearchParameterHint2D::Range(range0, range1) => {
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
-            SPHint2D::None => {
+            SearchParameterHint2D::None => {
                 algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };

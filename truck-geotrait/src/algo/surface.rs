@@ -2,7 +2,8 @@ use newton::Jacobian;
 
 use super::*;
 
-/// Divides the domain into equal parts, examines all the values, and returns `(u, v)` such that `surface.subs(u, v)` is closest to `point`.
+/// Divides the domain into equal parts, examines all the values, and returns `(u, v)` such that
+/// `surface.evaluate(u, v)` is closest to `point`.
 /// This method is useful to get an efficient hint of `search_nearest_parameter`.
 pub fn presearch<S>(
     surface: &S,
@@ -23,7 +24,7 @@ where
             let q = j as f64 / division as f64;
             let u = u0 * (1.0 - p) + u1 * p;
             let v = v0 * (1.0 - q) + v1 * q;
-            let dist = surface.subs(u, v).distance2(point);
+            let dist = surface.evaluate(u, v).distance2(point);
             if dist < min {
                 min = dist;
                 res = (u, v);
@@ -34,7 +35,7 @@ where
 }
 
 /// Vectors whose points returned by the surface that can be the target of [`search_nearest_parameter`].
-pub trait SsnpVector: InnerSpace<Scalar = f64> + Tolerance {
+pub trait SearchNearestParameterVector: InnerSpace<Scalar = f64> + Tolerance {
     #[doc(hidden)]
     type Point;
     #[doc(hidden)]
@@ -48,7 +49,7 @@ pub trait SsnpVector: InnerSpace<Scalar = f64> + Tolerance {
     fn from_param(param: (f64, f64)) -> Self;
 }
 
-impl SsnpVector for Vector2 {
+impl SearchNearestParameterVector for Vector2 {
     type Point = Point2;
     type Matrix = Matrix2;
     fn subs<S>(
@@ -60,15 +61,15 @@ impl SsnpVector for Vector2 {
         S: ParametricSurface<Point = Point2, Vector = Vector2>,
     {
         CalcOutput {
-            value: surface.subs(u, v) - point,
-            derivation: Matrix2::from_cols(surface.uder(u, v), surface.vder(u, v)),
+            value: surface.evaluate(u, v) - point,
+            derivation: Matrix2::from_cols(surface.derivative_u(u, v), surface.derivative_v(u, v)),
         }
     }
     fn into_param(self) -> (f64, f64) { self.into() }
     fn from_param(param: (f64, f64)) -> Self { param.into() }
 }
 
-impl SsnpVector for Vector3 {
+impl SearchNearestParameterVector for Vector3 {
     type Point = Point3;
     type Matrix = Matrix3;
     fn subs<S>(
@@ -79,12 +80,12 @@ impl SsnpVector for Vector3 {
     where
         S: ParametricSurface<Point = Self::Point, Vector = Self>,
     {
-        let diff = surface.subs(u, v) - point;
-        let uder = surface.uder(u, v);
-        let vder = surface.vder(u, v);
-        let uuder = surface.uuder(u, v);
-        let uvder = surface.uvder(u, v);
-        let vvder = surface.vvder(u, v);
+        let diff = surface.evaluate(u, v) - point;
+        let uder = surface.derivative_u(u, v);
+        let vder = surface.derivative_v(u, v);
+        let uuder = surface.derivative_uu(u, v);
+        let uvder = surface.derivative_uv(u, v);
+        let vvder = surface.derivative_vv(u, v);
         let uv_cross = uder.cross(vder);
         CalcOutput {
             value: diff + uv_cross * w,
@@ -109,16 +110,16 @@ pub fn search_nearest_parameter<P, S>(
 ) -> Option<(f64, f64)>
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-    P::Diff: SsnpVector<Point = P>,
+    P::Diff: SearchNearestParameterVector<Point = P>,
     S: ParametricSurface<Point = P, Vector = P::Diff>,
 {
-    let function = move |param: P::Diff| SsnpVector::subs(surface, point, param);
+    let function = move |param: P::Diff| SearchNearestParameterVector::subs(surface, point, param);
     let res = newton::solve(function, P::Diff::from_param(hint), trials);
     res.ok().map(P::Diff::into_param)
 }
 
 /// Vectors whose points returned by the surface that can be the target of [`search_parameter`].
-pub trait SspVector: InnerSpace<Scalar = f64> + Tolerance {
+pub trait SearchParameterVector: InnerSpace<Scalar = f64> + Tolerance {
     #[doc(hidden)]
     type Point;
     #[doc(hidden)]
@@ -126,7 +127,7 @@ pub trait SspVector: InnerSpace<Scalar = f64> + Tolerance {
     where S: ParametricSurface<Point = Self::Point, Vector = Self>;
 }
 
-impl SspVector for Vector2 {
+impl SearchParameterVector for Vector2 {
     type Point = Point2;
     fn subs<S>(
         surface: &S,
@@ -137,13 +138,13 @@ impl SspVector for Vector2 {
         S: ParametricSurface<Point = Point2, Vector = Vector2>,
     {
         CalcOutput {
-            value: surface.subs(u, v) - point,
-            derivation: Matrix2::from_cols(surface.uder(u, v), surface.vder(u, v)),
+            value: surface.evaluate(u, v) - point,
+            derivation: Matrix2::from_cols(surface.derivative_u(u, v), surface.derivative_v(u, v)),
         }
     }
 }
 
-impl SspVector for Vector3 {
+impl SearchParameterVector for Vector3 {
     type Point = Point3;
     fn subs<S>(
         surface: &S,
@@ -153,9 +154,9 @@ impl SspVector for Vector3 {
     where
         S: ParametricSurface<Point = Self::Point, Vector = Self>,
     {
-        let diff = surface.subs(u, v) - point;
-        let uder = surface.uder(u, v);
-        let vder = surface.vder(u, v);
+        let diff = surface.evaluate(u, v) - point;
+        let uder = surface.derivative_u(u, v);
+        let vder = surface.derivative_v(u, v);
         CalcOutput {
             value: Vector2::new(uder.dot(diff), vder.dot(diff)),
             derivation: Matrix2::new(
@@ -178,13 +179,13 @@ pub fn search_parameter<P, S>(
 ) -> Option<(f64, f64)>
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + Tolerance,
-    P::Diff: SspVector<Point = P>,
+    P::Diff: SearchParameterVector<Point = P>,
     S: ParametricSurface<Point = P, Vector = P::Diff>,
 {
-    let function = move |param: Vector2| SspVector::subs(surface, point, param);
+    let function = move |param: Vector2| SearchParameterVector::subs(surface, point, param);
     let res = newton::solve(function, hint.into(), trials);
     res.ok().and_then(
-        |Vector2 { x: u, y: v }| match surface.subs(u, v).near(&point) {
+        |Vector2 { x: u, y: v }| match surface.evaluate(u, v).near(&point) {
             true => Some((u, v)),
             false => None,
         },
@@ -204,12 +205,16 @@ where
     S: ParametricSurface3D,
 {
     let function = move |Vector3 { x, y, z }| CalcOutput {
-        value: surface.subs(x, y) - curve.subs(z),
-        derivation: Matrix3::from_cols(surface.uder(x, y), surface.vder(x, y), -curve.der(z)),
+        value: surface.evaluate(x, y) - curve.evaluate(z),
+        derivation: Matrix3::from_cols(
+            surface.derivative_u(x, y),
+            surface.derivative_v(x, y),
+            -curve.derivative(z),
+        ),
     };
     let hint = Vector3::new(hint0.0, hint0.1, hint1);
     let Vector3 { x, y, z } = newton::solve(function, hint, trials).ok()?;
-    match surface.subs(x, y).near(&curve.subs(z)) {
+    match surface.evaluate(x, y).near(&curve.evaluate(z)) {
         true => Some(((x, y), z)),
         false => None,
     }
@@ -249,16 +254,16 @@ where
                 continue;
             }
             let (u_gen, v_gen) = ((u[0] + u[1]) / 2.0, (v[0] + v[1]) / 2.0);
-            let gen = surface.subs(u_gen, v_gen);
-            let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
-            let q = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
+            let generated = surface.evaluate(u_gen, v_gen);
+            let p = 0.5 + (0.2 * HashGen::hash1(generated) - 0.1);
+            let q = 0.5 + (0.2 * HashGen::hash1(generated) - 0.1);
             let u0 = u[0] * (1.0 - p) + u[1] * p;
             let v0 = v[0] * (1.0 - q) + v[1] * q;
-            let p0 = surface.subs(u0, v0);
-            let pt00 = surface.subs(u[0], v[0]);
-            let pt01 = surface.subs(u[0], v[1]);
-            let pt10 = surface.subs(u[1], v[0]);
-            let pt11 = surface.subs(u[1], v[1]);
+            let p0 = surface.evaluate(u0, v0);
+            let pt00 = surface.evaluate(u[0], v[0]);
+            let pt01 = surface.evaluate(u[0], v[1]);
+            let pt10 = surface.evaluate(u[1], v[0]);
+            let pt11 = surface.evaluate(u[1], v[1]);
             let pt = S::Point::from_vec(
                 pt00.to_vec() * (1.0 - p) * (1.0 - q)
                     + pt01.to_vec() * (1.0 - p) * q

@@ -2,7 +2,7 @@ use truck_base::tolerance::Tolerance;
 use truck_geometry::prelude::*;
 
 use super::error::FilletError;
-use super::types::{self, Curve, ParamCurveLinear};
+use super::types::{self, Curve, ParameterCurveLinear};
 
 type InternalShell = types::Shell;
 
@@ -20,12 +20,12 @@ pub trait FilletableCurve: Clone {
     fn to_nurbs_curve(&self) -> Option<NurbsCurve<Vector4>>;
     /// Wrap a NURBS curve back into this type.
     fn from_nurbs_curve(c: NurbsCurve<Vector4>) -> Self;
-    /// Convert from a PCurve (line on NURBS surface).
-    fn from_pcurve(c: ParamCurveLinear) -> Self;
+    /// Convert from a ParameterCurve (line on NURBS surface).
+    fn from_pcurve(c: ParameterCurveLinear) -> Self;
     /// Convert from an intersection curve.
     fn from_intersection_curve(
         c: IntersectionCurve<
-            ParamCurveLinear,
+            ParameterCurveLinear,
             Box<NurbsSurface<Vector4>>,
             Box<NurbsSurface<Vector4>>,
         >,
@@ -47,10 +47,10 @@ impl FilletableCurve for Curve {
         }
     }
     fn from_nurbs_curve(c: NurbsCurve<Vector4>) -> Self { Curve::NurbsCurve(c) }
-    fn from_pcurve(c: ParamCurveLinear) -> Self { Curve::PCurve(c) }
+    fn from_pcurve(c: ParameterCurveLinear) -> Self { Curve::ParameterCurve(c) }
     fn from_intersection_curve(
         c: IntersectionCurve<
-            ParamCurveLinear,
+            ParameterCurveLinear,
             Box<NurbsSurface<Vector4>>,
             Box<NurbsSurface<Vector4>>,
         >,
@@ -61,12 +61,12 @@ impl FilletableCurve for Curve {
 
 /// Convert an external shell to internal fillet types.
 ///
-/// Returns the internal shell and the internal `EdgeID`s corresponding to
+/// Returns the internal shell and the internal `EdgeId`s corresponding to
 /// the selected external edges (matched by endpoint positions).
 pub(super) fn convert_shell_in<C: FilletableCurve, S: FilletableSurface>(
     shell: &truck_topology::Shell<Point3, C, S>,
     edges: &[truck_topology::Edge<Point3, C>],
-) -> std::result::Result<(InternalShell, Vec<types::EdgeID>), FilletError> {
+) -> std::result::Result<(InternalShell, Vec<types::EdgeId>), FilletError> {
     // Collect endpoint pairs for requested edges (front, back).
     let edge_endpoints: Vec<(Point3, Point3)> = edges
         .iter()
@@ -84,7 +84,7 @@ pub(super) fn convert_shell_in<C: FilletableCurve, S: FilletableSurface>(
         })?;
 
     // Match external edges to internal edges by endpoint positions.
-    let internal_edge_ids: Vec<types::EdgeID> = edge_endpoints
+    let internal_edge_ids: Vec<types::EdgeId> = edge_endpoints
         .iter()
         .map(|(ext_front, ext_back)| {
             internal_shell
@@ -113,7 +113,7 @@ pub(super) fn convert_shell_out<C: FilletableCurve, S: FilletableSurface>(
             |c| {
                 Some(match c {
                     Curve::NurbsCurve(nc) => C::from_nurbs_curve(nc.clone()),
-                    Curve::PCurve(pc) => C::from_pcurve(pc.clone()),
+                    Curve::ParameterCurve(pc) => C::from_pcurve(pc.clone()),
                     Curve::IntersectionCurve(ic) => C::from_intersection_curve(ic.clone()),
                 })
             },

@@ -1,10 +1,13 @@
 use super::*;
 use truck_base::cgmath64::control_point::ControlPoint;
+use truck_geotrait::ParametricCurve as PcurveTrait;
 
-impl<C, S> PCurve<C, S> {
+impl<C, S> ParameterCurve<C, S> {
     /// Creates composited
     #[inline(always)]
-    pub const fn new(curve: C, surface: S) -> PCurve<C, S> { PCurve { curve, surface } }
+    pub const fn new(curve: C, surface: S) -> ParameterCurve<C, S> {
+        ParameterCurve { curve, surface }
+    }
 
     /// Returns the reference to the parameter curve
     #[inline(always)]
@@ -19,7 +22,7 @@ impl<C, S> PCurve<C, S> {
     pub fn decompose(self) -> (C, S) { (self.curve, self.surface) }
 }
 
-impl<C, S> PCurve<C, S>
+impl<C, S> ParameterCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
@@ -42,7 +45,7 @@ where
     }
 }
 
-impl<C, S> ParametricCurve for PCurve<C, S>
+impl<C, S> PcurveTrait for ParameterCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
@@ -51,14 +54,14 @@ where
 {
     type Point = S::Point;
     type Vector = S::Vector;
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector {
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector {
         if n >= 32 {
             panic!("the order of derivation must be under 32.");
         }
         match n {
-            0 => return self.subs(t).to_vec(),
-            1 => return self.der(t),
-            2 => return self.der2(t),
+            0 => return self.evaluate(t).to_vec(),
+            1 => return self.derivative(t),
+            2 => return self.derivative_2(t),
             3 => return self.der3(t),
             _ => {}
         }
@@ -68,7 +71,7 @@ where
         let sders = self.surface.ders(n, u, v);
         sders.composite_der(&cders, n)
     }
-    fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> {
+    fn derivatives(&self, n: usize, t: f64) -> CurveDers<Self::Vector> {
         if n > MAX_DER_ORDER {
             panic!("the order of derivation must be under {MAX_DER_ORDER}.");
         }
@@ -78,17 +81,17 @@ where
         sders.composite_ders(&cders)
     }
     #[inline(always)]
-    fn subs(&self, t: f64) -> Self::Point {
+    fn evaluate(&self, t: f64) -> Self::Point {
         let pt = self.curve.subs(t);
         self.surface.subs(pt[0], pt[1])
     }
     #[inline(always)]
-    fn der(&self, t: f64) -> Self::Vector {
+    fn derivative(&self, t: f64) -> Self::Vector {
         let [pt, der] = self.curve.ders(1, t).to_array::<2>();
         self.surface.uder(pt[0], pt[1]) * der[0] + self.surface.vder(pt[0], pt[1]) * der[1]
     }
     #[inline(always)]
-    fn der2(&self, t: f64) -> Self::Vector {
+    fn derivative_2(&self, t: f64) -> Self::Vector {
         let [pt, der, der2] = self.curve.ders(2, t).to_array::<3>();
         self.surface.uuder(pt[0], pt[1]) * (der[0] * der[0])
             + self.surface.uvder(pt[0], pt[1]) * (der[0] * der[1] * 2.0)
@@ -102,18 +105,18 @@ where
     fn period(&self) -> Option<f64> { self.curve.period() }
 }
 
-impl<C, S> BoundedCurve for PCurve<C, S>
+impl<C, S> BoundedCurve for ParameterCurve<C, S>
 where
     C: BoundedCurve,
-    PCurve<C, S>: ParametricCurve,
+    ParameterCurve<C, S>: PcurveTrait,
 {
 }
 
-impl<C, S> Cut for PCurve<C, S>
+impl<C, S> Cut for ParameterCurve<C, S>
 where
     C: Cut,
     S: Clone,
-    PCurve<C, S>: ParametricCurve,
+    ParameterCurve<C, S>: PcurveTrait,
 {
     fn cut(&mut self, t: f64) -> Self {
         let curve = self.curve.cut(t);
@@ -124,13 +127,13 @@ where
     }
 }
 
-impl<C, S> SearchParameter<D1> for PCurve<C, S>
+impl<C, S> SearchParameter<D1> for ParameterCurve<C, S>
 where
     C: ParametricCurve2D + SearchParameter<D1, Point = Point2>,
     S: SearchParameter<D2>,
 {
     type Point = <S as SearchParameter<D2>>::Point;
-    fn search_parameter<H: Into<SPHint1D>>(
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: Self::Point,
         hint: H,
@@ -138,11 +141,11 @@ where
     ) -> Option<f64> {
         let hint = hint.into();
         let shint = match hint {
-            SPHint1D::Parameter(hint) => {
+            SearchParameterHint1D::Parameter(hint) => {
                 let p = self.curve.subs(hint);
-                SPHint2D::Parameter(p.x, p.y)
+                SearchParameterHint2D::Parameter(p.x, p.y)
             }
-            SPHint1D::Range(x, y) => {
+            SearchParameterHint1D::Range(x, y) => {
                 let p = self.curve.subs(y);
                 let ranges = (0..PRESEARCH_DIVISION).fold(
                     ((p.x, p.x), (p.y, p.y)),
@@ -155,35 +158,35 @@ where
                         )
                     },
                 );
-                SPHint2D::Range(ranges.0, ranges.1)
+                SearchParameterHint2D::Range(ranges.0, ranges.1)
             }
-            SPHint1D::None => SPHint2D::None,
+            SearchParameterHint1D::None => SearchParameterHint2D::None,
         };
         let (x, y) = self.surface.search_parameter(point, shint, trials)?;
         self.curve.search_parameter(Point2::new(x, y), hint, trials)
     }
 }
 
-impl<C, S> SearchNearestParameter<D1> for PCurve<C, S>
+impl<C, S> SearchNearestParameter<D1> for ParameterCurve<C, S>
 where
     Self: BoundedCurve,
-    <Self as ParametricCurve>::Point: EuclideanSpace<Scalar = f64, Diff = <Self as ParametricCurve>::Vector>
+    <Self as PcurveTrait>::Point: EuclideanSpace<Scalar = f64, Diff = <Self as PcurveTrait>::Vector>
         + MetricSpace<Metric = f64>,
-    <Self as ParametricCurve>::Vector: InnerSpace<Scalar = f64> + Tolerance,
+    <Self as PcurveTrait>::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
-    type Point = <Self as ParametricCurve>::Point;
-    fn search_nearest_parameter<H: Into<SPHint1D>>(
+    type Point = <Self as PcurveTrait>::Point;
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: Self::Point,
         hint: H,
         trials: usize,
     ) -> Option<f64> {
         let hint = match hint.into() {
-            SPHint1D::Parameter(hint) => hint,
-            SPHint1D::Range(x, y) => {
+            SearchParameterHint1D::Parameter(hint) => hint,
+            SearchParameterHint1D::Range(x, y) => {
                 algo::curve::presearch(self, point, (x, y), PRESEARCH_DIVISION)
             }
-            SPHint1D::None => {
+            SearchParameterHint1D::None => {
                 algo::curve::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
@@ -191,7 +194,7 @@ where
     }
 }
 
-impl<C, S> ParameterDivision1D for PCurve<C, S>
+impl<C, S> ParameterDivision1D for ParameterCurve<C, S>
 where
     C: ParametricCurve2D,
     S: ParametricSurface,
@@ -207,7 +210,7 @@ where
     }
 }
 
-impl<C, S> Invertible for PCurve<C, S>
+impl<C, S> Invertible for ParameterCurve<C, S>
 where
     C: Invertible,
     S: Clone,
@@ -215,7 +218,7 @@ where
     fn invert(&mut self) { self.curve.invert() }
 }
 
-impl<C: Clone, S: Clone, T> Transformed<T> for PCurve<C, S>
+impl<C: Clone, S: Clone, T> Transformed<T> for ParameterCurve<C, S>
 where S: Transformed<T>
 {
     #[inline(always)]

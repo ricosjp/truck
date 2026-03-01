@@ -7,22 +7,22 @@ use truck_modeling::*;
 
 fn cube_shell() -> Shell {
     let v = builder::vertex(Point3::origin());
-    let e = builder::tsweep(&v, Vector3::unit_x());
-    let f = builder::tsweep(&e, Vector3::unit_y());
-    let s = builder::tsweep(&f, Vector3::unit_z());
+    let e = builder::extrude(&v, Vector3::unit_x());
+    let f = builder::extrude(&e, Vector3::unit_y());
+    let s = builder::extrude(&f, Vector3::unit_z());
     s.into_boundaries().pop().unwrap()
 }
 
 fn torus_shell() -> Shell {
     let v = builder::vertex(Point3::new(0.5, 0.0, 0.25));
-    let w = builder::rsweep(
+    let w = builder::revolve(
         &v,
         Point3::new(0.5, 0.0, 0.5),
         -Vector3::unit_y(),
         Rad(2.0 * PI),
         2,
     );
-    builder::rsweep(&w, Point3::origin(), Vector3::unit_z(), Rad(PI / 2.0), 1)
+    builder::revolve(&w, Point3::origin(), Vector3::unit_z(), Rad(PI / 2.0), 1)
 }
 
 fn find_cube_face(cube_shell: &mut Shell, normal: Vector3) -> Option<&mut Face> {

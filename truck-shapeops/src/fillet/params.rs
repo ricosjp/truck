@@ -13,7 +13,7 @@ pub enum FilletProfile {
     Ridge,
     /// User-provided 2D profile curve. Domain [0,1], maps (0,0)→contact0,
     /// (1,0)→contact1, y-axis = displacement toward transit.
-    Custom(Box<BSplineCurve<Point2>>),
+    Custom(Box<BsplineCurve<Point2>>),
 }
 
 /// Radius specification for fillet operations.
@@ -22,10 +22,9 @@ pub enum RadiusSpec {
     Constant(f64),
     /// Variable radius as a function of normalized parameter `t` in `[0, 1]`.
     ///
-    /// Supported for single-edge fillets ([`fillet`](super::fillet),
-    /// [`fillet_with_side`](super::fillet_with_side)).
-    /// Rejected by [`fillet_along_wire`](super::fillet_along_wire) with
-    /// [`FilletError::VariableRadiusUnsupported`](super::FilletError::VariableRadiusUnsupported).
+    /// Supported for single-edge and wire fillets.
+    /// For closed wires, endpoint continuity is required:
+    /// `f(0.0)` must be near `f(1.0)`.
     Variable(Box<dyn Fn(f64) -> f64>),
     /// Per-edge radius. Length must match the edge count passed to [`fillet_edges`](super::fillet_edges).
     PerEdge(Vec<f64>),
@@ -60,5 +59,41 @@ impl Default for FilletOptions {
             divisions: NonZeroUsize::new(5).unwrap(),
             profile: FilletProfile::default(),
         }
+    }
+}
+
+impl FilletOptions {
+    /// Creates options with a constant radius.
+    pub fn constant(radius: f64) -> Self {
+        Self {
+            radius: RadiusSpec::Constant(radius),
+            ..Default::default()
+        }
+    }
+
+    /// Creates options with a variable radius function.
+    pub fn variable(radius: impl Fn(f64) -> f64 + 'static) -> Self {
+        Self {
+            radius: RadiusSpec::Variable(Box::new(radius)),
+            ..Default::default()
+        }
+    }
+
+    /// Sets the fillet radius specification.
+    pub fn with_radius(mut self, radius: RadiusSpec) -> Self {
+        self.radius = radius;
+        self
+    }
+
+    /// Sets the division count used by the fillet algorithm.
+    pub fn with_division(mut self, division: NonZeroUsize) -> Self {
+        self.divisions = division;
+        self
+    }
+
+    /// Sets the fillet profile.
+    pub fn with_profile(mut self, profile: FilletProfile) -> Self {
+        self.profile = profile;
+        self
     }
 }

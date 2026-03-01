@@ -43,9 +43,9 @@ impl MyApp {
 
     fn create_cube() -> Solid {
         let v = builder::vertex(Point3::origin());
-        let edge = builder::tsweep(&v, Vector3::unit_x());
-        let face = builder::tsweep(&edge, Vector3::unit_y());
-        builder::tsweep(&face, Vector3::unit_z())
+        let edge = builder::extrude(&v, Vector3::unit_x());
+        let face = builder::extrude(&edge, Vector3::unit_y());
+        builder::extrude(&face, Vector3::unit_z())
     }
 }
 

@@ -102,10 +102,12 @@ fn test_split_closed_face_simple_cylinder_case() {
         Line(Line<Point3>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point3>, Matrix4>>),
         #[allow(clippy::enum_variant_names)]
-        PCurve(PCurve<Line<Point2>, Surface>),
+        ParameterCurve(ParameterCurve<Line<Point2>, Surface>),
     }
-    impl From<PCurve<Line<Point2>, Surface>> for Curve {
-        fn from(value: PCurve<Line<Point2>, Surface>) -> Self { Self::PCurve(value) }
+    impl From<ParameterCurve<Line<Point2>, Surface>> for Curve {
+        fn from(value: ParameterCurve<Line<Point2>, Surface>) -> Self {
+            Self::ParameterCurve(value)
+        }
     }
 
     let vertices = vec![
@@ -309,7 +311,7 @@ fn test_split_closed_face_cylinder_with_hole() {
         Cut,
         SearchNearestParameterD1,
     )]
-    enum ParameterCurve {
+    enum ParamCurve2D {
         Line(Line<Point2>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point2>, Matrix3>>),
     }
@@ -326,12 +328,12 @@ fn test_split_closed_face_cylinder_with_hole() {
         Line(Line<Point3>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point3>, Matrix4>>),
         #[allow(clippy::enum_variant_names)]
-        PCurve(PCurve<ParameterCurve, Surface>),
+        ParameterCurve(ParameterCurve<ParamCurve2D, Surface>),
     }
-    impl From<PCurve<Line<Point2>, Surface>> for Curve {
-        fn from(value: PCurve<Line<Point2>, Surface>) -> Self {
+    impl From<ParameterCurve<Line<Point2>, Surface>> for Curve {
+        fn from(value: ParameterCurve<Line<Point2>, Surface>) -> Self {
             let (line, surface) = value.decompose();
-            Self::PCurve(PCurve::new(ParameterCurve::Line(line), surface))
+            Self::ParameterCurve(ParameterCurve::new(ParamCurve2D::Line(line), surface))
         }
     }
 
@@ -387,8 +389,8 @@ fn test_split_closed_face_cylinder_with_hole() {
         },
         CompressedEdge {
             vertices: (4, 5),
-            curve: Curve::PCurve(PCurve::new(
-                ParameterCurve::Arc(TrimmedCurve::new(
+            curve: Curve::ParameterCurve(ParameterCurve::new(
+                ParamCurve2D::Arc(TrimmedCurve::new(
                     Processor::new(UnitCircle::new()).transformed(transform),
                     (0.0, PI),
                 )),
@@ -397,8 +399,8 @@ fn test_split_closed_face_cylinder_with_hole() {
         },
         CompressedEdge {
             vertices: (5, 4),
-            curve: Curve::PCurve(PCurve::new(
-                ParameterCurve::Arc(TrimmedCurve::new(
+            curve: Curve::ParameterCurve(ParameterCurve::new(
+                ParamCurve2D::Arc(TrimmedCurve::new(
                     Processor::new(UnitCircle::new()).transformed(transform),
                     (PI, 2.0 * PI),
                 )),
@@ -593,7 +595,7 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
         Cut,
         SearchNearestParameterD1,
     )]
-    enum ParameterCurve {
+    enum ParamCurve2D {
         Line(Line<Point2>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point2>, Matrix3>>),
     }
@@ -609,12 +611,12 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
     enum Curve {
         Line(Line<Point3>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point3>, Matrix4>>),
-        PCurve(PCurve<ParameterCurve, Surface>),
+        ParameterCurve(ParameterCurve<ParamCurve2D, Surface>),
     }
-    impl From<PCurve<Line<Point2>, Surface>> for Curve {
-        fn from(value: PCurve<Line<Point2>, Surface>) -> Self {
+    impl From<ParameterCurve<Line<Point2>, Surface>> for Curve {
+        fn from(value: ParameterCurve<Line<Point2>, Surface>) -> Self {
             let (line, surface) = value.decompose();
-            Self::PCurve(PCurve::new(ParameterCurve::Line(line), surface))
+            Self::ParameterCurve(ParameterCurve::new(ParamCurve2D::Line(line), surface))
         }
     }
     type Surface = RevolutedCurve<Line<Point3>>;
@@ -671,8 +673,8 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
         },
         CompressedEdge {
             vertices: (4, 5),
-            curve: Curve::PCurve(PCurve::new(
-                ParameterCurve::Arc(TrimmedCurve::new(
+            curve: Curve::ParameterCurve(ParameterCurve::new(
+                ParamCurve2D::Arc(TrimmedCurve::new(
                     Processor::new(UnitCircle::new()).transformed(transform),
                     (0.5 * PI, 1.5 * PI),
                 )),
@@ -681,8 +683,8 @@ fn test_split_closed_face_cylinder_with_rotated_hole() {
         },
         CompressedEdge {
             vertices: (5, 4),
-            curve: Curve::PCurve(PCurve::new(
-                ParameterCurve::Arc(TrimmedCurve::new(
+            curve: Curve::ParameterCurve(ParameterCurve::new(
+                ParamCurve2D::Arc(TrimmedCurve::new(
                     Processor::new(UnitCircle::new()).transformed(transform),
                     (1.5 * PI, 2.5 * PI),
                 )),
@@ -891,10 +893,12 @@ fn too_simple_cylinder() {
     )]
     enum Curve {
         Arc(TrimmedCurve<Processor<UnitCircle<Point3>, Matrix4>>),
-        PCurve(PCurve<Line<Point2>, Surface>),
+        ParameterCurve(ParameterCurve<Line<Point2>, Surface>),
     }
-    impl From<PCurve<Line<Point2>, Surface>> for Curve {
-        fn from(value: PCurve<Line<Point2>, Surface>) -> Self { Curve::PCurve(value) }
+    impl From<ParameterCurve<Line<Point2>, Surface>> for Curve {
+        fn from(value: ParameterCurve<Line<Point2>, Surface>) -> Self {
+            Curve::ParameterCurve(value)
+        }
     }
     type Surface = RevolutedCurve<Line<Point3>>;
 
@@ -1064,7 +1068,7 @@ fn double_closed_boundary_cylinder() {
         Cut,
         SearchNearestParameterD1,
     )]
-    enum ParameterCurve {
+    enum ParamCurve2D {
         Line(Line<Point2>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point2>, Matrix3>>),
     }
@@ -1081,12 +1085,12 @@ fn double_closed_boundary_cylinder() {
         Line(Line<Point3>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point3>, Matrix4>>),
         #[allow(clippy::enum_variant_names)]
-        PCurve(PCurve<ParameterCurve, Surface>),
+        ParameterCurve(ParameterCurve<ParamCurve2D, Surface>),
     }
-    impl From<PCurve<Line<Point2>, Surface>> for Curve {
-        fn from(value: PCurve<Line<Point2>, Surface>) -> Self {
+    impl From<ParameterCurve<Line<Point2>, Surface>> for Curve {
+        fn from(value: ParameterCurve<Line<Point2>, Surface>) -> Self {
             let (line, surface) = value.decompose();
-            Self::PCurve(PCurve::new(ParameterCurve::Line(line), surface))
+            Self::ParameterCurve(ParameterCurve::new(ParamCurve2D::Line(line), surface))
         }
     }
     type Surface = RevolutedCurve<Line<Point3>>;
@@ -1120,8 +1124,8 @@ fn double_closed_boundary_cylinder() {
         },
         CompressedEdge {
             vertices: (2, 2),
-            curve: Curve::PCurve(PCurve::new(
-                ParameterCurve::Arc(TrimmedCurve::new(
+            curve: Curve::ParameterCurve(ParameterCurve::new(
+                ParamCurve2D::Arc(TrimmedCurve::new(
                     Processor::new(UnitCircle::new()).transformed(
                         Matrix3::from_translation(Vector2::new(0.5, 0.0))
                             * Matrix3::from_scale(0.25),
@@ -1133,8 +1137,8 @@ fn double_closed_boundary_cylinder() {
         },
         CompressedEdge {
             vertices: (3, 3),
-            curve: Curve::PCurve(PCurve::new(
-                ParameterCurve::Arc(TrimmedCurve::new(
+            curve: Curve::ParameterCurve(ParameterCurve::new(
+                ParamCurve2D::Arc(TrimmedCurve::new(
                     Processor::new(UnitCircle::new()).transformed(
                         Matrix3::from_translation(Vector2::new(0.5, PI))
                             * Matrix3::from_scale(0.25),
@@ -1337,7 +1341,7 @@ fn many_closed_boundary_cylinder() {
         Cut,
         SearchNearestParameterD1,
     )]
-    enum ParameterCurve {
+    enum ParamCurve2D {
         Line(Line<Point2>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point2>, Matrix3>>),
     }
@@ -1353,12 +1357,12 @@ fn many_closed_boundary_cylinder() {
     enum Curve {
         Line(Line<Point3>),
         Arc(TrimmedCurve<Processor<UnitCircle<Point3>, Matrix4>>),
-        PCurve(PCurve<ParameterCurve, Surface>),
+        ParameterCurve(ParameterCurve<ParamCurve2D, Surface>),
     }
-    impl From<PCurve<Line<Point2>, Surface>> for Curve {
-        fn from(value: PCurve<Line<Point2>, Surface>) -> Self {
+    impl From<ParameterCurve<Line<Point2>, Surface>> for Curve {
+        fn from(value: ParameterCurve<Line<Point2>, Surface>) -> Self {
             let (line, surface) = value.decompose();
-            Self::PCurve(PCurve::new(ParameterCurve::Line(line), surface))
+            Self::ParameterCurve(ParameterCurve::new(ParamCurve2D::Line(line), surface))
         }
     }
     type Surface = RevolutedCurve<Line<Point3>>;
@@ -1400,8 +1404,8 @@ fn many_closed_boundary_cylinder() {
             let t = 2.0 * PI * i as f64 / NUM_OF_CIRCLES as f64;
             CompressedEdge {
                 vertices: (2 + i, 2 + i),
-                curve: Curve::PCurve(PCurve::new(
-                    ParameterCurve::Arc(TrimmedCurve::new(
+                curve: Curve::ParameterCurve(ParameterCurve::new(
+                    ParamCurve2D::Arc(TrimmedCurve::new(
                         Processor::new(UnitCircle::new()).transformed(
                             Matrix3::from_translation(Vector2::new(0.5, t))
                                 * Matrix3::from_scale(0.1),

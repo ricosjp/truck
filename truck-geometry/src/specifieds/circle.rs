@@ -11,7 +11,7 @@ impl ParametricCurve for UnitCircle<Point2> {
     type Point = Point2;
     type Vector = Vector2;
     #[inline]
-    fn der_n(&self, n: usize, t: f64) -> Vector2 {
+    fn derivative_n(&self, n: usize, t: f64) -> Vector2 {
         match n % 4 {
             0 => Vector2::new(f64::cos(t), f64::sin(t)),
             1 => Vector2::new(-f64::sin(t), f64::cos(t)),
@@ -20,11 +20,11 @@ impl ParametricCurve for UnitCircle<Point2> {
         }
     }
     #[inline]
-    fn subs(&self, t: f64) -> Point2 { Point2::from_vec(self.der_n(0, t)) }
+    fn evaluate(&self, t: f64) -> Point2 { Point2::from_vec(self.derivative_n(0, t)) }
     #[inline]
-    fn der(&self, t: f64) -> Vector2 { self.der_n(1, t) }
+    fn derivative(&self, t: f64) -> Vector2 { self.derivative_n(1, t) }
     #[inline]
-    fn der2(&self, t: f64) -> Vector2 { self.der_n(2, t) }
+    fn derivative_2(&self, t: f64) -> Vector2 { self.derivative_n(2, t) }
     #[inline]
     fn parameter_range(&self) -> ParameterRange {
         (Bound::Included(0.0), Bound::Excluded(2.0 * PI))
@@ -37,7 +37,7 @@ impl ParametricCurve for UnitCircle<Point3> {
     type Point = Point3;
     type Vector = Vector3;
     #[inline]
-    fn der_n(&self, n: usize, t: f64) -> Vector3 {
+    fn derivative_n(&self, n: usize, t: f64) -> Vector3 {
         match n % 4 {
             0 => Vector3::new(f64::cos(t), f64::sin(t), 0.0),
             1 => Vector3::new(-f64::sin(t), f64::cos(t), 0.0),
@@ -46,11 +46,11 @@ impl ParametricCurve for UnitCircle<Point3> {
         }
     }
     #[inline]
-    fn subs(&self, t: f64) -> Point3 { Point3::from_vec(self.der_n(0, t)) }
+    fn evaluate(&self, t: f64) -> Point3 { Point3::from_vec(self.derivative_n(0, t)) }
     #[inline]
-    fn der(&self, t: f64) -> Vector3 { self.der_n(1, t) }
+    fn derivative(&self, t: f64) -> Vector3 { self.derivative_n(1, t) }
     #[inline]
-    fn der2(&self, t: f64) -> Vector3 { self.der_n(2, t) }
+    fn derivative_2(&self, t: f64) -> Vector3 { self.derivative_n(2, t) }
     #[inline]
     fn period(&self) -> Option<f64> { Some(2.0 * PI) }
     #[inline]
@@ -83,7 +83,7 @@ where UnitCircle<P>: ParametricCurve<Point = P>
 
 impl SearchNearestParameter<D1> for UnitCircle<Point2> {
     type Point = Point2;
-    fn search_nearest_parameter<H: Into<SPHint1D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         pt: Point2,
         _: H,
@@ -105,7 +105,12 @@ impl SearchNearestParameter<D1> for UnitCircle<Point2> {
 
 impl SearchParameter<D1> for UnitCircle<Point2> {
     type Point = Point2;
-    fn search_parameter<H: Into<SPHint1D>>(&self, pt: Point2, _: H, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
+        &self,
+        pt: Point2,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         let v = pt.to_vec();
         if !v.magnitude().near(&1.0) {
             return None;
@@ -122,7 +127,7 @@ impl SearchParameter<D1> for UnitCircle<Point2> {
 
 impl SearchNearestParameter<D1> for UnitCircle<Point3> {
     type Point = Point3;
-    fn search_nearest_parameter<H: Into<SPHint1D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         pt: Point3,
         _: H,
@@ -134,7 +139,12 @@ impl SearchNearestParameter<D1> for UnitCircle<Point3> {
 
 impl SearchParameter<D1> for UnitCircle<Point3> {
     type Point = Point3;
-    fn search_parameter<H: Into<SPHint1D>>(&self, pt: Point3, _: H, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
+        &self,
+        pt: Point3,
+        _: H,
+        _: usize,
+    ) -> Option<f64> {
         if !f64::abs(pt.z).so_small() {
             return None;
         }
@@ -148,8 +158,8 @@ impl ToSameGeometry<NurbsCurve<Vector3>> for TrimmedCurve<UnitCircle<Point2>> {
         let angle = t1 - t0;
         let (cos2, sin2) = (f64::cos(angle / 2.0), f64::sin(angle / 2.0));
         let rot = Matrix3::from(Matrix2::from_angle(Rad(t0)));
-        NurbsCurve::new(BSplineCurve::new_unchecked(
-            KnotVec::bezier_knot(2),
+        NurbsCurve::new(BsplineCurve::new_unchecked(
+            KnotVector::bezier_knot(2),
             vec![
                 rot * Vector3::new(1.0, 0.0, 1.0),
                 rot * Vector3::new(cos2, sin2, cos2),
@@ -165,7 +175,7 @@ impl ToSameGeometry<NurbsCurve<Vector4>> for TrimmedCurve<UnitCircle<Point3>> {
         let bsp: NurbsCurve<Vector3> =
             TrimmedCurve::new(UnitCircle::<Point2>::new(), (t0, t1)).to_same_geometry();
         let (knot_vec, pts) = bsp.into_non_rationalized().destruct();
-        let mut curve = NurbsCurve::new(BSplineCurve::new_unchecked(
+        let mut curve = NurbsCurve::new(BsplineCurve::new_unchecked(
             knot_vec,
             vec![
                 Vector4::new(pts[0].x, pts[0].y, 0.0, pts[0].z),

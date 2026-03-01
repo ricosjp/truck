@@ -32,7 +32,7 @@ pub type StepExtrudedCurve = ExtrudedCurve<Curve3D, Vector3>;
 /// `surface_of_revolution`, realized in `truck`
 pub type StepRevolutedCurve = Processor<RevolutedCurve<Curve3D>, Matrix4>;
 /// `pcurve`, realized in `truck`
-pub type PCurve = truck_geometry::prelude::PCurve<Box<Curve2D>, Box<Surface>>;
+pub type Pcurve = truck_geometry::prelude::ParameterCurve<Box<Curve2D>, Box<Surface>>;
 
 /// `conic` in 2D, realized in `truck`
 #[derive(
@@ -88,7 +88,7 @@ pub enum Curve2D {
     Line(Line<Point2>),
     Polyline(PolylineCurve<Point2>),
     Conic(Conic2D),
-    BSplineCurve(BSplineCurve<Point2>),
+    BsplineCurve(BsplineCurve<Point2>),
     NurbsCurve(NurbsCurve<Vector3>),
 }
 
@@ -145,8 +145,8 @@ pub enum Curve3D {
     Line(Line<Point3>),
     Polyline(PolylineCurve<Point3>),
     Conic(Conic3D),
-    BSplineCurve(BSplineCurve<Point3>),
-    PCurve(PCurve),
+    BsplineCurve(BsplineCurve<Point3>),
+    Pcurve(Pcurve),
     NurbsCurve(NurbsCurve<Vector4>),
 }
 
@@ -221,7 +221,7 @@ pub enum SweptCurve {
 pub enum Surface {
     ElementarySurface(ElementarySurface),
     SweptCurve(SweptCurve),
-    BSplineSurface(BSplineSurface<Point3>),
+    BsplineSurface(BsplineSurface<Point3>),
     NurbsSurface(NurbsSurface<Vector4>),
 }
 
@@ -231,7 +231,7 @@ impl truck_stepio::out::DisplayByStep for Surface {
         match self {
             ElementarySurface(x) => x.fmt(idx, f),
             SweptCurve(x) => x.fmt(idx, f),
-            BSplineSurface(x) => x.fmt(idx, f),
+            BsplineSurface(x) => x.fmt(idx, f),
             NurbsSurface(x) => x.fmt(idx, f),
         }
     }
@@ -253,10 +253,13 @@ mod from_pcurve {
     use super::{Curve2D, Curve3D, Surface};
     use truck_geometry::prelude::*;
 
-    impl From<PCurve<Line<Point2>, Surface>> for Curve3D {
-        fn from(value: PCurve<Line<Point2>, Surface>) -> Self {
+    impl From<ParameterCurve<Line<Point2>, Surface>> for Curve3D {
+        fn from(value: ParameterCurve<Line<Point2>, Surface>) -> Self {
             let (line, surface) = value.decompose();
-            Curve3D::PCurve(PCurve::new(Curve2D::Line(line).into(), surface.into()))
+            Curve3D::Pcurve(ParameterCurve::new(
+                Curve2D::Line(line).into(),
+                surface.into(),
+            ))
         }
     }
 }

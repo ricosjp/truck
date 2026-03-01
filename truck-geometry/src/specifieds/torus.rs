@@ -32,7 +32,7 @@ impl ParametricSurface for Torus {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         let ((su, cu), (sv, cv)) = (u.sin_cos(), v.sin_cos());
         let center = match (m, n) {
             (0, 0) => self.center.to_vec(),
@@ -57,36 +57,36 @@ impl ParametricSurface for Torus {
         center + u_part.mul_element_wise(v_part)
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point3 {
+    fn evaluate(&self, u: f64, v: f64) -> Point3 {
         let sr = self.small_radius() * Vector2::new(f64::cos(v), f64::sin(v));
         let lr = (self.large_radius() + sr.x) * Vector2::new(f64::cos(u), f64::sin(u));
         self.center() + Vector3::new(lr.x, lr.y, sr.y)
     }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_u(&self, u: f64, v: f64) -> Vector3 {
         let sr = self.small_radius() * f64::cos(v);
         let lr = (self.large_radius() + sr) * Vector2::new(f64::cos(u), f64::sin(u));
         Vector3::new(-lr.y, lr.x, 0.0)
     }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_v(&self, u: f64, v: f64) -> Vector3 {
         let sv = self.small_radius() * Vector2::new(-f64::sin(v), f64::cos(v));
         Vector3::new(sv.x * f64::cos(u), sv.x * f64::sin(u), sv.y)
     }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_uu(&self, u: f64, v: f64) -> Vector3 {
         let sr = self.small_radius() * f64::cos(v);
         let lr = (self.large_radius() + sr) * Vector2::new(f64::cos(u), f64::sin(u));
         Vector3::new(-lr.x, -lr.y, 0.0)
     }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_uv(&self, u: f64, v: f64) -> Vector3 {
         let sr = -self.small_radius() * f64::sin(v);
         let lr = sr * Vector2::new(f64::cos(u), f64::sin(u));
         Vector3::new(-lr.y, lr.x, 0.0)
     }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Vector3 {
+    fn derivative_vv(&self, u: f64, v: f64) -> Vector3 {
         let sv = -self.small_radius() * Vector2::new(f64::cos(v), f64::sin(v));
         Vector3::new(sv.x * f64::cos(u), sv.x * f64::sin(u), sv.y)
     }
@@ -123,7 +123,7 @@ impl BoundedSurface for Torus {}
 
 impl SearchParameter<D2> for Torus {
     type Point = Point3;
-    fn search_parameter<H: Into<SPHint2D>>(
+    fn search_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         _: H,
@@ -153,7 +153,7 @@ impl SearchParameter<D2> for Torus {
 
 impl SearchNearestParameter<D2> for Torus {
     type Point = Point3;
-    fn search_nearest_parameter<H: Into<SPHint2D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         _: H,

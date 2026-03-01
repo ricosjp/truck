@@ -59,13 +59,13 @@ where
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
-    fn der_n(&self, n: usize, t: f64) -> Self::Vector { self.ic.der_n(n, t) }
+    fn derivative_n(&self, n: usize, t: f64) -> Self::Vector { self.ic.derivative_n(n, t) }
     #[inline(always)]
-    fn subs(&self, t: f64) -> Point3 { self.ic.subs(t) }
+    fn evaluate(&self, t: f64) -> Point3 { self.ic.evaluate(t) }
     #[inline(always)]
-    fn der(&self, t: f64) -> Vector3 { self.ic.der(t) }
+    fn derivative(&self, t: f64) -> Vector3 { self.ic.derivative(t) }
     #[inline(always)]
-    fn der2(&self, t: f64) -> Vector3 { self.ic.der2(t) }
+    fn derivative_2(&self, t: f64) -> Vector3 { self.ic.derivative_2(t) }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { self.ic.parameter_range() }
 }
@@ -118,7 +118,7 @@ where
     S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
-    fn search_parameter<H: Into<SPHint1D>>(
+    fn search_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: Point3,
         hint: H,
@@ -134,7 +134,7 @@ where
     S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
 {
     type Point = Point3;
-    fn search_nearest_parameter<H: Into<SPHint1D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint1D>>(
         &self,
         point: Point3,
         hint: H,

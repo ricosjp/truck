@@ -1,7 +1,7 @@
 use super::*;
-use surface::{SsnpVector, SspVector};
+use surface::{SearchNearestParameterVector, SearchParameterVector};
 
-/// Divides the domain into equal parts, examines all the values, and returns `t` such that `curve.subs(t)` is closest to `point`.
+/// Divides the domain into equal parts, examines all the values, and returns `t` such that `curve.evaluate(t)` is closest to `point`.
 /// This method is useful to get an efficient hint of [`search_nearest_parameter`].
 pub fn presearch<C>(curve: &C, point: C::Point, range: (f64, f64), division: usize) -> f64
 where
@@ -13,7 +13,7 @@ where
     for i in 0..=division {
         let p = i as f64 / division as f64;
         let t = t0 * (1.0 - p) + t1 * p;
-        let dist = curve.subs(t).distance2(point);
+        let dist = curve.evaluate(t).distance2(point);
         if dist < min {
             min = dist;
             res = t;
@@ -35,9 +35,9 @@ where
     C::Vector: InnerSpace<Scalar = f64> + Tolerance,
 {
     let function = move |t: f64| {
-        let diff = curve.subs(t) - point;
-        let der = curve.der(t);
-        let der2 = curve.der2(t);
+        let diff = curve.evaluate(t) - point;
+        let der = curve.derivative(t);
+        let der2 = curve.derivative_2(t);
         CalcOutput {
             value: der.dot(diff),
             derivation: der2.dot(diff) + der.magnitude2(),
@@ -53,15 +53,15 @@ where
     C::Point: EuclideanSpace<Scalar = f64, Diff = C::Vector>,
     C::Vector: InnerSpace<Scalar = f64> + Tolerance, {
     let function = move |t: f64| {
-        let diff = curve.subs(t) - point;
-        let der = curve.der(t);
+        let diff = curve.evaluate(t) - point;
+        let der = curve.derivative(t);
         CalcOutput {
             value: der.dot(diff),
             derivation: der.magnitude2(),
         }
     };
     newton::solve(function, hint, trials).ok().and_then(|t| {
-        match curve.subs(t).to_vec().near(&point.to_vec()) {
+        match curve.evaluate(t).to_vec().near(&point.to_vec()) {
             true => Some(t),
             false => None,
         }
@@ -81,7 +81,7 @@ where
     sub_parameter_division(
         curve,
         range,
-        (curve.subs(range.0), curve.subs(range.1)),
+        (curve.evaluate(range.0), curve.evaluate(range.1)),
         tol,
         100,
     )
@@ -102,12 +102,12 @@ where
     let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
     let t = range.0 * (1.0 - p) + range.1 * p;
     let mid = ends.0 + (ends.1 - ends.0) * p;
-    let dist2 = curve.subs(t).distance2(mid);
+    let dist2 = curve.evaluate(t).distance2(mid);
     if dist2 < tol * tol || trials == 0 {
         (vec![range.0, range.1], vec![ends.0, ends.1])
     } else {
         let mid_param = (range.0 + range.1) / 2.0;
-        let mid_value = curve.subs(mid_param);
+        let mid_value = curve.evaluate(mid_param);
         let (mut params, mut pts) = sub_parameter_division(
             curve,
             (range.0, mid_param),
@@ -145,26 +145,32 @@ where
     type Point = P;
     type Vector = P::Diff;
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         match (m, n) {
-            (0, 0) => self.curve0.subs(u) - self.curve1.subs(v),
-            (_, 0) => self.curve0.der_n(m, u),
-            (0, _) => self.curve1.der_n(n, v) * (-1.0),
+            (0, 0) => self.curve0.evaluate(u) - self.curve1.evaluate(v),
+            (_, 0) => self.curve0.derivative_n(m, u),
+            (0, _) => self.curve1.derivative_n(n, v) * (-1.0),
             _ => Self::Vector::zero(),
         }
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { P::from_vec(self.der_mn(0, 0, u, v)) }
+    fn evaluate(&self, u: f64, v: f64) -> Self::Point {
+        P::from_vec(self.derivative_mn(0, 0, u, v))
+    }
     #[inline(always)]
-    fn uder(&self, u: f64, _: f64) -> Self::Vector { self.curve0.der(u) }
+    fn derivative_u(&self, u: f64, _: f64) -> Self::Vector { self.curve0.derivative(u) }
     #[inline(always)]
-    fn vder(&self, _: f64, v: f64) -> Self::Vector { self.curve1.der(v) * (-1.0) }
+    fn derivative_v(&self, _: f64, v: f64) -> Self::Vector {
+        self.curve1.derivative(v) * (-1.0)
+    }
     #[inline(always)]
-    fn uuder(&self, u: f64, _: f64) -> Self::Vector { self.curve0.der2(u) }
+    fn derivative_uu(&self, u: f64, _: f64) -> Self::Vector { self.curve0.derivative_2(u) }
     #[inline(always)]
-    fn vvder(&self, _: f64, v: f64) -> Self::Vector { self.curve1.der2(v) * (-1.0) }
+    fn derivative_vv(&self, _: f64, v: f64) -> Self::Vector {
+        self.curve1.derivative_2(v) * (-1.0)
+    }
     #[inline(always)]
-    fn uvder(&self, _: f64, _: f64) -> Self::Vector { P::Diff::zero() }
+    fn derivative_uv(&self, _: f64, _: f64) -> Self::Vector { P::Diff::zero() }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         (self.curve0.parameter_range(), self.curve1.parameter_range())
@@ -182,7 +188,8 @@ where
 {
 }
 
-/// Divides the domain into equal parts, examines all the values, and returns `(t0, t1)` such that `curve0.subs(t0)` is closest to `curve1.subs(t1`.
+/// Divides the domain into equal parts, examines all the values, and returns `(t0, t1)` such that
+/// `curve0.evaluate(t0)` is closest to `curve1.evaluate(t1)`.
 /// This method is useful to get an efficient hint of [`search_closest_parameter`].
 #[inline(always)]
 pub fn presearch_closest_point<P, C0, C1>(
@@ -215,7 +222,7 @@ pub fn search_closest_parameter<P, C0, C1>(
 ) -> Option<(f64, f64)>
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-    P::Diff: SsnpVector<Point = P> + Tolerance,
+    P::Diff: SearchNearestParameterVector<Point = P> + Tolerance,
     C0: ParametricCurve<Point = P, Vector = P::Diff>,
     C1: ParametricCurve<Point = P, Vector = P::Diff>,
 {
@@ -232,7 +239,7 @@ pub fn search_intersection_parameter<P, C0, C1>(
 ) -> Option<(f64, f64)>
 where
     P: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + Tolerance,
-    P::Diff: SspVector<Point = P> + Tolerance,
+    P::Diff: SearchParameterVector<Point = P> + Tolerance,
     C0: ParametricCurve<Point = P, Vector = P::Diff>,
     C1: ParametricCurve<Point = P, Vector = P::Diff>,
 {

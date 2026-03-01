@@ -1,32 +1,66 @@
 use super::*;
 
 type Tuple = (f64, f64);
-/// Parametric surface
+/// A surface defined by a mapping `S(u, v)` from two parameters to a point.
+///
+/// As `(u, v)` varies over the parameter domain, the returned points sweep out the surface.
+/// Partial derivatives give tangent directions (`derivative_u`, `derivative_v`) and curvature
+/// information (`derivative_uu`, `derivative_uv`, `derivative_vv`) at any parameter pair.
+/// New code should prefer `evaluate` and `derivative*` methods.
+/// Legacy `subs` and `*der` methods are kept for compatibility.
 pub trait ParametricSurface: Clone {
-    /// The surface is in the space of `Self::Point`.
+    /// The point type the surface maps into (e.g. `Point3`).
     type Point;
-    /// The derivation vector of the curve.
+    /// The derivative vector type (e.g. `Vector3`).
     type Vector: Zero + Copy;
-    /// Substitutes the parameter `(u, v)`.
-    fn subs(&self, u: f64, v: f64) -> Self::Point;
-    /// Returns the derivation by `u`.
-    fn uder(&self, u: f64, v: f64) -> Self::Vector;
-    /// Returns the derivation by `v`.
-    fn vder(&self, u: f64, v: f64) -> Self::Vector;
-    /// Returns the 2nd-order derivation by `u`.
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector;
-    /// Returns the 2nd-order derivation by both `u` and `v`.
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector;
-    /// Returns the 2nd-order derivation by `v`.
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector;
-    /// Returns $\partial^{m + n} S / \partial u^m \partial v^n$.
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector;
-    /// Calculates higher degree derivations at the parameter `(u, v)`.
-    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
-        let mut ders = SurfaceDers::new(max_order);
+    /// Evaluates the surface at `(u, v)`, returning the point `S(u, v)`.
+    fn evaluate(&self, u: f64, v: f64) -> Self::Point;
+    /// Returns `∂S/∂u` at `(u, v)`.
+    fn derivative_u(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns `∂S/∂v` at `(u, v)`.
+    fn derivative_v(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns `∂²S/∂u²` at `(u, v)`.
+    fn derivative_uu(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns `∂²S/∂u∂v` at `(u, v)`.
+    fn derivative_uv(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns `∂²S/∂v²` at `(u, v)`.
+    fn derivative_vv(&self, u: f64, v: f64) -> Self::Vector;
+    /// Returns the mixed partial `∂^(m+n)S / ∂u^m ∂v^n` at `(u, v)`.
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector;
+    /// Returns all derivatives at `(u, v)` up to order `max_order`.
+    fn derivatives(&self, max_order: usize, u: f64, v: f64) -> SurfaceDerivatives<Self::Vector> {
+        let mut derivs = SurfaceDerivatives::new(max_order);
         (0..=max_order)
-            .for_each(|m| (0..=max_order - m).for_each(|n| ders[m][n] = self.der_mn(m, n, u, v)));
-        ders
+            .for_each(|m| (0..=max_order - m).for_each(|n| derivs[m][n] = self.derivative_mn(m, n, u, v)));
+        derivs
+    }
+    /// Deprecated: use [`evaluate`](ParametricSurface::evaluate).
+    #[inline(always)]
+    fn subs(&self, u: f64, v: f64) -> Self::Point { self.evaluate(u, v) }
+    /// Deprecated: use [`derivative_u`](ParametricSurface::derivative_u).
+    #[inline(always)]
+    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.derivative_u(u, v) }
+    /// Deprecated: use [`derivative_v`](ParametricSurface::derivative_v).
+    #[inline(always)]
+    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.derivative_v(u, v) }
+    /// Deprecated: use [`derivative_uu`](ParametricSurface::derivative_uu).
+    #[inline(always)]
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.derivative_uu(u, v) }
+    /// Deprecated: use [`derivative_uv`](ParametricSurface::derivative_uv).
+    #[inline(always)]
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { self.derivative_uv(u, v) }
+    /// Deprecated: use [`derivative_vv`](ParametricSurface::derivative_vv).
+    #[inline(always)]
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.derivative_vv(u, v) }
+    /// Deprecated: use [`derivative_mn`](ParametricSurface::derivative_mn).
+    #[inline(always)]
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        self.derivative_mn(m, n, u, v)
+    }
+    /// Deprecated: use [`derivatives`](ParametricSurface::derivatives).
+    #[inline(always)]
+    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDerivatives<Self::Vector> {
+        self.derivatives(max_order, u, v)
     }
     /// The range of the parameter of the surface.
     #[inline(always)]
@@ -56,24 +90,24 @@ impl<S: ParametricSurface> ParametricSurface for &S {
     type Point = S::Point;
     type Vector = S::Vector;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { (*self).subs(u, v) }
+    fn evaluate(&self, u: f64, v: f64) -> Self::Point { (*self).evaluate(u, v) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { (*self).uder(u, v) }
+    fn derivative_u(&self, u: f64, v: f64) -> Self::Vector { (*self).derivative_u(u, v) }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { (*self).vder(u, v) }
+    fn derivative_v(&self, u: f64, v: f64) -> Self::Vector { (*self).derivative_v(u, v) }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector { (*self).uuder(u, v) }
+    fn derivative_uu(&self, u: f64, v: f64) -> Self::Vector { (*self).derivative_uu(u, v) }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector { (*self).uvder(u, v) }
+    fn derivative_uv(&self, u: f64, v: f64) -> Self::Vector { (*self).derivative_uv(u, v) }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector { (*self).vvder(u, v) }
+    fn derivative_vv(&self, u: f64, v: f64) -> Self::Vector { (*self).derivative_vv(u, v) }
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
-        (*self).der_mn(m, n, u, v)
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        (*self).derivative_mn(m, n, u, v)
     }
     #[inline(always)]
-    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
-        (*self).ders(max_order, u, v)
+    fn derivatives(&self, max_order: usize, u: f64, v: f64) -> SurfaceDerivatives<Self::Vector> {
+        (*self).derivatives(max_order, u, v)
     }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (*self).parameter_range() }
@@ -87,24 +121,24 @@ impl<S: ParametricSurface> ParametricSurface for Box<S> {
     type Point = S::Point;
     type Vector = S::Vector;
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { (**self).subs(u, v) }
+    fn evaluate(&self, u: f64, v: f64) -> Self::Point { (**self).evaluate(u, v) }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { (**self).uder(u, v) }
+    fn derivative_u(&self, u: f64, v: f64) -> Self::Vector { (**self).derivative_u(u, v) }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { (**self).vder(u, v) }
+    fn derivative_v(&self, u: f64, v: f64) -> Self::Vector { (**self).derivative_v(u, v) }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> Self::Vector { (**self).uuder(u, v) }
+    fn derivative_uu(&self, u: f64, v: f64) -> Self::Vector { (**self).derivative_uu(u, v) }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> Self::Vector { (**self).uvder(u, v) }
+    fn derivative_uv(&self, u: f64, v: f64) -> Self::Vector { (**self).derivative_uv(u, v) }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> Self::Vector { (**self).vvder(u, v) }
+    fn derivative_vv(&self, u: f64, v: f64) -> Self::Vector { (**self).derivative_vv(u, v) }
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
-        (**self).der_mn(m, n, u, v)
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        (**self).derivative_mn(m, n, u, v)
     }
     #[inline(always)]
-    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
-        (**self).ders(max_order, u, v)
+    fn derivatives(&self, max_order: usize, u: f64, v: f64) -> SurfaceDerivatives<Self::Vector> {
+        (**self).derivatives(max_order, u, v)
     }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { (**self).parameter_range() }
@@ -123,14 +157,16 @@ pub trait ParametricSurface3D: ParametricSurface<Point = Point3, Vector = Vector
     /// Returns the normal vector at `(u, v)`.
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
-        self.uder(u, v).cross(self.vder(u, v)).normalize()
+        self.derivative_u(u, v)
+            .cross(self.derivative_v(u, v))
+            .normalize()
     }
     /// Returns the derivation by `u` of the normal vector at `(u, v)`.
     fn normal_uder(&self, u: f64, v: f64) -> Vector3 {
-        let uder = self.uder(u, v);
-        let vder = self.vder(u, v);
-        let uuder = self.uuder(u, v);
-        let uvder = self.uvder(u, v);
+        let uder = self.derivative_u(u, v);
+        let vder = self.derivative_v(u, v);
+        let uuder = self.derivative_uu(u, v);
+        let uvder = self.derivative_uv(u, v);
         let cross = uder.cross(vder);
         let cross_uder = uuder.cross(vder) + uder.cross(uvder);
         let abs = cross.magnitude();
@@ -139,10 +175,10 @@ pub trait ParametricSurface3D: ParametricSurface<Point = Point3, Vector = Vector
     }
     /// Returns the derivation by `u` of the normal vector at `(u, v)`.
     fn normal_vder(&self, u: f64, v: f64) -> Vector3 {
-        let uder = self.uder(u, v);
-        let vder = self.vder(u, v);
-        let uvder = self.uvder(u, v);
-        let vvder = self.vvder(u, v);
+        let uder = self.derivative_u(u, v);
+        let vder = self.derivative_v(u, v);
+        let uvder = self.derivative_uv(u, v);
+        let vvder = self.derivative_vv(u, v);
         let cross = uder.cross(vder);
         let cross_vder = uvder.cross(vder) + uder.cross(vvder);
         let abs = cross.magnitude();

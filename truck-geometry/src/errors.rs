@@ -7,19 +7,19 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, PartialEq, Error)]
 pub enum Error {
     /// The following operations are failed if the knot vector has zero range.
-    /// * Creating `BSplineCurve` or `BSplineSurface`,
+    /// * Creating `BsplineCurve` or `BsplineSurface`,
     /// * Calculating bspline basis functions, or
     /// * Normalizing the knot vector.
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
     /// use truck_geometry::errors::Error;
-    /// let mut knot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 0.0]);
+    /// let mut knot_vec = KnotVector::from(vec![0.0, 0.0, 0.0, 0.0]);
     /// assert_eq!(knot_vec.try_normalize(), Err(Error::ZeroRange));
     /// assert_eq!(knot_vec.try_bspline_basis_functions(1, 0, 0.0), Err(Error::ZeroRange));
     ///
-    /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
-    /// assert!(matches!(BSplineCurve::try_new(knot_vec, ctrl_pts), Err(Error::ZeroRange)));
+    /// let control_points = vec![Vector2::new(0.0, 0.0), Vector2::new(1.0, 1.0)];
+    /// assert!(matches!(BsplineCurve::try_new(knot_vec, control_points), Err(Error::ZeroRange)));
     /// ```
     #[error("This knot vector consists single value.")]
     ZeroRange,
@@ -29,8 +29,8 @@ pub enum Error {
     /// ```
     /// use truck_geometry::prelude::*;
     /// use truck_geometry::errors::Error;
-    /// let mut knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
+    /// let mut knot_vec0 = KnotVector::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// let knot_vec1 = KnotVector::from(vec![2.0, 2.0, 3.0, 3.0]);
     /// assert!(matches!(knot_vec0.try_concat(&knot_vec1, 1), Err(Error::DifferentBackFront(1.0, 2.0))));
     /// ```
     #[error("Cannot concat two knot vectors whose the back of the first and the front of the second are different.
@@ -42,26 +42,26 @@ the front of the second knot vector: {1}")]
     /// ```
     /// use truck_geometry::prelude::*;
     /// use truck_geometry::errors::Error;
-    /// let mut knot_vec0 = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    /// let knot_vec1 = KnotVec::from(vec![2.0, 2.0, 3.0, 3.0]);
+    /// let mut knot_vec0 = KnotVector::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// let knot_vec1 = KnotVector::from(vec![2.0, 2.0, 3.0, 3.0]);
     /// assert!(matches!(knot_vec0.try_concat(&knot_vec1, 2), Err(Error::NotClampedKnotVector)));
     /// ```
     #[error("This knot vector is not clamped.")]
     NotClampedKnotVector,
-    /// Creating a knot vector by `KnotVec::try_from()` is failed if the given vector is not sorted.
-    /// `<KnotVec as From<Vec<f64>>>::from()` does not panic by this error because sorts the given
-    /// vector before creating the knot vector. So, `KnotVec::try_from()` is more efficient than
-    /// `<KnotVec as From<Vec<f64>>>::from()`.
+    /// Creating a knot vector by `KnotVector::try_from()` is failed if the given vector is not sorted.
+    /// `<KnotVector as From<Vec<f64>>>::from()` does not panic by this error because sorts the given
+    /// vector before creating the knot vector. So, `KnotVector::try_from()` is more efficient than
+    /// `<KnotVector as From<Vec<f64>>>::from()`.
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
     /// use truck_geometry::errors::Error;
     /// use std::convert::*;
     ///
-    /// assert!(matches!(KnotVec::try_from(vec![1.0, 3.0, 0.0, 2.0]), Err(Error::NotSortedVector)));
+    /// assert!(matches!(KnotVector::try_from(vec![1.0, 3.0, 0.0, 2.0]), Err(Error::NotSortedVector)));
     /// assert_eq!(
-    ///     <KnotVec as From<Vec<f64>>>::from(vec![1.0, 3.0, 0.0, 2.0]),
-    ///     KnotVec::try_from(vec![0.0, 1.0, 2.0, 3.0]).unwrap(),
+    ///     <KnotVector as From<Vec<f64>>>::from(vec![1.0, 3.0, 0.0, 2.0]),
+    ///     KnotVector::try_from(vec![0.0, 1.0, 2.0, 3.0]).unwrap(),
     /// );
     /// ```
     #[error("This knot vector is not sorted.")]
@@ -73,7 +73,7 @@ the front of the second knot vector: {1}")]
     /// use truck_geometry::errors::Error;
     ///
     /// // a knot vector with length = 4.
-    /// let knot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// let knot_vec = KnotVector::from(vec![0.0, 0.0, 1.0, 1.0]);
     /// assert!(matches!(
     ///     knot_vec.try_bspline_basis_functions(5, 0, 0.5),
     ///     Err(Error::TooLargeDegree(4, 5)),
@@ -90,9 +90,9 @@ the degree: {1}"
     /// ```
     /// use truck_geometry::prelude::*;
     /// use truck_geometry::errors::Error;
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
-    /// let mut bspcurve = BSplineCurve::new(knot_vec, ctrl_pts);
+    /// let knot_vec = KnotVector::bezier_knot(2);
+    /// let control_points = vec![Vector2::new(-1.0, 1.0), Vector2::new(0.0, -1.0), Vector2::new(1.0, 1.0)];
+    /// let mut bspcurve = BsplineCurve::new(knot_vec, control_points);
     /// let org_curve = bspcurve.clone();
     /// bspcurve.add_knot(0.5).add_knot(0.5).add_knot(0.25).add_knot(0.75);
     /// assert!(bspcurve.try_remove_knot(3).is_ok());
@@ -106,10 +106,10 @@ the degree: {1}"
     /// use truck_geometry::prelude::*;
     /// use truck_geometry::errors::Error;
     ///
-    /// let knot_vec = KnotVec::bezier_knot(2);
-    /// let ctrl_pts: Vec<Vector4> = Vec::new();
+    /// let knot_vec = KnotVector::bezier_knot(2);
+    /// let control_points: Vec<Vector4> = Vec::new();
     /// assert!(matches!(
-    ///     BSplineCurve::try_new(knot_vec, ctrl_pts),
+    ///     BsplineCurve::try_new(knot_vec, control_points),
     ///     Err(Error::EmptyControlPoints),
     /// ));
     /// ```
@@ -121,10 +121,10 @@ the degree: {1}"
     /// ```
     /// use truck_geometry::prelude::*;
     /// use truck_geometry::errors::Error;
-    /// let knot_vec = KnotVec::from(vec![0.0, 1.0, 2.0]);
-    /// let ctrl_pts = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0)];
+    /// let knot_vec = KnotVector::from(vec![0.0, 1.0, 2.0]);
+    /// let control_points = vec![Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0), Vector2::new(0.0, 0.0)];
     /// assert!(matches!(
-    ///     BSplineCurve::try_new(knot_vec, ctrl_pts),
+    ///     BsplineCurve::try_new(knot_vec, control_points),
     ///     Err(Error::TooShortKnotVector(3, 4)),
     /// ));
     /// ```
@@ -139,13 +139,13 @@ the number of control points: {1}"
     /// ```
     /// use truck_geometry::prelude::*;
     /// use truck_geometry::errors::Error;
-    /// let knot_vecs = (KnotVec::bezier_knot(2), KnotVec::bezier_knot(2));
-    /// let ctrl_pts = vec![
+    /// let knot_vecs = (KnotVector::bezier_knot(2), KnotVector::bezier_knot(2));
+    /// let control_points = vec![
     ///     vec![Vector2::new(1.0, 2.0), Vector2::new(1.0, 2.0)], // length = 2
     ///     vec![Vector2::new(1.0, 2.0)] // length = 1
     /// ];
     /// assert!(matches!(
-    ///     BSplineSurface::try_new(knot_vecs, ctrl_pts),
+    ///     BsplineSurface::try_new(knot_vecs, control_points),
     ///     Err(Error::IrregularControlPoints),
     /// ));
     /// ```
@@ -156,8 +156,8 @@ the number of control points: {1}"
     /// ```
     /// use truck_geometry::prelude::*;
     /// use truck_geometry::errors::Error;
-    /// let bspcurve = BSplineCurve::new(
-    ///     KnotVec::bezier_knot(2),
+    /// let bspcurve = BsplineCurve::new(
+    ///     KnotVector::bezier_knot(2),
     ///     vec![Point2::new(0.0, 1.0), Point2::new(2.0, 3.0), Point2::new(4.0, 5.0)],
     /// );
     /// let weights = vec![1.0, 2.0]; // less than control points
@@ -176,7 +176,7 @@ the number of control points: {1}"
     /// use truck_geometry::prelude::*;
     /// use truck_geometry::errors::Error;
     ///
-    /// let knot_vec = KnotVec::uniform_knot(2, 2);
+    /// let knot_vec = KnotVector::uniform_knot(2, 2);
     /// let parameter_points = [
     ///     (0.1, Point3::new(1.0, 2.0, 3.0)),
     ///     (0.8, Point3::new(4.0, -1.0, 10.0)),
@@ -185,7 +185,7 @@ the number of control points: {1}"
     /// ];
     ///
     /// assert!(matches!(
-    ///     BSplineCurve::try_interpolate(knot_vec, parameter_points),
+    ///     BsplineCurve::try_interpolate(knot_vec, parameter_points),
     ///     Err(Error::GaussianEliminationFailure),
     /// ));
     /// ```

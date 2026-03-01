@@ -25,10 +25,10 @@ struct MyApp {
 }
 
 impl MyApp {
-    fn init_surface(degree: usize, division: usize) -> BSplineSurface<Point3> {
+    fn init_surface(degree: usize, division: usize) -> BsplineSurface<Point3> {
         let range = degree + division - 1;
-        let knot_vec = KnotVec::uniform_knot(degree, division);
-        let mut ctrl_pts = Vec::new();
+        let knot_vec = KnotVector::uniform_knot(degree, division);
+        let mut control_points = Vec::new();
         for i in 0..=range {
             let u = (i as f64) / (range as f64);
             let mut vec = Vec::new();
@@ -36,9 +36,9 @@ impl MyApp {
                 let v = (j as f64) / (range as f64);
                 vec.push(Point3::new(v, 0.0, u));
             }
-            ctrl_pts.push(vec);
+            control_points.push(vec);
         }
-        BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts)
+        BsplineSurface::new((knot_vec.clone(), knot_vec), control_points)
     }
     fn init_camera() -> Camera {
         let mut vec0 = Vector4::new(1.5, 0.0, -1.5, 0.0);
@@ -57,7 +57,7 @@ impl MyApp {
         object: Arc<Mutex<StructuredMesh>>,
         closed: Arc<AtomicBool>,
         updated: Arc<AtomicBool>,
-        surface: Arc<Mutex<BSplineSurface<Point3>>>,
+        surface: Arc<Mutex<BsplineSurface<Point3>>>,
     ) -> JoinHandle<()> {
         std::thread::spawn(move || {
             let mut time: f64 = 0.0;
@@ -136,7 +136,7 @@ impl App for MyApp {
             thread,
         }
     }
-    fn app_title<'a>() -> Option<&'a str> { Some("BSpline Benchmark Animation") }
+    fn app_title<'a>() -> Option<&'a str> { Some("Bspline Benchmark Animation") }
 
     fn render(&mut self) {
         if self.updated.load(Ordering::SeqCst) {

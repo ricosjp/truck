@@ -2,7 +2,7 @@
 
 use truck_modeling::*;
 
-/// Build a simple box shell using tsweep, fillet selected edges, verify result.
+/// Build a simple box shell using extrude, fillet selected edges, verify result.
 #[test]
 fn fillet_box_edge() {
     let p = [

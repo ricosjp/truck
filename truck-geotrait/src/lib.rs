@@ -1,5 +1,5 @@
-//! Defines geometric traits: `ParametricCurve`, `ParametricSurface`, and so on.
-//! Implements some algorithms for traits.
+//! Abstract geometric traits ([`ParametricCurve`], [`ParametricSurface`], [`SearchParameter`], etc.)
+//! and generic algorithms (parameter search, closest-point, curve/surface inclusion).
 
 #![cfg_attr(not(debug_assertions), deny(warnings))]
 #![deny(clippy::all, rust_2018_idioms)]

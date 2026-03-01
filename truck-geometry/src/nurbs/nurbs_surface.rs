@@ -1,39 +1,39 @@
 use super::*;
-use algo::surface::{SsnpVector, SspVector};
+use algo::surface::{SearchNearestParameterVector, SearchParameterVector};
 
 impl<V> NurbsSurface<V> {
     /// constructor
     #[inline(always)]
-    pub const fn new(bspsurface: BSplineSurface<V>) -> Self { NurbsSurface(bspsurface) }
+    pub const fn new(bspsurface: BsplineSurface<V>) -> Self { NurbsSurface(bspsurface) }
 
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
-    pub const fn non_rationalized(&self) -> &BSplineSurface<V> { &self.0 }
+    pub const fn non_rationalized(&self) -> &BsplineSurface<V> { &self.0 }
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
-    pub fn non_rationalized_mut(&mut self) -> &mut BSplineSurface<V> { &mut self.0 }
+    pub fn non_rationalized_mut(&mut self) -> &mut BsplineSurface<V> { &mut self.0 }
 
     /// Returns the nurbs surface before rationalized
     #[inline(always)]
-    pub fn into_non_rationalized(self) -> BSplineSurface<V> { self.0 }
+    pub fn into_non_rationalized(self) -> BsplineSurface<V> { self.0 }
 
     /// Returns the reference of the knot vectors
     #[inline(always)]
-    pub const fn knot_vecs(&self) -> &(KnotVec, KnotVec) { &self.0.knot_vecs }
+    pub const fn knot_vecs(&self) -> &(KnotVector, KnotVector) { &self.0.knot_vecs }
 
     /// Returns the u knot vector.
     #[inline(always)]
-    pub const fn uknot_vec(&self) -> &KnotVec { &self.0.knot_vecs.0 }
+    pub const fn knot_vector_u(&self) -> &KnotVector { &self.0.knot_vecs.0 }
     /// Returns the v knot vector.
     #[inline(always)]
-    pub const fn vknot_vec(&self) -> &KnotVec { &self.0.knot_vecs.1 }
+    pub const fn knot_vector_v(&self) -> &KnotVector { &self.0.knot_vecs.1 }
 
     /// Returns the `idx`th u knot.
     #[inline(always)]
-    pub fn uknot(&self, idx: usize) -> f64 { self.0.knot_vecs.0[idx] }
+    pub fn knot_u(&self, idx: usize) -> f64 { self.0.knot_vecs.0[idx] }
     /// returns the `idx`th v knot.
     #[inline(always)]
-    pub fn vknot(&self, idx: usize) -> f64 { self.0.knot_vecs.1[idx] }
+    pub fn knot_v(&self, idx: usize) -> f64 { self.0.knot_vecs.1[idx] }
 
     /// Returns the reference of the vector of the control points
     #[inline(always)]
@@ -55,47 +55,47 @@ impl<V> NurbsSurface<V> {
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let uknot_vec = KnotVec::bezier_knot(1);
-    /// let vknot_vec = KnotVec::bezier_knot(2);
-    /// let knot_vecs = (uknot_vec, vknot_vec);
-    /// let ctrl_pts = vec![
+    /// let knot_vector_u = KnotVector::bezier_knot(1);
+    /// let knot_vector_v = KnotVector::bezier_knot(2);
+    /// let knot_vecs = (knot_vector_u, knot_vector_v);
+    /// let control_points = vec![
     ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
     ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
     /// ];
-    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
-    /// let mut iter = bspsurface.ctrl_pts_row_iter(1);
+    /// let bspsurface = BsplineSurface::new(knot_vecs, control_points);
+    /// let mut iter = bspsurface.control_points_row_iter(1);
     /// assert_eq!(iter.next(), Some(&Vector3::new(1.0, 0.0, 1.0)));
     /// assert_eq!(iter.next(), Some(&Vector3::new(1.0, 1.0, 1.0)));
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn ctrl_pts_row_iter(
+    pub fn control_points_row_iter(
         &self,
         column_idx: usize,
     ) -> impl ExactSizeIterator<Item = &V> + std::iter::FusedIterator<Item = &V> {
-        self.0.ctrl_pts_row_iter(column_idx)
+        self.0.control_points_row_iter(column_idx)
     }
 
     /// Returns the iterator over the control points in the `row_idx`th row.
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let uknot_vec = KnotVec::bezier_knot(1);
-    /// let vknot_vec = KnotVec::bezier_knot(2);
-    /// let knot_vecs = (uknot_vec, vknot_vec);
-    /// let ctrl_pts = vec![
+    /// let knot_vector_u = KnotVector::bezier_knot(1);
+    /// let knot_vector_v = KnotVector::bezier_knot(2);
+    /// let knot_vecs = (knot_vector_u, knot_vector_v);
+    /// let control_points = vec![
     ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
     ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
     /// ];
-    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
-    /// let mut iter = bspsurface.ctrl_pts_column_iter(1);
+    /// let bspsurface = BsplineSurface::new(knot_vecs, control_points);
+    /// let mut iter = bspsurface.control_points_column_iter(1);
     /// assert_eq!(iter.next(), Some(&Vector3::new(0.0, 1.0, 0.0)));
     /// assert_eq!(iter.next(), Some(&Vector3::new(1.0, 1.0, 1.0)));
     /// assert_eq!(iter.next(), Some(&Vector3::new(2.0, 1.0, 2.0)));
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn ctrl_pts_column_iter(&self, row_idx: usize) -> std::slice::Iter<'_, V> {
+    pub fn control_points_column_iter(&self, row_idx: usize) -> std::slice::Iter<'_, V> {
         self.0.control_points[row_idx].iter()
     }
 
@@ -114,14 +114,14 @@ impl<V> NurbsSurface<V> {
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let uknot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    /// let vknot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
-    /// let knot_vecs = (uknot_vec, vknot_vec);
-    /// let ctrl_pts = vec![
+    /// let knot_vector_u = KnotVector::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// let knot_vector_v = KnotVector::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
+    /// let knot_vecs = (knot_vector_u, knot_vector_v);
+    /// let control_points = vec![
     ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
     ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
     /// ];
-    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let bspsurface = BsplineSurface::new(knot_vecs, control_points);
     /// assert_eq!(bspsurface.udegree(), 1);
     /// ```
     #[inline(always)]
@@ -131,14 +131,14 @@ impl<V> NurbsSurface<V> {
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let uknot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    /// let vknot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
-    /// let knot_vecs = (uknot_vec, vknot_vec);
-    /// let ctrl_pts = vec![
+    /// let knot_vector_u = KnotVector::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// let knot_vector_v = KnotVector::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
+    /// let knot_vecs = (knot_vector_u, knot_vector_v);
+    /// let control_points = vec![
     ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
     ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
     /// ];
-    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let bspsurface = BsplineSurface::new(knot_vecs, control_points);
     /// assert_eq!(bspsurface.vdegree(), 2);
     /// ```
     #[inline(always)]
@@ -148,14 +148,14 @@ impl<V> NurbsSurface<V> {
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let uknot_vec = KnotVec::from(vec![0.0, 0.0, 1.0, 1.0]);
-    /// let vknot_vec = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
-    /// let knot_vecs = (uknot_vec, vknot_vec);
-    /// let ctrl_pts = vec![
+    /// let knot_vector_u = KnotVector::from(vec![0.0, 0.0, 1.0, 1.0]);
+    /// let knot_vector_v = KnotVector::from(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]);
+    /// let knot_vecs = (knot_vector_u, knot_vector_v);
+    /// let control_points = vec![
     ///     vec![Vector3::new(0.0, 0.0, 0.0), Vector3::new(1.0, 0.0, 1.0), Vector3::new(2.0, 0.0, 2.0)],
     ///     vec![Vector3::new(0.0, 1.0, 0.0), Vector3::new(1.0, 1.0, 1.0), Vector3::new(2.0, 1.0, 2.0)],
     /// ];
-    /// let bspsurface = BSplineSurface::new(knot_vecs, ctrl_pts);
+    /// let bspsurface = BsplineSurface::new(knot_vecs, control_points);
     /// assert_eq!(bspsurface.degrees(), (1, 2));
     /// ```
     #[inline(always)]
@@ -192,10 +192,10 @@ impl<V: Homogeneous<Scalar = f64>> NurbsSurface<V> {
     /// the length of `surface.control_points()` and `weights` must be the same.
     #[inline(always)]
     pub fn try_from_bspline_and_weights(
-        surface: BSplineSurface<V::Point>,
+        surface: BsplineSurface<V::Point>,
         weights: Vec<Vec<f64>>,
     ) -> Result<Self> {
-        let BSplineSurface {
+        let BsplineSurface {
             knot_vecs,
             control_points,
         } = surface;
@@ -216,7 +216,7 @@ impl<V: Homogeneous<Scalar = f64>> NurbsSurface<V> {
                     .collect::<Vec<_>>())
             })
             .collect::<Result<Vec<_>>>()?;
-        Ok(Self(BSplineSurface::new_unchecked(
+        Ok(Self(BsplineSurface::new_unchecked(
             knot_vecs,
             control_points,
         )))
@@ -236,15 +236,15 @@ where V::Point: Tolerance
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let uknot_vec = KnotVec::bezier_knot(1);
-    /// let vknot_vec = KnotVec::bezier_knot(2);
+    /// let knot_vector_u = KnotVector::bezier_knot(1);
+    /// let knot_vector_v = KnotVector::bezier_knot(2);
     /// let pt = Vector3::new(1.0, 2.0, 1.0);
     /// // allows differences upto scalars
-    /// let ctrl_pts = vec![
+    /// let control_points = vec![
     ///     vec![pt.clone(), pt.clone() * 2.0, pt.clone() * 3.0],
     ///     vec![pt.clone() * 0.5, pt.clone() * 0.25, pt.clone() * 0.125],
     /// ];
-    /// let mut surface = NurbsSurface::new(BSplineSurface::new((uknot_vec, vknot_vec), ctrl_pts));
+    /// let mut surface = NurbsSurface::new(BsplineSurface::new((knot_vector_u, knot_vector_v), control_points));
     /// assert!(surface.is_const());
     ///
     /// *surface.control_point_mut(1, 2) = Vector3::new(2.0, 3.0, 1.0);
@@ -267,14 +267,14 @@ where V::Point: Tolerance
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
-    /// let ctrl_pts = vec![
+    /// let knot_vecs = (KnotVector::bezier_knot(3), KnotVector::bezier_knot(2));
+    /// let control_points = vec![
     ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
     ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.5, 1.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
     ///     vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(0.5, 2.0, 3.0), Vector3::new(1.0, 2.0, 1.0)],
     ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(0.5, 3.5, 2.0), Vector3::new(1.0, 3.0, 1.0)],
     /// ];
-    /// let surface0 = NurbsSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
+    /// let surface0 = NurbsSurface::new(BsplineSurface::new(knot_vecs, control_points));
     /// let mut surface1 = surface0.clone();
     /// assert!(surface0.near_as_surface(&surface1));
     ///
@@ -295,14 +295,14 @@ where V::Point: Tolerance
     /// ```
     /// use truck_geometry::prelude::*;
     /// let eps = TOLERANCE;
-    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
-    /// let ctrl_pts = vec![
+    /// let knot_vecs = (KnotVector::bezier_knot(3), KnotVector::bezier_knot(2));
+    /// let control_points = vec![
     ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
     ///     vec![Vector3::new(0.0, 1.0, 1.0), Vector3::new(0.5, 1.0, 1.0), Vector3::new(1.0, 1.0, 1.0)],
     ///     vec![Vector3::new(0.0, 2.0, 1.0), Vector3::new(0.5, 2.0, 3.0), Vector3::new(1.0, 2.0, 1.0)],
     ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(0.5, 3.5, 2.0), Vector3::new(1.0, 3.0, 1.0)],
     /// ];
-    /// let surface0 = NurbsSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
+    /// let surface0 = NurbsSurface::new(BsplineSurface::new(knot_vecs, control_points));
     /// let mut surface1 = surface0.clone();
     /// assert!(surface0.near_as_surface(&surface1));
     ///
@@ -320,46 +320,46 @@ where V::Point: Tolerance
 impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V> + Tolerance> NurbsSurface<V> {
     /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.
     #[inline(always)]
-    pub fn add_uknot(&mut self, x: f64) -> &mut Self {
-        self.0.add_uknot(x);
+    pub fn add_knot_u(&mut self, x: f64) -> &mut Self {
+        self.0.add_knot_u(x);
         self
     }
     /// Adds a knot `x` of the first parameter `u`, and do not change `self` as a surface.
     #[inline(always)]
-    pub fn add_vknot(&mut self, x: f64) -> &mut Self {
-        self.0.add_vknot(x);
+    pub fn add_knot_v(&mut self, x: f64) -> &mut Self {
+        self.0.add_knot_v(x);
         self
     }
-    /// Removes the uknot corresponding to the indice `idx`, and do not change `self` as a curve.
+    /// Removes the knot_u corresponding to the indice `idx`, and do not change `self` as a curve.
     /// If the knot cannot be removed, returns [`Error::CannotRemoveKnot`].
     #[inline(always)]
-    pub fn try_remove_uknot(&mut self, idx: usize) -> Result<&mut Self> {
-        match self.0.try_remove_uknot(idx) {
+    pub fn try_remove_knot_u(&mut self, idx: usize) -> Result<&mut Self> {
+        match self.0.try_remove_knot_u(idx) {
             Ok(_) => Ok(self),
             Err(error) => Err(error),
         }
     }
-    /// Removes the uknot corresponding to the indices `idx`, and do not change `self` as a curve.
+    /// Removes the knot_u corresponding to the indices `idx`, and do not change `self` as a curve.
     /// If cannot remove the knot, do not change `self` and return `self`.
     #[inline(always)]
-    pub fn remove_uknot(&mut self, idx: usize) -> &mut Self {
-        self.0.remove_uknot(idx);
+    pub fn remove_knot_u(&mut self, idx: usize) -> &mut Self {
+        self.0.remove_knot_u(idx);
         self
     }
-    /// Removes the uknot corresponding to the indice `idx`, and do not change `self` as a curve.
+    /// Removes the knot_u corresponding to the indice `idx`, and do not change `self` as a curve.
     /// If the knot cannot be removed, returns [`Error::CannotRemoveKnot`].
     #[inline(always)]
-    pub fn try_remove_vknot(&mut self, idx: usize) -> Result<&mut Self> {
-        match self.0.try_remove_vknot(idx) {
+    pub fn try_remove_knot_v(&mut self, idx: usize) -> Result<&mut Self> {
+        match self.0.try_remove_knot_v(idx) {
             Ok(_) => Ok(self),
             Err(error) => Err(error),
         }
     }
-    /// Removes the uknot corresponding to the indices `idx`, and do not change `self` as a curve.
+    /// Removes the knot_u corresponding to the indices `idx`, and do not change `self` as a curve.
     /// If cannot remove the knot, do not change `self` and return `self`.
     #[inline(always)]
-    pub fn remove_vknot(&mut self, idx: usize) -> &mut Self {
-        self.0.remove_vknot(idx);
+    pub fn remove_knot_v(&mut self, idx: usize) -> &mut Self {
+        self.0.remove_knot_v(idx);
         self
     }
     /// Elevates the udegree.
@@ -380,7 +380,7 @@ impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V> + Tolerance> Nur
         self.0.syncro_uvdegrees();
         self
     }
-    /// Makes the uknot vector and the vknot vector the same knot vector.
+    /// Makes the knot_u vector and the knot_v vector the same knot vector.
     #[inline(always)]
     pub fn syncro_uvknots(&mut self) -> &mut Self {
         self.0.syncro_uvknots();
@@ -389,11 +389,11 @@ impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V> + Tolerance> Nur
 
     /// Cuts the surface into two surfaces at the parameter `u`
     #[inline(always)]
-    pub fn ucut(&mut self, u: f64) -> Self { Self::new(self.0.ucut(u)) }
+    pub fn cut_u(&mut self, u: f64) -> Self { Self::new(self.0.cut_u(u)) }
 
     /// Cuts the surface into two surfaces at the parameter `v`
     #[inline(always)]
-    pub fn vcut(&mut self, v: f64) -> Self { Self::new(self.0.vcut(v)) }
+    pub fn cut_v(&mut self, v: f64) -> Self { Self::new(self.0.cut_v(v)) }
 
     /// Normalizes the knot vectors
     #[inline(always)]
@@ -419,14 +419,14 @@ impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V> + Tolerance> Nur
     /// # Example
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
-    /// let ctrl_pts = vec![
+    /// let knot_vecs = (KnotVector::bezier_knot(3), KnotVector::bezier_knot(2));
+    /// let control_points = vec![
     ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(0.5, -1.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
     ///     vec![Vector3::new(0.0, 1.0, 2.0), Vector3::new(0.5, 1.0, 3.0), Vector3::new(1.0, 1.0, 2.0)],
     ///     vec![Vector3::new(0.0, 2.0, 2.0), Vector3::new(0.5, 2.0, 3.0), Vector3::new(1.0, 2.0, 2.0)],
     ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(0.5, 3.5, 2.0), Vector3::new(1.0, 3.0, 1.0)],
     /// ];
-    /// let bspsurface = NurbsSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
+    /// let bspsurface = NurbsSurface::new(BsplineSurface::new(knot_vecs, control_points));
     /// let curves = bspsurface.splitted_boundary();
     /// assert_eq!(
     ///     curves[0].control_points(),
@@ -485,7 +485,7 @@ impl<V: Homogeneous<Scalar = f64>> SearchNearestParameter<D2> for NurbsSurface<V
 where
     Self: ParametricSurface<Point = V::Point, Vector = <V::Point as EuclideanSpace>::Diff>,
     V::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64>,
-    <V::Point as EuclideanSpace>::Diff: SsnpVector<Point = V::Point>,
+    <V::Point as EuclideanSpace>::Diff: SearchNearestParameterVector<Point = V::Point>,
 {
     type Point = V::Point;
     /// Searches the parameter `(u, v)` which minimize `|self(u, v) - point|` by Newton's method
@@ -493,34 +493,34 @@ where
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let knot_vecs = (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2));
-    /// let ctrl_pts = vec![
+    /// let knot_vecs = (KnotVector::bezier_knot(3), KnotVector::bezier_knot(2));
+    /// let control_points = vec![
     ///     vec![Vector3::new(0.0, 0.0, 1.0), Vector3::new(1.0, -2.0, 2.0), Vector3::new(1.0, 0.0, 1.0)],
     ///     vec![Vector3::new(0.0, 2.0, 2.0), Vector3::new(2.0, 4.0, 4.0), Vector3::new(2.0, 2.0, 2.0)],
     ///     vec![Vector3::new(0.0, 4.0, 2.0), Vector3::new(2.0, 8.0, 4.0), Vector3::new(2.0, 4.0, 2.0)],
     ///     vec![Vector3::new(0.0, 3.0, 1.0), Vector3::new(1.0, 7.0, 2.0), Vector3::new(1.0, 3.0, 1.0)],
     /// ];
-    /// let surface = NurbsSurface::new(BSplineSurface::new(knot_vecs, ctrl_pts));
+    /// let surface = NurbsSurface::new(BsplineSurface::new(knot_vecs, control_points));
     /// let pt = surface.subs(0.3, 0.7);
     /// let (u, v) = surface.search_nearest_parameter(pt, Some((0.5, 0.5)), 100).unwrap();
     /// assert!(u.near(&0.3) && v.near(&0.7));
     /// ```
     /// # Remarks
     /// It may converge to a local solution depending on the hint.
-    /// cf. [`BSplineCurve::search_rational_nearest_parameter`](struct.BSplineCurve.html#method.search_rational_nearest_parameter)
+    /// cf. [`BsplineCurve::search_rational_nearest_parameter`](struct.BsplineCurve.html#method.search_rational_nearest_parameter)
     #[inline(always)]
-    fn search_nearest_parameter<H: Into<SPHint2D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: V::Point,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         let hint = match hint.into() {
-            SPHint2D::Parameter(x, y) => (x, y),
-            SPHint2D::Range(range0, range1) => {
+            SearchParameterHint2D::Parameter(x, y) => (x, y),
+            SearchParameterHint2D::Range(range0, range1) => {
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
-            SPHint2D::None => {
+            SearchParameterHint2D::None => {
                 algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
@@ -560,43 +560,43 @@ impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParametricSurfa
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         if m < 7 && n < 7 {
             let mut ders = [[V::zero(); 8]; 8];
-            (0..=m).for_each(|i| (0..=n).for_each(|j| ders[i][j] = self.0.der_mn(i, j, u, v)));
+            (0..=m).for_each(|i| (0..=n).for_each(|j| ders[i][j] = self.0.derivative_mn(i, j, u, v)));
             let ders = std::array::from_fn::<_, 8, _>(|i| &ders[i][..=n]);
             multi_rat_der(&ders[..=m])
         } else {
             let ders = (0..=m)
-                .map(|i| (0..=n).map(|j| self.0.der_mn(i, j, u, v)).collect())
+                .map(|i| (0..=n).map(|j| self.0.derivative_mn(i, j, u, v)).collect())
                 .collect::<Vec<Vec<_>>>();
             multi_rat_der(&ders)
         }
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> V::Point { self.0.subs(u, v).to_point() }
+    fn evaluate(&self, u: f64, v: f64) -> V::Point { self.0.evaluate(u, v).to_point() }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector {
-        rat_der(&[self.0.subs(u, v), self.0.uder(u, v)])
+    fn derivative_u(&self, u: f64, v: f64) -> Self::Vector {
+        rat_der(&[self.0.evaluate(u, v), self.0.derivative_u(u, v)])
     }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
-        rat_der(&[self.0.subs(u, v), self.0.vder(u, v)])
+    fn derivative_v(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
+        rat_der(&[self.0.evaluate(u, v), self.0.derivative_v(u, v)])
     }
     #[inline(always)]
-    fn uuder(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
-        rat_der(&[self.0.subs(u, v), self.0.uder(u, v), self.0.uuder(u, v)])
+    fn derivative_uu(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
+        rat_der(&[self.0.evaluate(u, v), self.0.derivative_u(u, v), self.0.derivative_uu(u, v)])
     }
     #[inline(always)]
-    fn uvder(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
+    fn derivative_uv(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
         multi_rat_der(&[
-            [self.0.subs(u, v), self.0.vder(u, v)],
-            [self.0.uder(u, v), self.0.uvder(u, v)],
+            [self.0.evaluate(u, v), self.0.derivative_v(u, v)],
+            [self.0.derivative_u(u, v), self.0.derivative_uv(u, v)],
         ])
     }
     #[inline(always)]
-    fn vvder(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
-        rat_der(&[self.0.subs(u, v), self.0.vder(u, v), self.0.vvder(u, v)])
+    fn derivative_vv(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
+        rat_der(&[self.0.evaluate(u, v), self.0.derivative_v(u, v), self.0.derivative_vv(u, v)])
     }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { self.parameter_range() }
@@ -605,9 +605,9 @@ impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParametricSurfa
 impl ParametricSurface3D for NurbsSurface<Vector4> {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
-        let pt = self.0.subs(u, v);
-        let ud = self.0.uder(u, v);
-        let vd = self.0.vder(u, v);
+        let pt = self.0.evaluate(u, v);
+        let ud = self.0.derivative_u(u, v);
+        let vd = self.0.derivative_v(u, v);
         rat_der(&[pt, ud]).cross(rat_der(&[pt, vd])).normalize()
     }
 }
@@ -636,8 +636,8 @@ impl IncludeCurve<NurbsCurve<Vector3>> for NurbsSurface<Vector3> {
             Some(got) => got,
             None => return false,
         };
-        let uknot_vec = self.uknot_vec();
-        let vknot_vec = self.vknot_vec();
+        let knot_vector_u = self.knot_vector_u();
+        let knot_vector_v = self.knot_vector_v();
         let degree = curve.degree() * 6;
         let (knots, _) = curve.knot_vec().to_single_multi();
         for i in 1..knots.len() {
@@ -650,10 +650,10 @@ impl IncludeCurve<NurbsCurve<Vector3>> for NurbsSurface<Vector3> {
                     None => return false,
                 };
                 if !self.subs(hint.0, hint.1).near(&pt)
-                    || hint.0 < uknot_vec[0] - TOLERANCE
-                    || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
-                    || hint.1 < vknot_vec[0] - TOLERANCE
-                    || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
+                    || hint.0 < knot_vector_u[0] - TOLERANCE
+                    || hint.0 - knot_vector_u[0] > knot_vector_u.range_length() + TOLERANCE
+                    || hint.1 < knot_vector_v[0] - TOLERANCE
+                    || hint.1 - knot_vector_v[0] > knot_vector_v.range_length() + TOLERANCE
                 {
                     return false;
                 }
@@ -663,16 +663,16 @@ impl IncludeCurve<NurbsCurve<Vector3>> for NurbsSurface<Vector3> {
     }
 }
 
-impl IncludeCurve<BSplineCurve<Point3>> for NurbsSurface<Vector4> {
+impl IncludeCurve<BsplineCurve<Point3>> for NurbsSurface<Vector4> {
     #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
+    fn include(&self, curve: &BsplineCurve<Point3>) -> bool {
         let pt = curve.front();
         let mut hint = match self.search_parameter(pt, None, INCLUDE_CURVE_TRIALS) {
             Some(got) => got,
             None => return false,
         };
-        let uknot_vec = self.uknot_vec();
-        let vknot_vec = self.vknot_vec();
+        let knot_vector_u = self.knot_vector_u();
+        let knot_vector_v = self.knot_vector_v();
         let degree = curve.degree() * 6;
         let (knots, _) = curve.knot_vec().to_single_multi();
         for i in 1..knots.len() {
@@ -685,10 +685,10 @@ impl IncludeCurve<BSplineCurve<Point3>> for NurbsSurface<Vector4> {
                     None => return false,
                 };
                 if !self.subs(hint.0, hint.1).near(&pt)
-                    || hint.0 < uknot_vec[0] - TOLERANCE
-                    || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
-                    || hint.1 < vknot_vec[0] - TOLERANCE
-                    || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
+                    || hint.0 < knot_vector_u[0] - TOLERANCE
+                    || hint.0 - knot_vector_u[0] > knot_vector_u.range_length() + TOLERANCE
+                    || hint.1 < knot_vector_v[0] - TOLERANCE
+                    || hint.1 - knot_vector_v[0] > knot_vector_v.range_length() + TOLERANCE
                 {
                     return false;
                 }
@@ -706,8 +706,8 @@ impl IncludeCurve<NurbsCurve<Vector4>> for NurbsSurface<Vector4> {
             Some(got) => got,
             None => return false,
         };
-        let uknot_vec = self.uknot_vec();
-        let vknot_vec = self.vknot_vec();
+        let knot_vector_u = self.knot_vector_u();
+        let knot_vector_v = self.knot_vector_v();
         let degree = curve.degree() * 6;
         let (knots, _) = curve.knot_vec().to_single_multi();
         for i in 1..knots.len() {
@@ -720,10 +720,10 @@ impl IncludeCurve<NurbsCurve<Vector4>> for NurbsSurface<Vector4> {
                     None => return false,
                 };
                 if !self.subs(hint.0, hint.1).near(&pt)
-                    || hint.0 < uknot_vec[0] - TOLERANCE
-                    || hint.0 - uknot_vec[0] > uknot_vec.range_length() + TOLERANCE
-                    || hint.1 < vknot_vec[0] - TOLERANCE
-                    || hint.1 - vknot_vec[0] > vknot_vec.range_length() + TOLERANCE
+                    || hint.0 < knot_vector_u[0] - TOLERANCE
+                    || hint.0 - knot_vector_u[0] > knot_vector_u.range_length() + TOLERANCE
+                    || hint.1 < knot_vector_v[0] - TOLERANCE
+                    || hint.1 - knot_vector_v[0] > knot_vector_v.range_length() + TOLERANCE
                 {
                     return false;
                 }
@@ -752,7 +752,7 @@ where
     V::Point: ControlPoint<f64, Diff = <V::Point as EuclideanSpace>::Diff>
         + MetricSpace<Metric = f64>
         + Tolerance,
-    <V::Point as EuclideanSpace>::Diff: SspVector<Point = V::Point>,
+    <V::Point as EuclideanSpace>::Diff: SearchParameterVector<Point = V::Point>,
 {
     type Point = V::Point;
     /// Search the parameter `(u, v)` such that `self.subs(u, v).rational_projection()` is near `pt`.
@@ -760,32 +760,32 @@ where
     /// # Examples
     /// ```
     /// use truck_geometry::prelude::*;
-    /// let knot_vec = KnotVec::uniform_knot(2, 2);
-    /// let ctrl_pts = vec![
+    /// let knot_vec = KnotVector::uniform_knot(2, 2);
+    /// let control_points = vec![
     ///     vec![Vector4::new(0.0, 0.0, 0.0, 1.0), Vector4::new(0.1, 0.0, 0.5, 0.4), Vector4::new(1.0, 0.0, 0.6, 2.0), Vector4::new(0.4, 0.0, 0.4, 0.4)],
     ///     vec![Vector4::new(0.0, 0.2, 0.2, 2.0), Vector4::new(0.24, 0.24, 0.1, 1.2), Vector4::new(2.4, 1.8, 2.4, 0.6), Vector4::new(1.4, 0.42, 0.98, 1.4)],
     ///     vec![Vector4::new(0.0, 1.5, 1.2, 3.0), Vector4::new(1.02, 2.04, 1.7, 3.4), Vector4::new(0.42, 0.28, 0.7, 0.7), Vector4::new(0.6, 0.3, 0.0, 0.6)],
     ///     vec![Vector4::new(0.0, 1.0, 1.0, 1.0), Vector4::new(0.2, 2.0, 2.0, 2.0), Vector4::new(0.85, 1.7, 0.85, 1.7), Vector4::new(1.0, 1.0, 0.3, 1.0)],
     /// ];
-    /// let bspsurface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    /// let bspsurface = BsplineSurface::new((knot_vec.clone(), knot_vec), control_points);
     /// let surface = NurbsSurface::new(bspsurface);
     ///
     /// let pt = surface.subs(0.3, 0.7);
     /// let (u, v) = surface.search_parameter(pt, Some((0.5, 0.5)), 100).unwrap();
     /// assert_near!(surface.subs(u, v), pt);
     /// ```
-    fn search_parameter<H: Into<SPHint2D>>(
+    fn search_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: V::Point,
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
         let hint = match hint.into() {
-            SPHint2D::Parameter(x, y) => (x, y),
-            SPHint2D::Range(range0, range1) => {
+            SearchParameterHint2D::Parameter(x, y) => (x, y),
+            SearchParameterHint2D::Range(range0, range1) => {
                 algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
             }
-            SPHint2D::None => {
+            SearchParameterHint2D::None => {
                 algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
             }
         };
@@ -793,14 +793,14 @@ where
     }
 }
 
-impl<V: Homogeneous<Scalar = f64>> From<BSplineSurface<V::Point>> for NurbsSurface<V> {
-    fn from(bsp: BSplineSurface<V::Point>) -> Self {
+impl<V: Homogeneous<Scalar = f64>> From<BsplineSurface<V::Point>> for NurbsSurface<V> {
+    fn from(bsp: BsplineSurface<V::Point>) -> Self {
         let control_points = bsp
             .control_points
             .into_iter()
             .map(|vec| vec.into_iter().map(|p| V::from_point(p)).collect())
             .collect();
-        Self(BSplineSurface {
+        Self(BsplineSurface {
             knot_vecs: bsp.knot_vecs,
             control_points,
         })
@@ -809,8 +809,8 @@ impl<V: Homogeneous<Scalar = f64>> From<BSplineSurface<V::Point>> for NurbsSurfa
 
 #[test]
 fn test_include2d() {
-    let knot_vec = KnotVec::uniform_knot(2, 3);
-    let ctrl_pts = vec![
+    let knot_vec = KnotVector::uniform_knot(2, 3);
+    let control_points = vec![
         vec![
             Vector3::new(0.0, 0.0, 1.0),
             Vector3::new(0.05, 0.0, 0.5),
@@ -836,7 +836,7 @@ fn test_include2d() {
             Vector3::new(0.3, 0.3, 0.3),
         ],
     ];
-    let surface = BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts);
+    let surface = BsplineSurface::new((knot_vec.clone(), knot_vec), control_points);
     let bnd_box = BoundingBox::from_iter(&[Vector2::new(0.2, 0.3), Vector2::new(0.8, 0.6)]);
     let mut curve = surface.sectional_curve(bnd_box);
     curve.control_points_mut().for_each(|pt| *pt *= 3.0);
@@ -847,8 +847,8 @@ fn test_include2d() {
 
 #[test]
 fn test_include3d() {
-    let knot_vec = KnotVec::bezier_knot(2);
-    let ctrl_pts = vec![
+    let knot_vec = KnotVector::bezier_knot(2);
+    let control_points = vec![
         vec![
             Vector4::new(-1.0, -1.0, 2.0, 1.0),
             Vector4::new(-1.0, 0.0, 0.0, 1.0),
@@ -865,12 +865,12 @@ fn test_include3d() {
             Vector4::new(1.0, 1.0, 2.0, 1.0),
         ],
     ];
-    let surface = NurbsSurface::new(BSplineSurface::new((knot_vec.clone(), knot_vec), ctrl_pts));
+    let surface = NurbsSurface::new(BsplineSurface::new((knot_vec.clone(), knot_vec), control_points));
 
-    let knot_vec = KnotVec::from(vec![
+    let knot_vec = KnotVector::from(vec![
         0.0, 0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0, 1.0,
     ]);
-    let ctrl_pts = vec![
+    let control_points = vec![
         // the vector of the indices of control points
         Vector4::new(0.0, -2.0, 2.0, 2.0),
         Vector4::new(1.0, -1.0, 1.0, 1.0),
@@ -882,7 +882,7 @@ fn test_include3d() {
         Vector4::new(-1.0, -1.0, 1.0, 1.0),
         Vector4::new(0.0, -2.0, 2.0, 2.0),
     ];
-    let mut curve = NurbsCurve::new(BSplineCurve::new(knot_vec, ctrl_pts));
+    let mut curve = NurbsCurve::new(BsplineCurve::new(knot_vec, control_points));
     assert!(surface.include(&curve));
     *curve.control_point_mut(1) += Vector4::new(0.0, 0.0, 0.00001, 0.0);
     assert!(!surface.include(&curve));

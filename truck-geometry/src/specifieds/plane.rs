@@ -91,28 +91,28 @@ impl ParametricSurface for Plane {
     type Point = Point3;
     type Vector = Vector3;
     #[inline(always)]
-    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+    fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         match (m, n) {
-            (0, 0) => self.subs(u, v).to_vec(),
+            (0, 0) => self.evaluate(u, v).to_vec(),
             (1, 0) => self.p - self.o,
             (0, 1) => self.q - self.o,
             _ => Vector3::zero(),
         }
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Point3 {
+    fn evaluate(&self, u: f64, v: f64) -> Point3 {
         self.o + u * (self.p - self.o) + v * (self.q - self.o)
     }
     #[inline(always)]
-    fn uder(&self, _: f64, _: f64) -> Vector3 { self.p - self.o }
+    fn derivative_u(&self, _: f64, _: f64) -> Vector3 { self.p - self.o }
     #[inline(always)]
-    fn vder(&self, _: f64, _: f64) -> Vector3 { self.q - self.o }
+    fn derivative_v(&self, _: f64, _: f64) -> Vector3 { self.q - self.o }
     #[inline(always)]
-    fn uuder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
+    fn derivative_uu(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
     #[inline(always)]
-    fn uvder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
+    fn derivative_uv(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
     #[inline(always)]
-    fn vvder(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
+    fn derivative_vv(&self, _: f64, _: f64) -> Vector3 { Vector3::zero() }
     /// as square
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
@@ -153,9 +153,9 @@ impl IncludeCurve<Line<Point3>> for Plane {
     }
 }
 
-impl IncludeCurve<BSplineCurve<Point3>> for Plane {
+impl IncludeCurve<BsplineCurve<Point3>> for Plane {
     #[inline(always)]
-    fn include(&self, curve: &BSplineCurve<Point3>) -> bool {
+    fn include(&self, curve: &BsplineCurve<Point3>) -> bool {
         let origin = self.origin();
         let normal = self.normal();
         curve
@@ -211,7 +211,7 @@ impl<T: Transform3<Scalar = f64>> Transformed<T> for Plane {
 impl SearchParameter<D2> for Plane {
     type Point = Point3;
     #[inline(always)]
-    fn search_parameter<H: Into<SPHint2D>>(
+    fn search_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         _: H,
@@ -228,7 +228,7 @@ impl SearchParameter<D2> for Plane {
 impl SearchNearestParameter<D2> for Plane {
     type Point = Point3;
     #[inline(always)]
-    fn search_nearest_parameter<H: Into<SPHint2D>>(
+    fn search_nearest_parameter<H: Into<SearchParameterHint2D>>(
         &self,
         point: Point3,
         _: H,
@@ -239,15 +239,15 @@ impl SearchNearestParameter<D2> for Plane {
     }
 }
 
-impl From<Plane> for BSplineSurface<Point3> {
+impl From<Plane> for BsplineSurface<Point3> {
     fn from(Plane { o, p, q }: Plane) -> Self {
-        BSplineSurface::debug_new(
-            (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1)),
+        BsplineSurface::debug_new(
+            (KnotVector::bezier_knot(1), KnotVector::bezier_knot(1)),
             vec![vec![o, q], vec![p, p + (q - o)]],
         )
     }
 }
 
-impl ToSameGeometry<BSplineSurface<Point3>> for Plane {
-    fn to_same_geometry(&self) -> BSplineSurface<Point3> { (*self).into() }
+impl ToSameGeometry<BsplineSurface<Point3>> for Plane {
+    fn to_same_geometry(&self) -> BsplineSurface<Point3> { (*self).into() }
 }

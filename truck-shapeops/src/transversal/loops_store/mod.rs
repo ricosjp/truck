@@ -177,7 +177,7 @@ impl<P: Copy, C: Clone> Loops<P, C> {
         &mut self,
         old_vertex: &Vertex<P>,
         new_vertex: &Vertex<P>,
-        emap: &mut HashMap<EdgeID<C>, Edge<P, C>>,
+        emap: &mut HashMap<EdgeId<C>, Edge<P, C>>,
     ) {
         self.iter_mut()
             .flat_map(|wire| wire.iter_mut())
@@ -197,7 +197,7 @@ impl<P: Copy, C: Clone> Loops<P, C> {
                 if !edge.orientation() {
                     new_edge.invert();
                 }
-                // Remove the edge from the HashMap when it is no longer there because ID reassignment will occur.
+                // Remove the edge from the HashMap when it is no longer there because Id reassignment will occur.
                 if edge.count() == 1 {
                     emap.remove(&edge.id());
                 }
@@ -205,7 +205,7 @@ impl<P: Copy, C: Clone> Loops<P, C> {
             })
     }
 
-    fn swap_edge_into_wire(&mut self, edge_id: EdgeID<C>, new_wire: &Wire<P, C>) {
+    fn swap_edge_into_wire(&mut self, edge_id: EdgeId<C>, new_wire: &Wire<P, C>) {
         self.iter_mut().for_each(|wire| {
             let mut iter = wire.iter().enumerate();
             if let Some((idx, edge)) = iter.find(|(_, edge)| edge.id() == edge_id) {
@@ -290,14 +290,14 @@ impl<P: Copy + Tolerance, C: Clone> LoopsStore<P, C> {
         &mut self,
         old_vertex: &Vertex<P>,
         new_vertex: &Vertex<P>,
-        emap: &mut HashMap<EdgeID<C>, Edge<P, C>>,
+        emap: &mut HashMap<EdgeId<C>, Edge<P, C>>,
     ) {
         self.iter_mut()
             .for_each(|loops| loops.change_vertex(old_vertex, new_vertex, emap));
     }
 
     #[inline(always)]
-    fn swap_edge_into_wire(&mut self, edge_id: EdgeID<C>, new_wire: &Wire<P, C>) {
+    fn swap_edge_into_wire(&mut self, edge_id: EdgeId<C>, new_wire: &Wire<P, C>) {
         self.iter_mut()
             .for_each(|loops| loops.swap_edge_into_wire(edge_id, new_wire))
     }
@@ -306,7 +306,7 @@ impl<P: Copy + Tolerance, C: Clone> LoopsStore<P, C> {
         &mut self,
         loops_index: usize,
         v: &Vertex<P>,
-        emap: &mut HashMap<EdgeID<C>, Edge<P, C>>,
+        emap: &mut HashMap<EdgeId<C>, Edge<P, C>>,
     ) -> Option<(usize, usize, ParameterKind)>
     where
         C: Cut<Point = P> + SearchParameter<D1, Point = P>,
@@ -345,7 +345,7 @@ impl<C> LoopsStore<Point3, C> {
         v: &Vertex<Point3>,
         kind: ParameterKind,
         another_surface: &S,
-        emap: &mut HashMap<EdgeID<C>, Edge<Point3, C>>,
+        emap: &mut HashMap<EdgeId<C>, Edge<Point3, C>>,
     ) -> Option<()>
     where
         C: Cut<Point = Point3, Vector = Vector3> + SearchNearestParameter<D1, Point = Point3>,

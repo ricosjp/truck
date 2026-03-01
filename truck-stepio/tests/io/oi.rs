@@ -77,8 +77,8 @@ fn oi() {
         Point2::new(1.0, 2.0),
         Point2::new(3.0, 4.0),
     ]));
-    oitest_tryfrom::<BSplineCurve<Point2>, BSplineCurveWithKnotsHolder>(BSplineCurve::new(
-        KnotVec::uniform_knot(3, 4),
+    oitest_tryfrom::<BsplineCurve<Point2>, BsplineCurveWithKnotsHolder>(BsplineCurve::new(
+        KnotVector::uniform_knot(3, 4),
         vec![
             Point2::new(1.0, 2.0),
             Point2::new(3.0, 4.0),
@@ -90,9 +90,9 @@ fn oi() {
             Point2::new(15.0, 16.0),
         ],
     ));
-    itest_tryfrom::<BSplineCurve<Point2>, BezierCurveHolder>(
-        BSplineCurve::new(
-            KnotVec::bezier_knot(2),
+    itest_tryfrom::<BsplineCurve<Point2>, BezierCurveHolder>(
+        BsplineCurve::new(
+            KnotVector::bezier_knot(2),
             vec![
                 Point2::new(0.0, 1.0),
                 Point2::new(2.0, 3.0),
@@ -103,9 +103,9 @@ fn oi() {
 #2 = CARTESIAN_POINT('', (0.0, 1.0)); #3 = CARTESIAN_POINT('', (2.0, 3.0));
 #4 = CARTESIAN_POINT('', (4.0, 5.0)); ENDSEC;",
     );
-    itest_tryfrom::<BSplineCurve<Point2>, QuasiUniformCurveHolder>(
-        BSplineCurve::new(
-            KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0]),
+    itest_tryfrom::<BsplineCurve<Point2>, QuasiUniformCurveHolder>(
+        BsplineCurve::new(
+            KnotVector::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0]),
             vec![
                 Point2::new(0.0, 1.0),
                 Point2::new(2.0, 3.0),
@@ -117,9 +117,9 @@ fn oi() {
 #2 = CARTESIAN_POINT('', (0.0, 1.0)); #3 = CARTESIAN_POINT('', (2.0, 3.0));
 #4 = CARTESIAN_POINT('', (4.0, 5.0)); #5 = CARTESIAN_POINT('', (6.0, 7.0)); ENDSEC;",
     );
-    oitest_tryfrom::<NurbsCurve<Vector3>, RationalBSplineCurveHolder>(NurbsCurve::new(
-        BSplineCurve::new(
-            KnotVec::bezier_knot(3),
+    oitest_tryfrom::<NurbsCurve<Vector3>, RationalBsplineCurveHolder>(NurbsCurve::new(
+        BsplineCurve::new(
+            KnotVector::bezier_knot(3),
             vec![
                 Vector3::new(0.0, 1.0, 2.0),
                 Vector3::new(3.0, 4.0, 5.0),
@@ -233,23 +233,24 @@ fn oi() {
             ),
         ),
     );
-    oitest_tryfrom::<PCurve<Box<step_geometry::Curve2D>, Box<step_geometry::Surface>>, PcurveHolder>(
-        PCurve::new(
-            Box::new(step_geometry::Curve2D::Line(Line(
-                Point2::new(0.0, 0.0),
-                Point2::new(1.0, 1.0),
-            ))),
-            Box::new(step_geometry::Surface::ElementarySurface(
-                step_geometry::ElementarySurface::Plane(truck::Plane::new(
-                    Point3::new(1.0, 2.0, 3.0),
-                    Point3::new(1.0, 2.0, 4.0),
-                    Point3::new(1.0, 1.0, 3.0),
-                )),
+    oitest_tryfrom::<
+        ParameterCurve<Box<step_geometry::Curve2D>, Box<step_geometry::Surface>>,
+        PcurveHolder,
+    >(ParameterCurve::new(
+        Box::new(step_geometry::Curve2D::Line(Line(
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 1.0),
+        ))),
+        Box::new(step_geometry::Surface::ElementarySurface(
+            step_geometry::ElementarySurface::Plane(truck::Plane::new(
+                Point3::new(1.0, 2.0, 3.0),
+                Point3::new(1.0, 2.0, 4.0),
+                Point3::new(1.0, 1.0, 3.0),
             )),
-        ),
-    );
-    oitest_tryfrom::<BSplineSurface<Point3>, BSplineSurfaceWithKnotsHolder>(BSplineSurface::new(
-        (KnotVec::bezier_knot(3), KnotVec::bezier_knot(2)),
+        )),
+    ));
+    oitest_tryfrom::<BsplineSurface<Point3>, BsplineSurfaceWithKnotsHolder>(BsplineSurface::new(
+        (KnotVector::bezier_knot(3), KnotVector::bezier_knot(2)),
         vec![
             vec![
                 Point3::new(0.0, 1.0, 2.0),

@@ -6,19 +6,19 @@ use truck_modeling::*;
 
 fn main() {
     let v = builder::vertex(Point3::new(-0.5, -0.5, -0.5));
-    let edge = builder::tsweep(&v, Vector3::unit_x());
-    let mut face = builder::tsweep(&edge, Vector3::unit_y());
+    let edge = builder::extrude(&v, Vector3::unit_x());
+    let mut face = builder::extrude(&edge, Vector3::unit_y());
     let v = builder::vertex(Point3::new(0.2, 0.0, -0.5));
-    let edge0 = builder::tsweep(&v, Vector3::new(-0.2, 0.2, 0.0));
-    let wire1 = builder::rsweep(
+    let edge0 = builder::extrude(&v, Vector3::new(-0.2, 0.2, 0.0));
+    let wire1 = builder::revolve(
         edge0.back(),
         Point3::origin(),
         Vector3::unit_z(),
         Rad(std::f64::consts::PI / 2.0),
         2,
     );
-    let edge2 = builder::tsweep(wire1.back_vertex().unwrap(), Vector3::new(0.2, -0.2, 0.0));
-    let mut wire3 = builder::rsweep(
+    let edge2 = builder::extrude(wire1.back_vertex().unwrap(), Vector3::new(0.2, -0.2, 0.0));
+    let mut wire3 = builder::revolve(
         edge2.back(),
         Point3::origin(),
         Vector3::unit_z(),
@@ -36,7 +36,7 @@ fn main() {
     );
     wire.invert();
     face.add_boundary(wire);
-    let shape: Solid = builder::tsweep(&face, Vector3::unit_z());
+    let shape: Solid = builder::extrude(&face, Vector3::unit_z());
     let json = serde_json::to_vec_pretty(&shape).unwrap();
     std::fs::write("punched-cube.json", json).unwrap();
 }
