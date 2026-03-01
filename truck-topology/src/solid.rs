@@ -150,7 +150,7 @@ impl<P, C, S> Solid<P, C, S> {
     #[inline(always)]
     pub fn cut_edge(
         &mut self,
-        edge_id: EdgeID<C>,
+        edge_id: EdgeId<C>,
         vertex: &Vertex<P>,
     ) -> Option<(Edge<P, C>, Edge<P, C>)>
     where
@@ -167,7 +167,7 @@ impl<P, C, S> Solid<P, C, S> {
     }
     /// Removes `vertex` from `self` by concat two edges on both sides.
     #[inline(always)]
-    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> Option<Edge<P, C>>
+    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexId<P>) -> Option<Edge<P, C>>
     where
         P: Debug,
         C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
@@ -182,7 +182,7 @@ impl<P, C, S> Solid<P, C, S> {
 
     /// Cut a face with `face_id` by edge.
     #[inline(always)]
-    pub fn cut_face_by_edge(&mut self, face_id: FaceID<S>, edge: Edge<P, C>) -> bool
+    pub fn cut_face_by_edge(&mut self, face_id: FaceId<S>, edge: Edge<P, C>) -> bool
     where S: Clone {
         let tuple = self.boundaries.iter_mut().find_map(|shell| {
             let find_res = shell

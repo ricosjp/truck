@@ -36,7 +36,7 @@ fn exec_microfacet_module_test(backend: Backends, out_dir: &str) {
         shader: &shader,
         vs_entpt: "vs_main",
         fs_entpt: "fs_main",
-        id: RenderID::gen(),
+        id: RenderId::gen(),
     };
     let buffer0 = common::render_one(&mut scene, &plane);
     common::save_buffer(

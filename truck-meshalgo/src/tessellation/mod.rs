@@ -217,9 +217,9 @@ pub trait MeshableShape {
     ///
     /// // modeling a unit cube
     /// let v = builder::vertex(Point3::origin());
-    /// let e = builder::tsweep(&v, Vector3::unit_x());
-    /// let f = builder::tsweep(&e, Vector3::unit_y());
-    /// let cube: Solid = builder::tsweep(&f, Vector3::unit_z());
+    /// let e = builder::extrude(&v, Vector3::unit_x());
+    /// let f = builder::extrude(&e, Vector3::unit_y());
+    /// let cube: Solid = builder::extrude(&f, Vector3::unit_z());
     ///
     /// // cube is Solid, however, the tessellated mesh is not closed.
     /// let mut mesh = cube.triangulation(0.01).to_polygon();
@@ -268,8 +268,8 @@ pub trait RobustMeshableShape {
     /// // vertices
     /// let v = Vertex::news(&p);
     /// // Curves that do not ride on a cylinder
-    /// let bsp0: Curve = BSplineCurve::new(
-    ///     KnotVec::bezier_knot(3),
+    /// let bsp0: Curve = BsplineCurve::new(
+    ///     KnotVector::bezier_knot(3),
     ///     vec![
     ///         p[0],
     ///         Point3::new(1.0, 4.0 / 3.0, 0.0),
@@ -278,8 +278,8 @@ pub trait RobustMeshableShape {
     ///     ],
     /// )
     /// .into();
-    /// let bsp1: Curve = BSplineCurve::new(
-    ///     KnotVec::bezier_knot(3),
+    /// let bsp1: Curve = BsplineCurve::new(
+    ///     KnotVector::bezier_knot(3),
     ///     vec![
     ///         p[3],
     ///         Point3::new(-1.0, 4.0 / 3.0, 1.0),

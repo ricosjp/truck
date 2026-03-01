@@ -43,7 +43,7 @@ mod plane {
     pub struct Plane {
         module: ShaderModule,
         pub mouse: [f32; 4],
-        id: RenderID,
+        id: RenderId,
     }
 
     const BASE_PREFIX: &str = "struct SceneInfo {
@@ -228,7 +228,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
             Plane {
                 module,
                 mouse: [0.0; 4],
-                id: RenderID::gen(),
+                id: RenderId::gen(),
             }
         }
 

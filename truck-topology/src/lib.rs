@@ -85,7 +85,7 @@ use parking_lot::Mutex;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
-use truck_base::{id::ID, tolerance::*};
+use truck_base::{id::Id, tolerance::*};
 use truck_geotrait::*;
 
 #[cfg(feature = "rclite")]
@@ -210,7 +210,7 @@ impl<T> RemoveTry<T> for Result<T> {
 /// let v = Vertex::new(0);
 ///
 /// let entity = v.point();
-/// let v_id: VertexID<usize> = v.id();
+/// let v_id: VertexId<usize> = v.id();
 ///
 /// // Change the point!
 /// v.set_point(1);
@@ -218,7 +218,7 @@ impl<T> RemoveTry<T> for Result<T> {
 /// assert_ne!(entity, v.point());
 /// assert_eq!(v_id, v.id());
 /// ```
-pub type VertexID<P> = ID<Mutex<P>>;
+pub type VertexId<P> = Id<Mutex<P>>;
 
 /// The id that does not depend on the direction of the edge.
 /// # Examples
@@ -230,7 +230,7 @@ pub type VertexID<P> = ID<Mutex<P>>;
 /// assert_ne!(edge0, edge1);
 /// assert_eq!(edge0.id(), edge1.id());
 /// ```
-pub type EdgeID<C> = ID<Mutex<C>>;
+pub type EdgeId<C> = Id<Mutex<C>>;
 
 /// The id that does not depend on the direction of the face.
 /// # Examples
@@ -250,7 +250,19 @@ pub type EdgeID<C> = ID<Mutex<C>>;
 /// assert_eq!(face0.id(), face1.id());
 /// assert_ne!(face0.id(), face2.id());
 /// ```
-pub type FaceID<S> = ID<Mutex<S>>;
+pub type FaceId<S> = Id<Mutex<S>>;
+
+/// Renamed to [`VertexId`] per RFC 430 (C-CASE).
+#[deprecated(note = "renamed to VertexId per RFC 430 (C-CASE)")]
+pub type VertexID<P> = VertexId<P>;
+
+/// Renamed to [`EdgeId`] per RFC 430 (C-CASE).
+#[deprecated(note = "renamed to EdgeId per RFC 430 (C-CASE)")]
+pub type EdgeID<C> = EdgeId<C>;
+
+/// Renamed to [`FaceId`] per RFC 430 (C-CASE).
+#[deprecated(note = "renamed to FaceId per RFC 430 (C-CASE)")]
+pub type FaceID<S> = FaceId<S>;
 
 /// configuration for vertex display format.
 #[derive(Clone, Copy, Debug)]
@@ -268,7 +280,7 @@ pub enum VertexDisplayFormat {
 /// Configuration for edge display format.
 #[derive(Clone, Copy, Debug)]
 pub enum EdgeDisplayFormat {
-    /// Display all data like `Edge { id: 0x123456789ab, vertices: (0, 1), entity: BSplineCurve {..} }`.
+    /// Display all data like `Edge { id: 0x123456789ab, vertices: (0, 1), entity: BsplineCurve {..} }`.
     Full {
         /// vertex display format
         vertex_format: VertexDisplayFormat,
@@ -278,7 +290,7 @@ pub enum EdgeDisplayFormat {
         /// vertex display format
         vertex_format: VertexDisplayFormat,
     },
-    /// Display end vertices tuple and entity curve like `Edge { vertices: (1, 0), entity: BSplineCurve {..} }`.
+    /// Display end vertices tuple and entity curve like `Edge { vertices: (1, 0), entity: BsplineCurve {..} }`.
     VerticesTupleAndCurve {
         /// vertex display format
         vertex_format: VertexDisplayFormat,
@@ -293,7 +305,7 @@ pub enum EdgeDisplayFormat {
         /// vertex display format
         vertex_format: VertexDisplayFormat,
     },
-    /// Display only entity curve like `BSplineCurve {..}`.
+    /// Display only entity curve like `BsplineCurve {..}`.
     AsCurve,
 }
 
@@ -320,7 +332,7 @@ pub enum WireDisplayFormat {
 /// Configuration for face display format
 #[derive(Clone, Copy, Debug)]
 pub enum FaceDisplayFormat {
-    /// Display all data like `Face { id: 0x123456789ab, boundaries: [Wire(..), Wire(..)], entity: BSplineSurface {..} }`.
+    /// Display all data like `Face { id: 0x123456789ab, boundaries: [Wire(..), Wire(..)], entity: BsplineSurface {..} }`.
     Full {
         /// display format for boundary wire
         wire_format: WireDisplayFormat,
@@ -330,7 +342,7 @@ pub enum FaceDisplayFormat {
         /// display format for boundary wire
         wire_format: WireDisplayFormat,
     },
-    /// Display boundary and entity surface like `Face { boundaries: [Wire(..), Wire(..)], entity: BSplineSurface {..} }`.
+    /// Display boundary and entity surface like `Face { boundaries: [Wire(..), Wire(..)], entity: BsplineSurface {..} }`.
     BoundariesAndSurface {
         /// display format for boundary wire
         wire_format: WireDisplayFormat,
@@ -345,7 +357,7 @@ pub enum FaceDisplayFormat {
         /// display format for boundary wire
         wire_format: WireDisplayFormat,
     },
-    /// Display as surface like `BSplineSurface {..}`.
+    /// Display as surface like `BsplineSurface {..}`.
     AsSurface,
 }
 

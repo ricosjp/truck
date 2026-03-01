@@ -19,7 +19,7 @@ impl WireFrameInstance {
             strips: Arc::clone(&self.strips),
             state: self.state.clone(),
             shaders: self.shaders.clone(),
-            id: RenderID::gen(),
+            id: RenderId::gen(),
         }
     }
     /// Returns the wireframe state
@@ -168,7 +168,7 @@ impl ToInstance<WireFrameInstance> for Vec<(Point3, Point3)> {
             strips: Arc::new(ib),
             state: state.clone(),
             shaders: shaders.clone(),
-            id: RenderID::gen(),
+            id: RenderId::gen(),
         }
     }
 }

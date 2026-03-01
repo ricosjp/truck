@@ -11,7 +11,7 @@ pub struct Plane<'a> {
     pub shader: &'a str,
     pub vs_entpt: &'a str,
     pub fs_entpt: &'a str,
-    pub id: RenderID,
+    pub id: RenderId,
 }
 
 #[macro_export]
@@ -21,7 +21,7 @@ macro_rules! new_plane {
             shader: include_str!($shader),
             vs_entpt: $vs_endpt,
             fs_entpt: $fs_endpt,
-            id: RenderID::gen(),
+            id: RenderId::gen(),
         }
     };
 }

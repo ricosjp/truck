@@ -1,4 +1,4 @@
-//! Defines polyline-polygon data structure and some algorithms handling mesh.
+//! Polygon mesh data structures (triangle/quad/n-gon) with OBJ and STL I/O.
 
 #![cfg_attr(not(debug_assertions), deny(warnings))]
 #![deny(clippy::all, rust_2018_idioms)]
@@ -26,7 +26,7 @@ pub mod base {
 }
 pub use base::*;
 
-/// attribution container for polygin mesh
+/// Attribution container for polygon mesh
 pub trait Attributes<V> {
     /// attribution
     type Output;

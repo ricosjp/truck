@@ -60,7 +60,7 @@ fn nontex_raytracing(scene: &mut Scene) -> Vec<u8> {
         shader: &shader,
         vs_entpt: "vs_main",
         fs_entpt: "nontex_raytracing",
-        id: RenderID::gen(),
+        id: RenderId::gen(),
     };
     common::render_one(scene, &plane)
 }
@@ -117,7 +117,7 @@ fn tex_raytracing(scene: &mut Scene) -> Vec<u8> {
         shader: &shader,
         vs_entpt: "vs_main",
         fs_entpt: "tex_raytracing",
-        id: RenderID::gen(),
+        id: RenderId::gen(),
     };
     common::render_one(scene, &plane)
 }

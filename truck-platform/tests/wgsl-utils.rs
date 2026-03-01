@@ -36,14 +36,14 @@ fn exec_math_util_test(backend: Backends, out_dir: &str) {
         shader: &shader,
         vs_entpt: "vs_main",
         fs_entpt: "fs_main",
-        id: RenderID::gen(),
+        id: RenderId::gen(),
     };
     let buffer1 = common::render_one(&mut scene, &plane);
     let plane = Plane {
         shader: &shader,
         vs_entpt: "vs_main",
         fs_entpt: "fs_main_anti",
-        id: RenderID::gen(),
+        id: RenderId::gen(),
     };
     let buffer2 = common::render_one(&mut scene, &plane);
     save_buffer(out_dir.clone() + "unicolor.png", &buffer0);

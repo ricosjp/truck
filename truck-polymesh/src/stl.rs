@@ -149,14 +149,10 @@ fn ascii_one_read<R: BufRead>(lines: &mut Lines<R>) -> Result<Option<StlFace>> {
 
 fn binary_one_read<R: Read>(reader: &mut R) -> Result<Option<StlFace>> {
     let mut chunk = [0; CHUNKSIZE];
-    let size = reader.read(&mut chunk)?;
-    if size == CHUNKSIZE {
-        let mut buf = [0; FACESIZE];
-        buf.copy_from_slice(&chunk[..FACESIZE]);
-        Ok(Some(bytemuck::cast(buf)))
-    } else {
-        Err(syntax_error().into())
-    }
+    reader.read_exact(&mut chunk)?;
+    let mut buf = [0; FACESIZE];
+    buf.copy_from_slice(&chunk[..FACESIZE]);
+    Ok(Some(bytemuck::cast(buf)))
 }
 
 /// Write STL file in `stl_type` format.

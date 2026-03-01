@@ -387,7 +387,7 @@ impl<P, C> Wire<P, C> {
         edge_map: &mut EdgeEntryMapForTryMapping<'a, P, C, Q, D, KF, KV>,
     ) -> Option<Wire<Q, D>>
     where
-        KF: FnMut(&'a Edge<P, C>) -> EdgeID<C>,
+        KF: FnMut(&'a Edge<P, C>) -> EdgeId<C>,
         KV: FnMut(&'a Edge<P, C>) -> Option<Edge<Q, D>>,
     {
         self.edge_iter()
@@ -425,7 +425,7 @@ impl<P, C> Wire<P, C> {
         edge_map: &mut EdgeEntryMapForMapping<'a, P, C, Q, D, KF, KV>,
     ) -> Wire<Q, D>
     where
-        KF: FnMut(&'a Edge<P, C>) -> EdgeID<C>,
+        KF: FnMut(&'a Edge<P, C>) -> EdgeId<C>,
         KV: FnMut(&'a Edge<P, C>) -> Edge<Q, D>,
     {
         self.edge_iter()
@@ -542,16 +542,16 @@ impl<P, C> Wire<P, C> {
 }
 
 type EdgeEntryMapForTryMapping<'a, P, C, Q, D, KF, KV> =
-    EntryMap<EdgeID<C>, Option<Edge<Q, D>>, KF, KV, &'a Edge<P, C>>;
+    EntryMap<EdgeId<C>, Option<Edge<Q, D>>, KF, KV, &'a Edge<P, C>>;
 type EdgeEntryMapForMapping<'a, P, C, Q, D, KF, KV> =
-    EntryMap<EdgeID<C>, Edge<Q, D>, KF, KV, &'a Edge<P, C>>;
+    EntryMap<EdgeId<C>, Edge<Q, D>, KF, KV, &'a Edge<P, C>>;
 
 pub(super) fn edge_entry_map_try_closure<'a, P, C, Q, D, KF, VF>(
-    vertex_map: &'a mut EntryMap<VertexID<P>, Option<Vertex<Q>>, KF, VF, &'a Vertex<P>>,
+    vertex_map: &'a mut EntryMap<VertexId<P>, Option<Vertex<Q>>, KF, VF, &'a Vertex<P>>,
     curve_mapping: &'a mut impl FnMut(&C) -> Option<D>,
 ) -> impl FnMut(&'a Edge<P, C>) -> Option<Edge<Q, D>> + 'a
 where
-    KF: FnMut(&'a Vertex<P>) -> VertexID<P>,
+    KF: FnMut(&'a Vertex<P>) -> VertexId<P>,
     VF: FnMut(&'a Vertex<P>) -> Option<Vertex<Q>>,
 {
     move |edge| {
@@ -565,11 +565,11 @@ where
 }
 
 pub(super) fn edge_entry_map_closure<'a, P, C, Q, D, KF, VF>(
-    vertex_map: &'a mut EntryMap<VertexID<P>, Vertex<Q>, KF, VF, &'a Vertex<P>>,
+    vertex_map: &'a mut EntryMap<VertexId<P>, Vertex<Q>, KF, VF, &'a Vertex<P>>,
     curve_mapping: &'a mut impl FnMut(&C) -> D,
 ) -> impl FnMut(&'a Edge<P, C>) -> Edge<Q, D> + 'a
 where
-    KF: FnMut(&'a Vertex<P>) -> VertexID<P>,
+    KF: FnMut(&'a Vertex<P>) -> VertexId<P>,
     VF: FnMut(&'a Vertex<P>) -> Vertex<Q>,
 {
     move |edge| {

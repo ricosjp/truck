@@ -16,20 +16,8 @@ Deno.test("tseep cube", async () => {
 Deno.test("rseep torus", async () => {
   await init(Deno.readFile("./pkg/truck_js_bg.wasm"));
   const v = Truck.vertex(0.75, 0.0, 0.25);
-  const w = Truck.rsweep(
-    v.upcast(),
-    [0.75, 0.0, 0.0],
-    [0.0, 1.0, 0.0],
-    7.0,
-    2,
-  );
-  const abst = Truck.rsweep(
-    w,
-    [0.0, 0.0, 0.0],
-    [0.0, 0.0, 1.0],
-    7.0,
-    2,
-  );
+  const w = Truck.rsweep(v.upcast(), [0.75, 0.0, 0.0], [0.0, 1.0, 0.0], 7.0, 2);
+  const abst = Truck.rsweep(w, [0.0, 0.0, 0.0], [0.0, 0.0, 1.0], 7.0, 2);
   const shell = abst.into_shell();
   const solid = shell.into_solid();
   const vec = solid.to_json();

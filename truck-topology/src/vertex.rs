@@ -92,7 +92,7 @@ impl<P> Vertex<P> {
 
     /// Returns the id of the vertex.
     #[inline(always)]
-    pub fn id(&self) -> VertexID<P> { ID::new(Arc::as_ptr(&self.point)) }
+    pub fn id(&self) -> VertexId<P> { Id::new(Arc::as_ptr(&self.point)) }
 
     /// Returns how many same vertices.
     ///

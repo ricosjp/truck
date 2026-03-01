@@ -54,7 +54,7 @@ impl ToInstance<PolygonInstance> for PolygonMesh {
             polygon: (Arc::new(vb), Arc::new(ib)),
             state: state.clone(),
             shaders: shaders.clone(),
-            id: RenderID::gen(),
+            id: RenderId::gen(),
         }
     }
 }
@@ -86,7 +86,7 @@ impl ToInstance<WireFrameInstance> for PolygonMesh {
             strips: Arc::new(ib),
             state: state.clone(),
             shaders: shaders.clone(),
-            id: RenderID::gen(),
+            id: RenderId::gen(),
         }
     }
 }
@@ -146,7 +146,7 @@ impl ToInstance<PolygonInstance> for StructuredMesh {
             polygon: (Arc::new(vb), Arc::new(ib)),
             state: state.clone(),
             shaders: shaders.clone(),
-            id: RenderID::gen(),
+            id: RenderId::gen(),
         }
     }
 }
@@ -191,7 +191,7 @@ impl ToInstance<WireFrameInstance> for StructuredMesh {
             strips: Arc::new(ib),
             state: state.clone(),
             shaders: shaders.clone(),
-            id: RenderID::gen(),
+            id: RenderId::gen(),
         }
     }
 }
@@ -216,7 +216,7 @@ impl ToInstance<WireFrameInstance> for PolylineCurve<Point3> {
             strips: Arc::new(ib),
             state: state.clone(),
             shaders: shaders.clone(),
-            id: RenderID::gen(),
+            id: RenderId::gen(),
         }
     }
 }
@@ -251,7 +251,7 @@ impl ToInstance<WireFrameInstance> for Vec<PolylineCurve<Point3>> {
             strips: Arc::new(ib),
             state: state.clone(),
             shaders: shaders.clone(),
-            id: RenderID::gen(),
+            id: RenderId::gen(),
         }
     }
 }

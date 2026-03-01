@@ -16,6 +16,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 derive_more = { workspace = true }
+gloo = "0.11.0"
+js-sys = "0.3.85"
 serde_json = { workspace = true }
 
 truck-meshalgo = { workspace = true }
@@ -25,5 +27,3 @@ truck-stepio = { workspace = true }
 truck-topology = { workspace = true }
 
 wasm-bindgen = "0.2.108"
-js-sys = "0.3.85"
-gloo = "0.11.0"

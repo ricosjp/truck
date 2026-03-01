@@ -16,9 +16,9 @@ derive = ["truck-derivers"]
 polynomial = []
 
 [dependencies]
-truck-base = { workspace = true }
 rand = { workspace = true }
 thiserror = { workspace = true }
+truck-base = { workspace = true }
 truck-derivers = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

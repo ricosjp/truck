@@ -4,10 +4,10 @@ use winit::window::Window;
 
 static MAXID: AtomicUsize = AtomicUsize::new(0);
 
-impl RenderID {
-    /// Generate the unique `RenderID`.
+impl RenderId {
+    /// Generate the unique `RenderId`.
     #[inline(always)]
-    pub fn gen() -> Self { RenderID(MAXID.fetch_add(1, Ordering::SeqCst)) }
+    pub fn gen() -> Self { RenderId(MAXID.fetch_add(1, Ordering::SeqCst)) }
 }
 
 async fn init_default_device(
@@ -507,7 +507,7 @@ impl Scene {
 
     /// Adds a render object to the scene.
     ///
-    /// If there already exists a render object with the same ID,
+    /// If there already exists a render object with the same Id,
     /// replaces the render object and returns false.
     #[inline(always)]
     pub fn add_object<R: Rendered>(&mut self, object: &R) -> bool {
@@ -528,7 +528,7 @@ impl Scene {
     }
     /// Adds render objects to the scene.
     ///
-    /// If there already exists a render object with the same ID,
+    /// If there already exists a render object with the same Id,
     /// replaces the render object and returns false.
     #[inline(always)]
     pub fn add_objects<'a, R, I>(&mut self, objects: I) -> bool

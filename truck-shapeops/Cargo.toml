@@ -13,23 +13,23 @@ step-test = []
 
 [dependencies]
 derive_more = { workspace = true }
-rustc-hash = { workspace = true }
 itertools = { workspace = true }
+rustc-hash = { workspace = true }
 smallvec = { workspace = true }
 thiserror = { workspace = true }
 truck-base = { workspace = true }
 truck-geometry = { workspace = true }
-truck-topology = { workspace = true }
-truck-meshalgo = { workspace = true }
 
 truck-geotrait = { workspace = true }
+truck-meshalgo = { workspace = true }
+truck-topology = { workspace = true }
 
 [dev-dependencies]
+proptest = { workspace = true }
 rand = { workspace = true }
 serde_json = { workspace = true }
 truck-modeling = { workspace = true }
 truck-stepio = { workspace = true }
-proptest = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { workspace = true }

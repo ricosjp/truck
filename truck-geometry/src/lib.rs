@@ -1,4 +1,5 @@
-//! Geometrical structs: knot vector, B-spline and NURBS
+//! Geometric primitives for CAD modeling: B-spline and NURBS curves/surfaces,
+//! knot vectors, and decorator types (revolved, extruded, intersection curves).
 
 #![cfg_attr(not(debug_assertions), deny(warnings))]
 #![deny(clippy::all, rust_2018_idioms)]
@@ -28,16 +29,16 @@ pub mod base {
     };
     pub use truck_geotrait::*;
 }
-/// Declares the nurbs
+/// NURBS and B-spline curves, surfaces, and knot vectors.
 pub mod nurbs;
 
-/// Enumerats `Error`.
+/// Error types for geometry operations.
 pub mod errors;
 
-/// Declares the specified gememetric items: Plane, Sphere, and so on.
+/// Concrete geometric primitives: [`Plane`], [`Sphere`], [`Line`], etc.
 pub mod specifieds;
 
-/// Declares some decorators
+/// Composite geometry: revolved curves, intersection curves, processor wrappers.
 pub mod decorators;
 
 /// T-Spline and T-NURCC surface types.

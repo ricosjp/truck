@@ -82,13 +82,13 @@ macro_rules! prelude {
 
         /// The id of vertex. `Copy` trait is implemented.
         #[allow(unused)]
-        $($pub$($super)?)? type VertexID = $crate::VertexID<$point>;
+        $($pub$($super)?)? type VertexId = $crate::VertexId<$point>;
         /// The id that does not depend on the direction of the edge.
         #[allow(unused)]
-        $($pub$($super)?)? type EdgeID = $crate::EdgeID<$curve>;
+        $($pub$($super)?)? type EdgeId = $crate::EdgeId<$curve>;
         /// The id that does not depend on the direction of the face.
         #[allow(unused)]
-        $($pub$($super)?)? type FaceID = $crate::FaceID<$surface>;
+        $($pub$($super)?)? type FaceId = $crate::FaceId<$surface>;
 
         /// Serialized compressed edge
         #[allow(unused)]

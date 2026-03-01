@@ -5,7 +5,7 @@
 macro_rules! impl_render_id {
     ($($id_member: tt).*) => {
         #[inline(always)]
-        fn render_id(&self) -> RenderID { self.$($id_member).* }
+        fn render_id(&self) -> RenderId { self.$($id_member).* }
     };
 }
 
@@ -16,7 +16,7 @@ macro_rules! impl_render_id {
 macro_rules! derive_render_id {
     ($($id_member: tt).*) => {
         #[inline(always)]
-        fn render_id(&self) -> RenderID { self.$($id_member).*.render_id() }
+        fn render_id(&self) -> RenderId { self.$($id_member).*.render_id() }
     };
 }
 

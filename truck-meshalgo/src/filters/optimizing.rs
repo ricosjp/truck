@@ -1,5 +1,5 @@
 use super::*;
-use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use rustc_hash::FxHashMap as HashMap;
 use std::iter::Iterator;
 use std::ops::{Div, Mul};
 
@@ -217,62 +217,84 @@ trait SameAttr: Copy + CastIntVector + MetricSpace<Metric = f64> {}
 impl<T> SameAttr for T where T: Copy + CastIntVector + MetricSpace<Metric = f64> {}
 
 fn sub_put_together_same_attrs<T: SameAttr>(attrs: &[T], tol: f64) -> Vec<usize> {
+    let mut uf = UnionFind::new(attrs.len());
     let map = create_blocks(attrs, tol);
-    let adj = create_adjacency(map, attrs, tol);
-    let components = create_components(adj, attrs);
-    centralize(components, attrs)
+    for indices in map.values() {
+        if indices.len() > 1 {
+            for (k, &i) in indices.iter().enumerate() {
+                for &j in &indices[(k + 1)..] {
+                    if attrs[i].has_nan() || attrs[j].has_nan() {
+                        continue;
+                    }
+                    if attrs[i].distance2(attrs[j]) < tol * tol {
+                        uf.union(i, j);
+                    }
+                }
+            }
+        }
+    }
+    let components = uf.components();
+    centralize(components.into_iter(), attrs)
+}
+
+struct UnionFind {
+    parent: Vec<usize>,
+    rank: Vec<usize>,
+}
+
+impl UnionFind {
+    fn new(n: usize) -> Self {
+        Self {
+            parent: (0..n).collect(),
+            rank: vec![0; n],
+        }
+    }
+
+    fn find(&mut self, x: usize) -> usize {
+        if self.parent[x] != x {
+            self.parent[x] = self.find(self.parent[x]);
+        }
+        self.parent[x]
+    }
+
+    fn union(&mut self, x: usize, y: usize) {
+        let rx = self.find(x);
+        let ry = self.find(y);
+        if rx == ry {
+            return;
+        }
+        match self.rank[rx].cmp(&self.rank[ry]) {
+            std::cmp::Ordering::Less => self.parent[rx] = ry,
+            std::cmp::Ordering::Greater => self.parent[ry] = rx,
+            std::cmp::Ordering::Equal => {
+                self.parent[ry] = rx;
+                self.rank[rx] += 1;
+            }
+        }
+    }
+
+    fn components(mut self) -> Vec<Vec<usize>> {
+        let mut map: HashMap<usize, Vec<usize>> = HashMap::default();
+        for i in 0..self.parent.len() {
+            let root = self.find(i);
+            map.entry(root).or_default().push(i);
+        }
+        map.into_values().collect()
+    }
 }
 
 type BlockMap<'a, T> = HashMap<<T as CastIntVector>::IntVector, Vec<usize>>;
 fn create_blocks<T: SameAttr>(attrs: &[T], tol: f64) -> BlockMap<'_, T> {
     let mut map = HashMap::default();
     attrs.iter().enumerate().for_each(|(i, attr)| {
+        if attr.has_nan() {
+            return;
+        }
         attr.round(tol).neighborhood().into_iter().for_each(|idx| {
             map.entry(idx).or_insert_with(Vec::new).push(i);
         });
     });
     map
-}
-
-fn create_adjacency<T: SameAttr>(map: BlockMap<'_, T>, attrs: &[T], tol: f64) -> Vec<Vec<usize>> {
-    let mut adj = vec![HashSet::default(); attrs.len()];
-    map.into_iter().for_each(|(_, vec)| {
-        if vec.len() > 1 {
-            vec.iter().copied().enumerate().for_each(|(k, i)| {
-                vec[(k + 1)..].iter().copied().for_each(|j| {
-                    if attrs[i].distance2(attrs[j]) < tol * tol {
-                        adj[i].insert(j);
-                        adj[j].insert(i);
-                    }
-                });
-            });
-        }
-    });
-    adj.into_iter()
-        .map(|set| set.into_iter().collect())
-        .collect()
-}
-
-fn create_components<T: SameAttr>(
-    mut adj: Vec<Vec<usize>>,
-    attrs: &[T],
-) -> impl Iterator<Item = Vec<usize>> {
-    let mut already = vec![false; attrs.len()];
-    (0..adj.len()).filter_map(move |i| {
-        if already[i] {
-            return None;
-        }
-        let mut stack = vec![i];
-        let mut component = Vec::new();
-        while let Some(i) = stack.pop() {
-            if !already[i] {
-                component.push(i);
-                already[i] = true;
-                stack.append(&mut adj[i]);
-            }
-        }
-        Some(component)
-    })
 }
 
 fn centralize<T: SameAttr>(
@@ -348,6 +370,7 @@ trait CastIntVector:
     fn cast_int(self) -> Self::IntVector;
     fn round(self, tol: f64) -> Self::IntVector;
     fn zero() -> Self;
+    fn has_nan(&self) -> bool;
 }
 
 macro_rules! impl_cast_int {
@@ -361,6 +384,10 @@ macro_rules! impl_cast_int {
             }
             fn round(self, tol: f64) -> Self::IntVector { (self / tol).cast_int() }
             fn zero() -> Self { Self::from([0.0; $n]) }
+            fn has_nan(&self) -> bool {
+                let arr: [f64; $n] = (*self).into();
+                arr.iter().any(|v| v.is_nan())
+            }
         }
     };
 }

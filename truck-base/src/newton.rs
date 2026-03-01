@@ -72,8 +72,8 @@ where
             return Err(log);
         };
         let next = hint - inv * value;
-        if next.near2(&hint) {
-            return Ok(hint);
+        if next.near(&hint) {
+            return Ok(next);
         }
         hint = next;
     }

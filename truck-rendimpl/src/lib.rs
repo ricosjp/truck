@@ -99,7 +99,7 @@ pub struct PolygonInstance {
     polygon: (Arc<BufferHandler>, Arc<BufferHandler>),
     state: PolygonState,
     shaders: PolygonShaders,
-    id: RenderID,
+    id: RenderId,
 }
 
 /// Wire frame rendering
@@ -109,7 +109,7 @@ pub struct WireFrameInstance {
     strips: Arc<BufferHandler>,
     state: WireFrameState,
     shaders: WireShaders,
-    id: RenderID,
+    id: RenderId,
 }
 
 /// Constroctor for instances

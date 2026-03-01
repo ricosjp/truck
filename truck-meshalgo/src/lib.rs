@@ -1,4 +1,4 @@
-//! Mesh algorigthms, include tessellations of the shape.
+//! Mesh algorithms: tessellation of CAD shapes, mesh analysis, and mesh optimization filters.
 
 #![cfg_attr(not(debug_assertions), deny(warnings))]
 #![deny(clippy::all, rust_2018_idioms)]

@@ -9,7 +9,7 @@ pub struct AdjacentFace<'a, P, C, S> {
     /// face adjacent to the specified face
     pub face: &'a Face<P, C, S>,
     /// edges shared by two faces
-    pub common_edges: Vec<EdgeID<C>>,
+    pub common_edges: Vec<EdgeId<C>>,
 }
 
 trait As<T> {
@@ -219,12 +219,12 @@ impl<P, C, S> Shell<P, C, S> {
     /// let shell: Shell<_, _, _> = wire.into_iter().map(|w| Face::new(vec![w], ())).collect();
     /// let adjacency = shell.vertex_adjacency();
     /// let v0_ads_vec = adjacency.get(&v[0].id()).unwrap();
-    /// let v0_ads: HashSet<&VertexID<()>> = HashSet::from_iter(v0_ads_vec);
+    /// let v0_ads: HashSet<&VertexId<()>> = HashSet::from_iter(v0_ads_vec);
     /// assert_eq!(v0_ads, HashSet::from_iter(vec![&v[2].id(), &v[3].id()]));
     /// ```
-    pub fn vertex_adjacency(&self) -> HashMap<VertexID<P>, Vec<VertexID<P>>> {
+    pub fn vertex_adjacency(&self) -> HashMap<VertexId<P>, Vec<VertexId<P>>> {
         let mut adjacency = EntryMap::new(|x| x, |_| Vec::new());
-        let mut done_edge: HashSet<EdgeID<C>> = HashSet::default();
+        let mut done_edge: HashSet<EdgeId<C>> = HashSet::default();
         self.edge_iter().for_each(|edge| {
             if done_edge.insert(edge.id()) {
                 let v0 = edge.front().id();
@@ -692,7 +692,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// - cutting of edge fails.
     pub fn cut_edge(
         &mut self,
-        edge_id: EdgeID<C>,
+        edge_id: EdgeId<C>,
         vertex: &Vertex<P>,
     ) -> Option<(Edge<P, C>, Edge<P, C>)>
     where
@@ -739,7 +739,7 @@ impl<P, C, S> Shell<P, C, S> {
     /// - the vertex is included more than 2 face boundaries,
     /// - the vertex is included more than 2 edges, or
     /// - concatenating edges is failed.
-    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexID<P>) -> Option<Edge<P, C>>
+    pub fn remove_vertex_by_concat_edges(&mut self, vertex_id: VertexId<P>) -> Option<Edge<P, C>>
     where
         P: Debug,
         C: Concat<C, Point = P, Output = C> + Invertible + ParameterTransform, {
@@ -1072,8 +1072,8 @@ impl std::ops::BitAnd for ShellCondition {
 
 #[derive(Debug, Clone)]
 struct Boundaries<C> {
-    checked: HashSet<EdgeID<C>>,
-    boundaries: HashMap<EdgeID<C>, bool>,
+    checked: HashSet<EdgeId<C>>,
+    boundaries: HashMap<EdgeId<C>, bool>,
     condition: ShellCondition,
 }
 

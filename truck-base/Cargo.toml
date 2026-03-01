@@ -14,8 +14,8 @@ categories = ["graphics"]
 [dependencies]
 cgmath = { version = "0.18.0", features = ["serde"] }
 matext4cgmath = "0.1.0"
-serde = { workspace = true }
 rustc-hash = { workspace = true }
+serde = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

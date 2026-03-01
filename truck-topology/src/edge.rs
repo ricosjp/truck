@@ -288,7 +288,7 @@ impl<P, C> Edge<P, C> {
     /// assert_eq!(edge0.id(), edge1.id());
     /// ```
     #[inline(always)]
-    pub fn id(&self) -> EdgeID<C> { ID::new(Arc::as_ptr(&self.curve)) }
+    pub fn id(&self) -> EdgeId<C> { Id::new(Arc::as_ptr(&self.curve)) }
 
     /// Returns how many same edges.
     ///

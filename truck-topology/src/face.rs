@@ -607,7 +607,7 @@ impl<P, C, S> Face<P, C, S> {
     /// assert_ne!(face0.id(), face2.id());
     /// ```
     #[inline(always)]
-    pub fn id(&self) -> FaceID<S> { ID::new(Arc::as_ptr(&self.surface)) }
+    pub fn id(&self) -> FaceId<S> { Id::new(Arc::as_ptr(&self.surface)) }
 
     /// Returns how many same faces.
     ///
@@ -957,7 +957,7 @@ impl<P, C, S> Face<P, C, S> {
         if surface != other.surface() || self.orientation() != other.orientation() {
             return None;
         }
-        let mut vemap: HashMap<VertexID<P>, &Edge<P, C>> = self
+        let mut vemap: HashMap<VertexId<P>, &Edge<P, C>> = self
             .absolute_boundaries()
             .iter()
             .flatten()

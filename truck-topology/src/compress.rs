@@ -97,8 +97,8 @@ pub struct CompressedSolid<P, C, S> {
 }
 
 struct CompressDirector<P, C> {
-    vmap: HashMap<VertexID<P>, (usize, P)>,
-    emap: HashMap<EdgeID<C>, (usize, CompressedEdge<C>)>,
+    vmap: HashMap<VertexId<P>, (usize, P)>,
+    emap: HashMap<EdgeId<C>, (usize, CompressedEdge<C>)>,
 }
 
 impl<P: Clone, C: Clone> CompressDirector<P, C> {
@@ -183,6 +183,13 @@ impl<P: Clone, C: Clone, S: Clone> Shell<P, C, S> {
     }
 
     /// Extracts the serialized compressed shell into the shell.
+    ///
+    /// # Errors
+    /// Returns [`Error::NotSimpleWire`] if any boundary wire has repeated vertices.
+    /// STEP files from other CAD systems often produce such wires. To handle this,
+    /// apply [`SplitClosedEdgesAndFaces`] or [`RobustSplitClosedEdgesAndFaces`]
+    /// (from `truck-shapeops`) to the `CompressedShell` before calling `extract`.
+    /// The convenience function `truck_shapeops::extract_healed` does both steps.
     pub fn extract(cshell: CompressedShell<P, C, S>) -> Result<Self> {
         let CompressedShell {
             vertices,
@@ -235,7 +242,7 @@ fn compress_extract() {
 fn vmap_subroutin<P, Q>(
     v0: &Vertex<P>,
     v1: &Vertex<Q>,
-    vmap: &mut HashMap<VertexID<P>, VertexID<Q>>,
+    vmap: &mut HashMap<VertexId<P>, VertexId<Q>>,
 ) -> bool {
     match vmap.get(&v0.id()) {
         Some(got) => *got == v1.id(),
@@ -250,8 +257,8 @@ fn vmap_subroutin<P, Q>(
 fn emap_subroutin<P, Q, C, D>(
     edge0: &Edge<P, C>,
     edge1: &Edge<Q, D>,
-    vmap: &mut HashMap<VertexID<P>, VertexID<Q>>,
-    emap: &mut HashMap<EdgeID<C>, EdgeID<D>>,
+    vmap: &mut HashMap<VertexId<P>, VertexId<Q>>,
+    emap: &mut HashMap<EdgeId<C>, EdgeId<D>>,
 ) -> bool {
     match emap.get(&edge0.id()) {
         Some(got) => *got == edge1.id(),
@@ -265,8 +272,8 @@ fn emap_subroutin<P, Q, C, D>(
 
 #[allow(dead_code)]
 fn same_topology<P, C, S, Q, D, T>(one: &Shell<P, C, S>, other: &Shell<Q, D, T>) -> bool {
-    let mut vmap = HashMap::<VertexID<P>, VertexID<Q>>::default();
-    let mut emap = HashMap::<EdgeID<C>, EdgeID<D>>::default();
+    let mut vmap = HashMap::<VertexId<P>, VertexId<Q>>::default();
+    let mut emap = HashMap::<EdgeId<C>, EdgeId<D>>::default();
     if one.len() != other.len() {
         return false;
     }

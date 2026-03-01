@@ -5,7 +5,7 @@ use truck_modeling::topo_traits::*;
 use truck_topology::{shell::ShellCondition, *};
 
 type Line = truck_geometry::prelude::Line<Point3>;
-type Surface = BSplineSurface<Point3>;
+type Surface = BsplineSurface<Point3>;
 
 #[derive(Clone, Copy, Debug)]
 struct LinearMapping;
@@ -33,7 +33,7 @@ impl Connector<Line, Surface> for Connection {
     fn connector(self) -> impl Fn(&Line, &Line) -> Surface {
         |line0, line1| {
             Surface::new(
-                (KnotVec::bezier_knot(1), KnotVec::bezier_knot(1)),
+                (KnotVector::bezier_knot(1), KnotVector::bezier_knot(1)),
                 vec![vec![line0.0, line1.0], vec![line0.1, line1.1]],
             )
         }

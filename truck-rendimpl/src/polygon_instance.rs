@@ -8,7 +8,7 @@ impl PolygonInstance {
             polygon: self.polygon.clone(),
             state: self.state.clone(),
             shaders: self.shaders.clone(),
-            id: RenderID::gen(),
+            id: RenderId::gen(),
         }
     }
     /// Returns a reference to the instance descriptor.

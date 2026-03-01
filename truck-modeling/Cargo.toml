@@ -11,6 +11,10 @@ license = "Apache-2.0"
 keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
+[features]
+default = []
+fillet = ["truck-shapeops"]
+
 [dependencies]
 derive_more = { workspace = true }
 itertools = { workspace = true }
@@ -18,15 +22,11 @@ rustc-hash = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 truck-base = { workspace = true }
-truck-geotrait = { workspace = true, features = ["derive"] }
 truck-geometry = { workspace = true }
+truck-geotrait = { workspace = true, features = ["derive"] }
 truck-polymesh = { workspace = true }
-truck-topology = { workspace = true }
 truck-shapeops = { workspace = true, optional = true }
-
-[features]
-default = []
-fillet = ["truck-shapeops"]
+truck-topology = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
