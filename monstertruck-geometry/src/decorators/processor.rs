@@ -115,7 +115,8 @@ where
             self.evaluate(t).to_vec()
         } else {
             let t = self.get_curve_parameter(t);
-            self.transform.transform_vector(self.entity.derivative_n(n, t))
+            self.transform
+                .transform_vector(self.entity.derivative_n(n, t))
         }
     }
     #[inline(always)]
@@ -202,36 +203,56 @@ where
     #[inline(always)]
     fn derivative_u(&self, u: f64, v: f64) -> Self::Vector {
         match self.orientation {
-            true => self.transform.transform_vector(self.entity.derivative_u(u, v)),
-            false => self.transform.transform_vector(self.entity.derivative_v(v, u)),
+            true => self
+                .transform
+                .transform_vector(self.entity.derivative_u(u, v)),
+            false => self
+                .transform
+                .transform_vector(self.entity.derivative_v(v, u)),
         }
     }
     #[inline(always)]
     fn derivative_v(&self, u: f64, v: f64) -> Self::Vector {
         match self.orientation {
-            true => self.transform.transform_vector(self.entity.derivative_v(u, v)),
-            false => self.transform.transform_vector(self.entity.derivative_u(v, u)),
+            true => self
+                .transform
+                .transform_vector(self.entity.derivative_v(u, v)),
+            false => self
+                .transform
+                .transform_vector(self.entity.derivative_u(v, u)),
         }
     }
     #[inline(always)]
     fn derivative_uu(&self, u: f64, v: f64) -> Self::Vector {
         match self.orientation {
-            true => self.transform.transform_vector(self.entity.derivative_uu(u, v)),
-            false => self.transform.transform_vector(self.entity.derivative_vv(v, u)),
+            true => self
+                .transform
+                .transform_vector(self.entity.derivative_uu(u, v)),
+            false => self
+                .transform
+                .transform_vector(self.entity.derivative_vv(v, u)),
         }
     }
     #[inline(always)]
     fn derivative_uv(&self, u: f64, v: f64) -> Self::Vector {
         match self.orientation {
-            true => self.transform.transform_vector(self.entity.derivative_uv(u, v)),
-            false => self.transform.transform_vector(self.entity.derivative_uv(v, u)),
+            true => self
+                .transform
+                .transform_vector(self.entity.derivative_uv(u, v)),
+            false => self
+                .transform
+                .transform_vector(self.entity.derivative_uv(v, u)),
         }
     }
     #[inline(always)]
     fn derivative_vv(&self, u: f64, v: f64) -> Self::Vector {
         match self.orientation {
-            true => self.transform.transform_vector(self.entity.derivative_vv(u, v)),
-            false => self.transform.transform_vector(self.entity.derivative_uu(v, u)),
+            true => self
+                .transform
+                .transform_vector(self.entity.derivative_vv(u, v)),
+            false => self
+                .transform
+                .transform_vector(self.entity.derivative_uu(v, u)),
         }
     }
     #[inline(always)]

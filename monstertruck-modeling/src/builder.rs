@@ -1,8 +1,8 @@
 use crate::{
+    Result,
     errors::Error,
     geom_impls::{self, ArcConnector, ExtrudeConnector, LineConnector, RevoluteConnector},
     topo_traits::*,
-    Result,
 };
 use monstertruck_geometry::prelude::*;
 use monstertruck_topology::*;

@@ -1,101 +1,73 @@
-# truck - Truck is a RUst Cad Kernel
+# `monstertruck` — **M**ultifarious **O**mnificence, **N**omenclature **S**tandardized, **T**erminology **E**nhanced & **R**efactored **Truck** — a **Ru**st **C**ad **K**ernel).
 
 ## Overview
 
-`truck` is an open-source shape processing kernel by Rust.  
-The broad concept consists of the following three elements.
+`monstertruck` is an open-source, Rust-based shape processing kernel. It is a heavily fortified, feature-expanded fork of the original [`truck`](https://github.com/ricosjp/truck) project.
 
-- Trendy Tools
-- Traditional Arts
-- Theseus' ship
+The underlying philosophy of this kernel rests on three foundational pillars:
 
-### Trendy Tools
+- **Modern Tooling** We are building the next generation of CAD utilizing modern, cutting-edge tools: Rust and WebGPU. By leveraging advanced, crate-level optimizations in both languages, we maximize performance across both the CPU and the GPU.
+- **Classical Techniques, Reborn** We are breaking away from fragile, legacy C++ codebases by fully re-implementing classic Boundary Representation (B-rep) and NURBS from the ground up. Rust's strict memory safety completely eliminates the CPU-level core dumps that plague older CAD software, while Cargo's robust ecosystem provides a seamless foundation for continuous integration.
+- **The Ship of Theseus Architecture** Learning from the pitfalls of monolithic CAD architectures, we abandoned the idea of a single, massive application. Instead, we modularized the kernel into a collection of small, highly optimized, and interchangeable crates — much like the Ship of Theseus. Knowing that feature creep and expansions are inevitable, we manage complexity by keeping our modules strictly focused and self-contained.
 
-- We are targeting the next generation of market share using developmental tools: Rust and WebGPU.
-- Advanced optimizations using Rust and WebGPU maximize the performance of each crate.
+## Why Was This Forked?
 
-### Traditional Arts
+Getting PRs accepted upstream was proving to be a challenge, so we spun up `monstertruck` to keep development moving and add some serious horsepower.
 
-- We will break away from the legacy by re-implementing the B-rep with NURBS in the above trendy tools.
-- Safe implementation using Rust to eliminate core dumped for CPU-derived processes.
-- Cargo's extensive maintenance features ensure thorough continuous integration.
+This fork exists to accomplish two main goals:
 
-### Theseus' ship
+1. **Supercharge the functionality:** We are actively adding and enhancing features, tools, and operations that go beyond the original scope (hence the _Multifarious Omnificence_).
+2. **Fix the ergonomics:** The original codebase suffered from unconventional phrasing, non-idiomatic naming conventions, and occasionally confusing translationsp.
+   We have overhauled the project using idiomatic Rust naming conventions and standard, industry-recognized CAD terminology. Our goal is to make the codebase highly inclusive, readable, and accessible—whether you are a non-native English speaker, a Rust fanatic, or a seasoned CAD veteran.
 
-- We are modularizing into smaller crates that can be replaced, like [the Ship of Theseus](https://en.wikipedia.org/wiki/Ship_of_Theseus).
-- Based on the many lessons learned in the past, we have given up on overall optimization as a single application, and design as a collection of individual optimized crates.
-- Since unexpected expansions are bound to occur, we deal with uncontrolled expansions in the form of small modules.
+## Usage
+
+### Running the Examples
+
+All examples are located under the `examples` directory within each respective crate. They use standard Cargo syntax for execution.
+
+To test-drive `monstertruck` and render your first object, run the following commands:
+
+```bash
+# Clone the required submodules
+git submodule update --init
+
+# Run the basic rotation example
+cargo run --example rotate-objects
+```
+
+## Architecture & Crate Ecosystem
+
+The `monstertruck` kernel is split into independent crates so you only need to pull in what you need (and also to help with build times).
+
+### Core & Geometry
+
+- [`monstertruck-core`](monstertruck-core/) — Core types and traits for linear algebra, curves, surfaces, and tolerances.
+- [`monstertruck-derive`](monstertruck-derive/) — Derive macros for geometric traits.
+- [`monstertruck-traits`](monstertruck-traits/) — Geometric trait definitions.
+- [`monstertruck-geometry`](monstertruck-geometry/) — Geometric primitives: knot vectors, B-splines, NURBS, and T-splines.
+
+### Topology & Modeling
+
+- [`monstertruck-topology`](monstertruck-topology/) — Topological data structures: vertices, edges, wires, faces, shells, and solids.
+- [`monstertruck-modeling`](monstertruck-modeling/) — Integrated geometric and topological modeling algorithms.
+- [`monstertruck-solid`](monstertruck-solid/) — Boolean operations, fillets, and shape healing for solids.
+- [`monstertruck-assembly`](monstertruck-assembly/) — Assembly data structures using a directed acyclic graph (DAG).
+
+### Meshing & Rendering
+
+- [`monstertruck-mesh`](monstertruck-mesh/) — Polygon mesh data structures and algorithms.
+- [`monstertruck-meshing`](monstertruck-meshing/) — Tessellation and meshing algorithms for B-rep shapes.
+- [`monstertruck-gpu`](monstertruck-gpu/) — Graphics utility crate built on wgpu.
+- [`monstertruck-render`](monstertruck-render/) — Shape and polygon mesh visualization.
+
+### I/O & Bindings
+
+- [`monstertruck-step`](monstertruck-step/) — STEP file import and export.
+- [`monstertruck-wasm`](monstertruck-wasm/) — WebAssembly/JavaScript bindings.
+
+![dependencies](./dependencies.svg)
 
 ## License
 
 Apache License 2.0
-
-## Usage
-
-### How to Run Examples
-
-All examples are located under the examples directory in each crates.  
-These examples use the default syntax for running examples, as found in the [Cargo](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#examples) documentation.
-
-At first, let's run the following example!
-
-```bash
-git submodule update --init
-cargo run --example rotate-objects
-```
-
-## crates
-
-### monstertruck-core [![Crates.io](https://img.shields.io/crates/v/monstertruck-core.svg)](https://crates.io/crates/monstertruck-core) [![Docs.rs](https://docs.rs/monstertruck-core/badge.svg)](https://docs.rs/monstertruck-core)
-
-basic structs and traits: importing cgmath, curve and surface traits, tolerance, etc...
-
-### monstertruck-traits [![Crates.io](https://img.shields.io/crates/v/monstertruck-traits.svg)](https://crates.io/crates/monstertruck-traits) [![Docs.rs](https://docs.rs/monstertruck-traits/badge.svg)](https://docs.rs/monstertruck-traits)
-
-Defines geometric traits: `ParametricCurve`, `ParametricSurface`, and so on.
-
-### monstertruck-geometry [![Crates.io](https://img.shields.io/crates/v/monstertruck-geometry.svg)](https://crates.io/crates/monstertruck-geometry) [![Docs.rs](https://docs.rs/monstertruck-geometry/badge.svg)](https://docs.rs/monstertruck-geometry)
-
-geometrical structs: knot vector, B-spline and NURBS
-
-### monstertruck-topology [![Crates.io](https://img.shields.io/crates/v/monstertruck-topology.svg)](https://crates.io/crates/monstertruck-topology) [![Docs.rs](https://docs.rs/monstertruck-topology/badge.svg)](https://docs.rs/monstertruck-topology)
-
-topological structs: vertex, edge, wire, face, shell, and solid
-
-### monstertruck-mesh [![Crates.io](https://img.shields.io/crates/v/monstertruck-mesh.svg)](https://crates.io/crates/monstertruck-mesh) [![Docs.rs](https://docs.rs/monstertruck-mesh/badge.svg)](https://docs.rs/monstertruck-mesh)
-
-defines polygon data structure and some algorithms handling mesh, including meshing the shapes
-
-### monstertruck-meshing [![Crates.io](https://img.shields.io/crates/v/monstertruck-meshing.svg)](https://crates.io/crates/monstertruck-meshing) [![Docs.rs](https://docs.rs/monstertruck-meshing/badge.svg)](https://docs.rs/monstertruck-meshing)
-
-Mesh algorighms, include tessellations of the shape.
-
-### monstertruck-modeling [![Crates.io](https://img.shields.io/crates/v/monstertruck-modeling.svg)](https://crates.io/crates/monstertruck-modeling) [![Docs.rs](https://docs.rs/monstertruck-modeling/badge.svg)](https://docs.rs/monstertruck-modeling)
-
-integrated modeling algorithms by geometry and topology
-
-### monstertruck-solid [![Crates.io](https://img.shields.io/crates/v/monstertruck-solid.svg)](https://crates.io/crates/monstertruck-solid) [![Docs.rs](https://docs.rs/monstertruck-solid/badge.svg)](https://docs.rs/monstertruck-solid)
-
-Provides boolean operations to Solid
-
-### monstertruck-platform [![Crates.io](https://img.shields.io/crates/v/monstertruck-platform.svg)](https://crates.io/crates/monstertruck-platform) [![Docs.rs](https://docs.rs/monstertruck-platform/badge.svg)](https://docs.rs/monstertruck-platform)
-
-graphic utility library based on wgpu
-
-### monstertruck-render [![Crates.io](https://img.shields.io/crates/v/monstertruck-render.svg)](https://crates.io/crates/monstertruck-render) [![Docs.rs](https://docs.rs/monstertruck-render/badge.svg)](https://docs.rs/monstertruck-render)
-
-visualization of shape and polygon mesh based on platform
-
-### monstertruck-wasm
-
-Javascript wrapper of `truck`.
-
-![dependencies](./dependencies.svg)
-
-## Tutorials
-
-There are some learning resources for using `truck` v0.6.x series.
-
-- [truck-tutorial](https://ricos.gitlab.io/truck-tutorial/v0.6/)
-- [truck-tutorial-ja](https://ricos.gitlab.io/truck-tutorial-ja/v0.6/) (Japanese version)
-- [truck-tutorial-code](https://github.com/ricosjp/truck-tutorial-code/tree/v0.6) (pre-created sample code)

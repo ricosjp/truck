@@ -1,67 +1,25 @@
-# monstertruck-meshing
+# `monstertruck-meshing`
 
-[![Crates.io](https://img.shields.io/crates/v/monstertruck-meshing.svg)](https://crates.io/crates/monstertruck-meshing) [![Docs.rs](https://docs.rs/monstertruck-meshing/badge.svg)](https://docs.rs/monstertruck-meshing)
+Tessellation and meshing algorithms for B-rep shapes.
 
-Mesh algorithms, including tessellation of shapes.
+> Forked from [`truck-meshalgo`](https://crates.io/crates/truck-meshalgo) v0.4.0 by [ricosjp](https://github.com/ricosjp/truck).
 
-## Sample Codes
+## Quick Start
 
-### filleted-cube
+```rust
+use monstertruck_meshing::prelude::*;
+use monstertruck_modeling::*;
 
-An experiment to decompose a mesh into elements for future NURBS surface approximation.
-Contains `doc(hidden)` methods.
+// Build a cube and tessellate it
+let v = builder::vertex(Point3::origin());
+let cube: Solid = builder::extrude(
+    &builder::extrude(&builder::extrude(&v, Vector3::unit_x()), Vector3::unit_y()),
+    Vector3::unit_z(),
+);
 
-- Input: filleted_cube.obj
-- Output: planes.obj, lower.obj, upper.obj
-
-### irregular-sphere
-
-Add normals to a sphere that contains irregular normals generated from a NURBS surface with critical points.
-
-- Input: irregular_sphere.obj
-- Output: regular_sphere.obj
-
-### octahedron-subdivision
-
-Apply loop subdivision to a regular octahedron.
-
-- Input: hardcoded octahedron
-- Output: octahedron.obj, subdivision-octahedron.obj
-
-### requadrangulate-buddha
-
-A benchmark that reads in heavy mesh data, applies triangulation and quadrangulation, and writes it out.
-
-- Input: happy-buddha.obj
-- Output: requadrangulated-buddha.obj
-
-### smoothing-bunny
-
-Adds smooth normals to the stanford bunny.
-
-- Input: bunny.obj
-- Output: smooth_bunny.obj
-
-### splitting-sample
-
-An experiment to decompose a mesh into elements for future NURBS surface approximation.
-
-- Input: sample.obj
-- Output: planes*parts*#.obj, others*parts*#.obj
-
-### teapot
-
-Add smooth normals to and quadrangulate the famous teapot.
-
-- Input: teapot.obj
-- Output: quaded_pot.obj
-
-### tessellate-shape
-
-Tessellate a shape and output an obj file.
-
-```bash
-usage: tessellate-shape <input json file> <output json file>
+let mesh = cube.triangulation(0.01).to_polygon();
 ```
 
-The default `<output file>` is output.obj.
+## License
+
+Apache License 2.0

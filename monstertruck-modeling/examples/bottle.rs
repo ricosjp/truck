@@ -14,8 +14,8 @@
 //!
 //! [OCCT tutorial]: https://dev.opencascade.org/doc/overview/html/occt__tutorial.html
 
-use std::f64::consts::PI;
 use monstertruck_modeling::*;
+use std::f64::consts::PI;
 
 fn body_shell(bottom: f64, height: f64, width: f64, thickness: f64) -> Shell {
     let vertex0 = builder::vertex(Point3::new(-width / 2.0, bottom, thickness / 4.0));

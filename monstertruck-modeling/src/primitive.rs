@@ -1,7 +1,7 @@
 use crate::builder;
-use std::f64::consts::PI;
 use monstertruck_geometry::prelude::*;
 use monstertruck_topology::*;
+use std::f64::consts::PI;
 
 /// rectangle
 /// # Example

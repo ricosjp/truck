@@ -1,4 +1,4 @@
-//! Wasm wrapper API for truck
+//! Wasm wrapper API for monstertruck
 
 #![cfg_attr(not(debug_assertions), deny(warnings))]
 #![deny(clippy::all, rust_2018_idioms)]
@@ -16,7 +16,7 @@
 use derive_more::{AsRef, Deref, DerefMut, From, Into};
 use wasm_bindgen::prelude::*;
 
-/// truck struct wrapped by wasm
+/// Monstertruck struct wrapped by wasm
 pub trait IntoWasm: Sized {
     /// wasm wrapper struct
     type WasmWrapper: From<Self>;

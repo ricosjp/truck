@@ -8,8 +8,8 @@ use super::types::*;
 use monstertruck_traits::ParametricSurface;
 
 use super::{
-    fillet, fillet_along_wire, fillet_edges, fillet_edges_generic, fillet_with_side, FilletOptions,
-    FilletProfile, FilletableCurve, FilletableSurface, RadiusSpec,
+    FilletOptions, FilletProfile, FilletableCurve, FilletableSurface, RadiusSpec, fillet,
+    fillet_along_wire, fillet_edges, fillet_edges_generic, fillet_with_side,
 };
 
 #[test]
@@ -297,13 +297,15 @@ fn fillet_to_nurbs() {
             bsp0,
         ),
         Face::new(
-            vec![[
-                edge[3].clone(),
-                edge[5].clone(),
-                edge[4].inverse(),
-                edge[1].inverse(),
-            ]
-            .into()],
+            vec![
+                [
+                    edge[3].clone(),
+                    edge[5].clone(),
+                    edge[4].inverse(),
+                    edge[1].inverse(),
+                ]
+                .into(),
+            ],
             bsp1,
         ),
     ]
@@ -720,30 +722,56 @@ fn fillet_edges_rejects_boundary() {
 // Generic fillet tests
 // ---------------------------------------------------------------------------
 
-// These impls are needed locally because dev-dependency cycles cause
-// trait resolution issues — the monstertruck-modeling fillet_impls implement
-// traits from monstertruck-modeling's copy of monstertruck-solid, not this one.
-mod modeling_impls {
+// These impls are needed locally because the dev-dependency on
+// monstertruck-modeling doesn't enable the `fillet` feature.
+mod modeling_impl {
+    use super::super::convert::FilletIntersectionCurve;
     use super::super::types::ParameterCurveLinear;
     use monstertruck_geometry::prelude::*;
 
     type ModelCurve = monstertruck_modeling::Curve;
     type ModelSurface = monstertruck_modeling::Surface;
 
-    impl super::FilletableSurface for ModelSurface {
-        fn to_nurbs_surface(&self) -> Option<NurbsSurface<Vector4>> {
-            match self {
-                ModelSurface::Plane(plane) => {
-                    let bsp: BsplineSurface<Point3> = (*plane).into();
-                    Some(NurbsSurface::from(bsp))
-                }
-                ModelSurface::BsplineSurface(bsp) => Some(NurbsSurface::from(bsp.clone())),
-                ModelSurface::NurbsSurface(ns) => Some(ns.clone()),
-                ModelSurface::RevolutedCurve(_) | ModelSurface::TSplineSurface(_) => None,
+    impl TryFrom<ModelSurface> for NurbsSurface<Vector4> {
+        type Error = ();
+        fn try_from(surface: ModelSurface) -> Result<Self, ()> {
+            match surface {
+                ModelSurface::Plane(plane) => Ok(NurbsSurface::from(BsplineSurface::from(plane))),
+                ModelSurface::BsplineSurface(bsp) => Ok(NurbsSurface::from(bsp)),
+                ModelSurface::NurbsSurface(ns) => Ok(ns),
+                ModelSurface::RevolutedCurve(_) | ModelSurface::TSplineSurface(_) => Err(()),
             }
         }
-        fn from_nurbs_surface(surface: NurbsSurface<Vector4>) -> Self {
-            ModelSurface::NurbsSurface(surface)
+    }
+    // From<NurbsSurface<Vector4>> for ModelSurface — provided by derive_more::From
+
+    impl TryFrom<ModelCurve> for NurbsCurve<Vector4> {
+        type Error = ();
+        fn try_from(curve: ModelCurve) -> Result<Self, ()> {
+            match curve {
+                ModelCurve::Line(line) => Ok(NurbsCurve::from(BsplineCurve::from(line))),
+                ModelCurve::BsplineCurve(bsp) => Ok(NurbsCurve::from(bsp)),
+                ModelCurve::NurbsCurve(nc) => Ok(nc),
+                ModelCurve::IntersectionCurve(ic) => {
+                    let range = ic.range_tuple();
+                    Ok(sample_to_nurbs(range, |t| ic.subs(t), 16))
+                }
+            }
+        }
+    }
+    // From<NurbsCurve<Vector4>> for ModelCurve — provided by derive_more::From
+
+    impl From<ParameterCurveLinear> for ModelCurve {
+        fn from(c: ParameterCurveLinear) -> Self {
+            let range = c.range_tuple();
+            ModelCurve::NurbsCurve(sample_to_nurbs(range, |t| c.subs(t), 16))
+        }
+    }
+
+    impl From<FilletIntersectionCurve> for ModelCurve {
+        fn from(c: FilletIntersectionCurve) -> Self {
+            let range = c.range_tuple();
+            ModelCurve::NurbsCurve(sample_to_nurbs(range, |t| c.subs(t), 16))
         }
     }
 
@@ -765,38 +793,6 @@ mod modeling_impls {
         );
         let bsp = BsplineCurve::new(knot_vec, pts);
         NurbsCurve::from(bsp)
-    }
-
-    impl super::FilletableCurve for ModelCurve {
-        fn to_nurbs_curve(&self) -> Option<NurbsCurve<Vector4>> {
-            match self {
-                ModelCurve::Line(line) => {
-                    let bsp: BsplineCurve<Point3> = (*line).into();
-                    Some(NurbsCurve::from(bsp))
-                }
-                ModelCurve::BsplineCurve(bsp) => Some(NurbsCurve::from(bsp.clone())),
-                ModelCurve::NurbsCurve(nc) => Some(nc.clone()),
-                ModelCurve::IntersectionCurve(ic) => {
-                    let range = ic.range_tuple();
-                    Some(sample_to_nurbs(range, |t| ic.subs(t), 16))
-                }
-            }
-        }
-        fn from_nurbs_curve(c: NurbsCurve<Vector4>) -> Self { ModelCurve::NurbsCurve(c) }
-        fn from_pcurve(c: ParameterCurveLinear) -> Self {
-            let range = c.range_tuple();
-            ModelCurve::NurbsCurve(sample_to_nurbs(range, |t| c.subs(t), 16))
-        }
-        fn from_intersection_curve(
-            c: IntersectionCurve<
-                ParameterCurveLinear,
-                Box<NurbsSurface<Vector4>>,
-                Box<NurbsSurface<Vector4>>,
-            >,
-        ) -> Self {
-            let range = c.range_tuple();
-            ModelCurve::NurbsCurve(sample_to_nurbs(range, |t| c.subs(t), 16))
-        }
     }
 }
 
@@ -1890,7 +1886,12 @@ fn boolean_shell_converts_for_fillet() {
     // Verify IntersectionCurve edges exist.
     let ic_edges: Vec<_> = shell
         .edge_iter()
-        .filter(|e| matches!(e.curve(), monstertruck_modeling::Curve::IntersectionCurve(_)))
+        .filter(|e| {
+            matches!(
+                e.curve(),
+                monstertruck_modeling::Curve::IntersectionCurve(_)
+            )
+        })
         .collect();
     assert!(
         !ic_edges.is_empty(),

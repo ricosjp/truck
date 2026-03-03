@@ -1,14 +1,12 @@
 [package]
 name = "monstertruck-traits"
-version = "0.4.0"
-authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2021"
-description = "Defines geometric traits for truck"
+version = "0.1.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>", "Moritz Moeller <virtualritz@protonmail.com>"]
+edition = "2024"
+description = "Geometric trait definitions"
 homepage = "https://github.com/virtualritz/truck"
 repository = "https://github.com/virtualritz/truck"
 license = "Apache-2.0"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
 default = []

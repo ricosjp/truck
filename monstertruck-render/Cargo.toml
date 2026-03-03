@@ -1,9 +1,9 @@
 [package]
 name = "monstertruck-render"
-version = "0.6.0"
-authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2021"
-description = "visualization of shape and polygon mesh based on platform"
+version = "0.1.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>", "Moritz Moeller <virtualritz@protonmail.com>"]
+edition = "2024"
+description = "Shape and polygon mesh visualization"
 homepage = "https://github.com/virtualritz/truck"
 repository = "https://github.com/virtualritz/truck"
 license = "Apache-2.0"
@@ -14,17 +14,17 @@ exclude = ["*.png"]
 
 [features]
 default = []
-webgl = ["monstertruck-platform/webgl"]
+webgl = ["monstertruck-gpu/webgl"]
 
 [dependencies]
 bytemuck = { workspace = true }
 image = { workspace = true }
 itertools = { workspace = true }
-monstertruck-platform = { workspace = true }
+monstertruck-gpu = { workspace = true }
 monstertruck-mesh = { workspace = true }
 
 [dev-dependencies]
-async-trait = "0.1.89"
+async-trait = { workspace = true }
 env_logger = { workspace = true }
 pollster = { workspace = true }
 rayon = { workspace = true }

@@ -129,7 +129,7 @@ fn non_closed_wires_in_param_divisor<C, S>(
     Shell {
         edges,
         faces,
-        ref vertices,
+        vertices,
     }: &mut Shell<Point3, C, S>,
     poly_edges: &[PolylineCurve<Point3>],
     sp: impl SP<S>,
@@ -409,10 +409,11 @@ where
         let t1 = curve.search_nearest_parameter(p, previous1, 100)?;
         let q = curve.subs(t1);
         t0 = pcurve.search_nearest_parameter(q, t0, 100)?;
-        if let Some(previous1) = previous1 {
-            if previous0.near(&t0) && previous1.near(&t1) {
-                return Some((t0, t1, pcurve.subs(t0)));
-            }
+        if let Some(previous1) = previous1
+            && previous0.near(&t0)
+            && previous1.near(&t1)
+        {
+            return Some((t0, t1, pcurve.subs(t0)));
         }
         previous0 = t0;
         previous1 = Some(t1);
@@ -618,12 +619,12 @@ fn boundary_into_domain<S: ParametricSurface3D>(vec: &mut Vec<Point2>, surface: 
         let quot = f64::floor((grav.y - v0) / vp);
         vec.iter_mut().for_each(|p| p.y -= quot * vp);
     }
-    if let Some(last) = vec.last().copied() {
-        if !vec[0].near(&last) {
-            let Point2 { x: u0, y: v0 } = last;
-            if surface.uder(u0, v0).so_small() || surface.vder(u0, v0).so_small() {
-                vec.push(vec[0]);
-            }
+    if let Some(last) = vec.last().copied()
+        && !vec[0].near(&last)
+    {
+        let Point2 { x: u0, y: v0 } = last;
+        if surface.uder(u0, v0).so_small() || surface.vder(u0, v0).so_small() {
+            vec.push(vec[0]);
         }
     }
 }
@@ -700,7 +701,7 @@ where
 fn signup_new_edges<C>(
     edges: &mut Vec<Edge<C>>,
     new_edges: Vec<Edge<C>>,
-) -> (Range<usize>, impl Iterator<Item = EdgeIndex>) {
+) -> (Range<usize>, impl Iterator<Item = EdgeIndex> + use<C>) {
     let len = edges.len();
     edges.extend(new_edges);
     let new_edge_indices = (len..edges.len()).flat_map(move |index| {
@@ -740,10 +741,10 @@ fn construct_boundaries<C>(
             let vec = vemap.get_mut(&start)?;
             vec.pop()?
         };
-        if let Some(vec) = vemap.get(&start) {
-            if vec.is_empty() {
-                vemap.remove(&start);
-            }
+        if let Some(vec) = vemap.get(&start)
+            && vec.is_empty()
+        {
+            vemap.remove(&start);
         }
         let mut wire = Vec::new();
         loop {
@@ -766,10 +767,10 @@ fn construct_boundaries<C>(
                     _ => return None,
                 }
             };
-            if let Some(vec) = vemap.get(&v) {
-                if vec.is_empty() {
-                    vemap.remove(&v);
-                }
+            if let Some(vec) = vemap.get(&v)
+                && vec.is_empty()
+            {
+                vemap.remove(&v);
             }
             edge_index = next_edge;
         }
@@ -782,9 +783,9 @@ fn construct_boundaries<C>(
 
 fn divide_face<S: ParametricSurface3D>(
     Face {
-        ref mut boundaries,
-        ref surface,
-        ref orientation,
+        boundaries,
+        surface,
+        orientation,
     }: &mut Face<S>,
     new_boundaries: Vec<Wire>,
     poly_edges: &[PolylineCurve<Point3>],

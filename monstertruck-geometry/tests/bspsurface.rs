@@ -1,5 +1,5 @@
-use proptest::prelude::*;
 use monstertruck_geometry::prelude::*;
+use proptest::prelude::*;
 
 #[test]
 fn test_substitution() {

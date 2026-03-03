@@ -1,3 +1,6 @@
+use monstertruck_geometry::prelude as truck;
+use monstertruck_mesh::PolylineCurve;
+use monstertruck_step::{r#in::*, out::*};
 use ruststep::{
     ast::DataSection,
     tables::{EntityTable, Holder},
@@ -8,9 +11,6 @@ use std::{
     str::FromStr,
 };
 use truck::*;
-use monstertruck_geometry::prelude as truck;
-use monstertruck_mesh::PolylineCurve;
-use monstertruck_step::{out::*, r#in::*};
 
 fn oitest<Truck, StepHolder>(t: Truck)
 where

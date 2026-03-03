@@ -35,7 +35,7 @@ impl Camera {
     ///
     /// # Examples
     /// ```
-    /// use monstertruck_platform::*;
+    /// use monstertruck_gpu::*;
     /// use monstertruck_core::cgmath64::*;
     /// let mut camera = Camera::default();
     /// camera.matrix = Matrix4::from_translation(Vector3::new(1.0, 2.0, 3.0));
@@ -50,7 +50,7 @@ impl Camera {
     /// # Examples
     /// ```
     /// use std::f64::consts::PI;
-    /// use monstertruck_platform::*;
+    /// use monstertruck_gpu::*;
     /// use monstertruck_core::{cgmath64::*, tolerance::Tolerance};
     /// let mut camera = Camera::default();
     /// camera.matrix = Matrix4::from_axis_angle(
@@ -66,7 +66,7 @@ impl Camera {
     /// # Examples
     /// ```
     /// use std::f64::consts::PI;
-    /// use monstertruck_platform::*;
+    /// use monstertruck_gpu::*;
     /// use monstertruck_core::{cgmath64::*, tolerance::Tolerance};
     /// let mut camera = Camera::default();
     /// camera.matrix = Matrix4::from_axis_angle(
@@ -86,7 +86,7 @@ impl Camera {
     /// // perspective camera
     /// use std::f64::consts::PI;
     /// use monstertruck_core::{assert_near, cgmath64::*, tolerance::*};
-    /// use monstertruck_platform::*;
+    /// use monstertruck_gpu::*;
     ///
     /// let fov = PI / 4.0;
     /// let aspect = 1.2;
@@ -122,7 +122,7 @@ impl Camera {
     /// ```
     /// // parallel camera
     /// use monstertruck_core::{assert_near, cgmath64::*, tolerance::*};
-    /// use monstertruck_platform::*;
+    /// use monstertruck_gpu::*;
     ///
     /// let size = 3.0;
     /// let aspect = 1.2;
@@ -198,7 +198,7 @@ impl Camera {
     /// // Perspective case
     /// use std::f64::consts::PI;
     /// use monstertruck_core::{assert_near, cgmath64::*, tolerance::Tolerance};
-    /// use monstertruck_platform::*;
+    /// use monstertruck_gpu::*;
     ///
     ///
     /// let matrix = Matrix4::look_at_rh(
@@ -231,7 +231,7 @@ impl Camera {
     /// ```
     /// // Parallel case
     /// use monstertruck_core::{assert_near, cgmath64::*, tolerance::*};
-    /// use monstertruck_platform::*;
+    /// use monstertruck_gpu::*;
     ///
     /// let matrix = Matrix4::look_at_rh(
     ///     Point3::new(1.0, 1.0, 1.0),
@@ -291,7 +291,7 @@ impl Camera {
     /// # Examples
     /// ```
     /// use monstertruck_core::{assert_near, cgmath64::*, tolerance::*};
-    /// use monstertruck_platform::*;
+    /// use monstertruck_gpu::*;
     ///
     /// let points: &[Point3] = &[
     ///     (0.0, 0.0, 0.0).into(),
@@ -358,7 +358,7 @@ impl Camera {
     /// # Examples
     /// ```
     /// use monstertruck_core::{assert_near, cgmath64::*, tolerance::*};
-    /// use monstertruck_platform::*;
+    /// use monstertruck_gpu::*;
     ///
     /// let points: &[Point3] = &[
     ///     (0.0, 0.0, 0.0).into(),

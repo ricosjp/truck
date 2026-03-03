@@ -1,5 +1,5 @@
-use rustc_hash::FxHashMap as HashMap;
 use monstertruck_topology::*;
+use rustc_hash::FxHashMap as HashMap;
 
 pub(super) fn create_edge<P: Clone, C: Clone, CP: Fn(&P, &P) -> C>(
     v0: &Vertex<P>,

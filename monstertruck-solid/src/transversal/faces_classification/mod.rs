@@ -1,6 +1,6 @@
 use super::loops_store::ShapesOpStatus;
-use rustc_hash::FxHashMap as HashMap;
 use monstertruck_topology::*;
+use rustc_hash::FxHashMap as HashMap;
 
 #[derive(Clone, Debug)]
 pub struct FacesClassification<P, C, S> {

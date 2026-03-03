@@ -1,11 +1,11 @@
 //! Parse STEP data, extract shape, and meshing.
 
 use clap::Parser;
-use std::path::Path;
 use monstertruck_assembly::assy::*;
 use monstertruck_meshing::prelude::*;
 use monstertruck_step::r#in::{convert::*, *};
 use monstertruck_topology::compress::*;
+use std::path::Path;
 
 type MeshedCShell = CompressedShell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>>;
 

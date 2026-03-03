@@ -16,7 +16,7 @@ declare -A DIR_MAP=(
     ["truck-geometry"]="monstertruck-geometry"
     ["truck-topology"]="monstertruck-topology"
     ["truck-polymesh"]="monstertruck-mesh"
-    ["truck-platform"]="monstertruck-platform"
+    ["truck-platform"]="monstertruck-gpu"
     ["truck-meshalgo"]="monstertruck-meshing"
     ["truck-shapeops"]="monstertruck-solid"
     ["truck-modeling"]="monstertruck-modeling"
@@ -90,7 +90,7 @@ declare -a HYPHEN_PHASE_A=(
 declare -a HYPHEN_PHASE_B=(
     "truck-geometry:monstertruck-geometry"
     "truck-topology:monstertruck-topology"
-    "truck-platform:monstertruck-platform"
+    "truck-platform:monstertruck-gpu"
     "truck-modeling:monstertruck-modeling"
     "truck-assembly:monstertruck-assembly"
 )
@@ -131,7 +131,7 @@ declare -a USCORE_PHASE_A=(
 declare -a USCORE_PHASE_B=(
     "truck_geometry:monstertruck_geometry"
     "truck_topology:monstertruck_topology"
-    "truck_platform:monstertruck_platform"
+    "truck_platform:monstertruck_gpu"
     "truck_modeling:monstertruck_modeling"
     "truck_assembly:monstertruck_assembly"
 )

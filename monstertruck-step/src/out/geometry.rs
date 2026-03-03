@@ -1,7 +1,7 @@
 use super::{Result, *};
 use monstertruck_geometry::prelude::*;
-use monstertruck_modeling::{Curve as ModelingCurve, Surface as ModelingSurface};
 use monstertruck_mesh::PolylineCurve;
+use monstertruck_modeling::{Curve as ModelingCurve, Surface as ModelingSurface};
 
 impl DisplayByStep for Point2 {
     fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {

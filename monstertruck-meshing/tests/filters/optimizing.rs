@@ -1,5 +1,5 @@
-use monstertruck_meshing::filters::*;
 use monstertruck_mesh::*;
+use monstertruck_meshing::filters::*;
 
 #[test]
 fn remove_unused_attrs_test() {

@@ -968,14 +968,14 @@ impl<P, C, S> Face<P, C, S> {
             .iter()
             .flatten()
             .try_for_each(|edge| {
-                if let Some(edge0) = vemap.get(&edge.back().id()) {
-                    if edge.front() == edge0.back() {
-                        if edge.is_same(edge0) {
-                            vemap.remove(&edge.back().id());
-                            return Some(());
-                        } else {
-                            return None;
-                        }
+                if let Some(edge0) = vemap.get(&edge.back().id())
+                    && edge.front() == edge0.back()
+                {
+                    if edge.is_same(edge0) {
+                        vemap.remove(&edge.back().id());
+                        return Some(());
+                    } else {
+                        return None;
                     }
                 }
                 vemap.insert(edge.front().id(), edge);

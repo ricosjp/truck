@@ -68,7 +68,7 @@ description = "Tests using GPU"
 command = "cargo"
 args = [
 	"test",
-	"-p", "monstertruck-platform",
+	"-p", "monstertruck-gpu",
 	"-p", "monstertruck-render",
 	"--", "--nocapture", "--test-threads=1",
 ]
@@ -78,7 +78,7 @@ description = "Collects artifacts for gpu tests"
 script_runner = "@shell"
 script = [
 	"mkdir images",
-	"mv monstertruck-platform/output images/platform",
+	"mv monstertruck-gpu/output images/platform",
 	"mv monstertruck-render/output images/rendimpl",
 ]
 

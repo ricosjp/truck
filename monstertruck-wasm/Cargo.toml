@@ -1,9 +1,9 @@
 [package]
 name = "monstertruck-wasm"
-version = "0.2.0"
-authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2021"
-description = "Javascript wrapper for truck"
+version = "0.1.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>", "Moritz Moeller <virtualritz@protonmail.com>"]
+edition = "2024"
+description = "WebAssembly/JavaScript bindings"
 homepage = "https://github.com/virtualritz/truck"
 repository = "https://github.com/virtualritz/truck"
 license = "Apache-2.0"
@@ -16,14 +16,13 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 derive_more = { workspace = true }
-gloo = "0.11.0"
-js-sys = "0.3.85"
+gloo = { workspace = true }
+js-sys = { workspace = true }
 serde_json = { workspace = true }
+wasm-bindgen = { workspace = true }
 
 monstertruck-meshing = { workspace = true }
 monstertruck-modeling = { workspace = true }
 monstertruck-solid = { workspace = true }
 monstertruck-step = { workspace = true }
 monstertruck-topology = { workspace = true }
-
-wasm-bindgen = "0.2.108"

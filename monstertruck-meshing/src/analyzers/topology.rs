@@ -1,7 +1,7 @@
 use super::*;
 use itertools::Itertools;
-use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use monstertruck_topology::shell::ShellCondition;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 /// Extracts boundaries, and check shell condition: closed or orientation.
 pub trait Topology {

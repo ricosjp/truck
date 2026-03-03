@@ -2,14 +2,14 @@
 //!
 //! In each frame, the NURBS surface is divided into mesh.
 
+use monstertruck_gpu::*;
+use monstertruck_modeling::*;
+use monstertruck_render::*;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc, Mutex,
+    atomic::{AtomicBool, Ordering},
 };
 use std::thread::*;
-use monstertruck_modeling::*;
-use monstertruck_platform::*;
-use monstertruck_render::*;
 use winit::window::Window;
 mod app;
 use app::*;

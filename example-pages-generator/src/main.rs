@@ -54,7 +54,7 @@ fn main() {
             "--examples",
             "--release",
             "-p",
-            "monstertruck-platform",
+            "monstertruck-gpu",
             "-p",
             "monstertruck-render",
         ])

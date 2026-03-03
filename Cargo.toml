@@ -11,7 +11,7 @@ members = [
     "monstertruck-wasm",
     "monstertruck-meshing",
     "monstertruck-modeling",
-    "monstertruck-platform",
+    "monstertruck-gpu",
     "monstertruck-mesh",
     "monstertruck-render",
     "monstertruck-solid",
@@ -23,41 +23,64 @@ members = [
 
 # External dependencies
 array-macro = "2"
+async-trait = "0.1"
 bytemuck = { version = "1", features = ["derive"] }
+cgmath = { version = "0.18", features = ["serde"] }
+chrono = { version = "0.4", features = ["wasmbind"] }
+clap = { version = "4", features = ["derive"] }
 console_error_panic_hook = "0.1"
 console_log = "1"
 derive_more = { version = "2", features = ["full"] }
 env_logger = "0.11"
+espr-derive = "0.4"
+futures-intrusive = "0.5"
 getrandom = { version = "0.3", features = ["wasm_js"] }
+gloo = "0.11"
 image = "0.25"
 itertools = "0.14"
+js-sys = "0.3"
+log = "0.4"
+matext4cgmath = "0.1"
+naga = { version = "27", features = ["wgsl-in"] }
 parking_lot = "0.12"
 pollster = "0.4"
+proc-macro-error = "1"
+proc-macro2 = "1"
 proptest = "1"
+quote = "1"
 rand = "0.9"
 rayon = "1"
+rclite = "0.4"
 rustc-hash = "2"
+ruststep = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 smallvec = "1"
+spade = "2"
+syn = { version = "2", features = ["derive", "printing"] }
 thiserror = "2"
-# Internal crates
-monstertruck-assembly = { version = "0.1.0", path = "monstertruck-assembly" }
-monstertruck-core = { version = "0.5.0", path = "monstertruck-core" }
-monstertruck-derive = { version = "0.1.0", path = "monstertruck-derive" }
-monstertruck-geometry = { version = "0.5.0", path = "monstertruck-geometry" }
-monstertruck-traits = { version = "0.4.0", path = "monstertruck-traits" }
-monstertruck-meshing = { version = "0.4.0", path = "monstertruck-meshing" }
-monstertruck-modeling = { version = "0.6.0", path = "monstertruck-modeling" }
-monstertruck-platform = { version = "0.6.0", path = "monstertruck-platform" }
-monstertruck-mesh = { version = "0.6.0", path = "monstertruck-mesh" }
-monstertruck-solid = { version = "0.4.0", path = "monstertruck-solid" }
-monstertruck-step = { version = "0.3.0", path = "monstertruck-step" }
-monstertruck-topology = { version = "0.6.0", path = "monstertruck-topology" }
+vtkio = "0.6"
+wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3"
 web-time = "1"
+wgpu = "28"
 winit = "0.30"
+
+# Internal crates
+monstertruck-assembly = { version = "0.1", path = "monstertruck-assembly" }
+monstertruck-core = { version = "0.1", path = "monstertruck-core" }
+monstertruck-derive = { version = "0.1", path = "monstertruck-derive" }
+monstertruck-geometry = { version = "0.1", path = "monstertruck-geometry" }
+monstertruck-mesh = { version = "0.1", path = "monstertruck-mesh" }
+monstertruck-meshing = { version = "0.1", path = "monstertruck-meshing" }
+monstertruck-modeling = { version = "0.1", path = "monstertruck-modeling" }
+monstertruck-gpu = { version = "0.1", path = "monstertruck-gpu" }
+monstertruck-render = { version = "0.1", path = "monstertruck-render" }
+monstertruck-solid = { version = "0.1", path = "monstertruck-solid" }
+monstertruck-step = { version = "0.1", path = "monstertruck-step" }
+monstertruck-topology = { version = "0.1", path = "monstertruck-topology" }
+monstertruck-traits = { version = "0.1", path = "monstertruck-traits" }
 
 [profile.release.package.monstertruck-wasm]
 opt-level = "z"

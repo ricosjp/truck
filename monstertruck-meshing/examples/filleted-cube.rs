@@ -4,8 +4,8 @@
 //! - Input: filleted_cube.obj
 //! - Output: planes.obj, lower.obj, upper.obj
 
-use monstertruck_meshing::{analyzers::*, filters::*};
 use monstertruck_mesh::*;
+use monstertruck_meshing::{analyzers::*, filters::*};
 
 fn main() {
     const PATH: &str = concat!(

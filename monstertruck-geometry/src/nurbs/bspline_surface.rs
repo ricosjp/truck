@@ -538,8 +538,8 @@ impl<P: ControlPoint<f64>> ParametricSurface for BsplineSurface<P> {
     fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         let (degree0, degree1) = self.degrees();
         let BsplineSurface {
-            knot_vecs: (ref knot_vector_u, ref knot_vector_v),
-            ref control_points,
+            knot_vecs: (knot_vector_u, knot_vector_v),
+            control_points,
         } = self;
         let u_range_is_zero = knot_vector_u[0] == knot_vector_u[knot_vector_u.len() - 1];
         let v_range_is_zero = knot_vector_v[0] == knot_vector_v[knot_vector_v.len() - 1];
@@ -916,7 +916,10 @@ impl<P: ControlPoint<f64> + Tolerance> BsplineSurface<P> {
             }
         }
 
-        for (pt0, pt1) in self.control_points_row_iter(idx).zip(new_points.last().unwrap()) {
+        for (pt0, pt1) in self
+            .control_points_row_iter(idx)
+            .zip(new_points.last().unwrap())
+        {
             if !pt0.near(pt1) {
                 return Err(Error::CannotRemoveKnot(idx));
             }

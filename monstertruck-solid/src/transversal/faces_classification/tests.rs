@@ -4,7 +4,7 @@ use super::{
 };
 use monstertruck_geometry::prelude::*;
 use monstertruck_meshing::prelude::*;
-use monstertruck_topology::{shell::ShellCondition, Vertex};
+use monstertruck_topology::{Vertex, shell::ShellCondition};
 const TOL: f64 = 0.05;
 
 type AlternativeIntersection = crate::alternative::Alternative<

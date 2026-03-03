@@ -1,8 +1,8 @@
 use super::*;
 use algo::surface::{SearchNearestParameterVector, SearchParameterVector};
 use control_point::ControlPoint;
-use std::ops::RangeBounds;
 use monstertruck_traits::ParametricCurve as PcurveTrait;
+use std::ops::RangeBounds;
 
 impl<C0, C1> HomotopySurface<C0, C1> {
     /// constructor
@@ -60,7 +60,9 @@ where
         v0 + (v1 - v0) * v
     }
     #[inline(always)]
-    fn derivative_v(&self, u: f64, _: f64) -> Self::Vector { self.curve1.evaluate(u) - self.curve0.evaluate(u) }
+    fn derivative_v(&self, u: f64, _: f64) -> Self::Vector {
+        self.curve1.evaluate(u) - self.curve0.evaluate(u)
+    }
     #[inline(always)]
     fn derivative_uu(&self, u: f64, v: f64) -> Self::Vector {
         let v0 = self.curve0.der2(u);
@@ -68,7 +70,9 @@ where
         v0 + (v1 - v0) * v
     }
     #[inline(always)]
-    fn derivative_uv(&self, u: f64, _: f64) -> Self::Vector { self.curve1.der(u) - self.curve0.der(u) }
+    fn derivative_uv(&self, u: f64, _: f64) -> Self::Vector {
+        self.curve1.der(u) - self.curve0.der(u)
+    }
     #[inline(always)]
     fn derivative_vv(&self, _: f64, _: f64) -> Self::Vector { Self::Vector::zero() }
     #[inline(always)]

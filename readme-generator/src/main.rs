@@ -7,7 +7,7 @@ const WORKSPACES: [&str; 11] = [
     "monstertruck-traits",
     "monstertruck-meshing",
     "monstertruck-modeling",
-    "monstertruck-platform",
+    "monstertruck-gpu",
     "monstertruck-mesh",
     "monstertruck-render",
     "monstertruck-solid",

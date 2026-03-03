@@ -5,13 +5,7 @@ use std::slice::SliceIndex;
 use std::vec::Vec;
 
 #[inline(always)]
-fn inv_or_zero_strict(delta: f64) -> f64 {
-    if delta == 0.0 {
-        0.0
-    } else {
-        1.0 / delta
-    }
-}
+fn inv_or_zero_strict(delta: f64) -> f64 { if delta == 0.0 { 0.0 } else { 1.0 / delta } }
 
 impl KnotVector {
     /// empty constructor

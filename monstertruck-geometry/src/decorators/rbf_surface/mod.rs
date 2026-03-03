@@ -1,6 +1,6 @@
 use super::*;
-use std::f64::consts::PI;
 use monstertruck_traits::ParametricCurve as PcurveTrait;
+use std::f64::consts::PI;
 
 impl<C, S0, S1, R> RbfSurface<C, S0, S1, R> {
     /// constructor
@@ -166,7 +166,9 @@ where
     fn derivative_v(&self, u: f64, v: f64) -> Vector3 {
         self.vder_info(self.contact_circle(v).unwrap(), 1).vder(u)
     }
-    fn derivative_uu(&self, u: f64, v: f64) -> Self::Vector { self.contact_circle(v).unwrap().der2(u) }
+    fn derivative_uu(&self, u: f64, v: f64) -> Self::Vector {
+        self.contact_circle(v).unwrap().der2(u)
+    }
     fn derivative_uv(&self, u: f64, v: f64) -> Self::Vector {
         self.vder_info(self.contact_circle(v).unwrap(), 1).uvder(u)
     }
@@ -215,7 +217,7 @@ where
     ) -> (Vec<f64>, Vec<f64>) {
         nonpositive_tolerance!(tol);
         let udiv = self.u_parameter_division(range, tol).unwrap();
-        let mut vdiv = vec![range.1 .0, range.1 .1];
+        let mut vdiv = vec![range.1.0, range.1.1];
         algo::v_parameter_division_for_fillet(self, &udiv, &mut vdiv, tol);
         (udiv, vdiv)
     }

@@ -1,8 +1,8 @@
 use crate::*;
+use monstertruck_core::tolerance::TOLERANCE;
+use monstertruck_topology::{Vertex, compress::*, *};
 use rustc_hash::FxHashMap as HashMap;
 use std::convert::identity;
-use monstertruck_core::tolerance::TOLERANCE;
-use monstertruck_topology::{compress::*, Vertex, *};
 pub use vtkio;
 use vtkio::model::{Attributes, *};
 

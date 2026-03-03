@@ -7,12 +7,12 @@
 //! - Enter "L" on the keyboard to switch the point light source/uniform light source of the light.
 //! - Enter "Space" on the keyboard to switch the rendering mode for the wireframe and surface.
 
+use monstertruck_gpu::*;
+use monstertruck_meshing::prelude::*;
+use monstertruck_render::*;
 use std::f64::consts::PI;
 use std::io::Read;
 use std::sync::Arc;
-use monstertruck_meshing::prelude::*;
-use monstertruck_platform::*;
-use monstertruck_render::*;
 use wgpu::*;
 use winit::{dpi::*, event::*, keyboard::*};
 mod app;

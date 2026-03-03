@@ -523,14 +523,22 @@ impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParametricCurve
     type Point = V::Point;
     type Vector = <V::Point as EuclideanSpace>::Diff;
     fn derivative_n(&self, n: usize, t: f64) -> Self::Vector { self.0.ders(n, t).rat_ders()[n] }
-    fn derivatives(&self, n: usize, t: f64) -> CurveDers<Self::Vector> { self.0.ders(n, t).rat_ders() }
+    fn derivatives(&self, n: usize, t: f64) -> CurveDers<Self::Vector> {
+        self.0.ders(n, t).rat_ders()
+    }
     #[inline(always)]
     fn evaluate(&self, t: f64) -> Self::Point { self.0.evaluate(t).to_point() }
     #[inline(always)]
-    fn derivative(&self, t: f64) -> Self::Vector { rat_der(&[self.0.evaluate(t), self.0.derivative(t)]) }
+    fn derivative(&self, t: f64) -> Self::Vector {
+        rat_der(&[self.0.evaluate(t), self.0.derivative(t)])
+    }
     #[inline(always)]
     fn derivative_2(&self, t: f64) -> Self::Vector {
-        rat_der(&[self.0.evaluate(t), self.0.derivative(t), self.0.derivative_2(t)])
+        rat_der(&[
+            self.0.evaluate(t),
+            self.0.derivative(t),
+            self.0.derivative_2(t),
+        ])
     }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange {

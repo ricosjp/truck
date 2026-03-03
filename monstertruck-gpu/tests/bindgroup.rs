@@ -1,7 +1,7 @@
 mod common;
 use common::Plane;
 use monstertruck_core::cgmath64::*;
-use monstertruck_platform::*;
+use monstertruck_gpu::*;
 use wgpu::*;
 
 const PICTURE_WIDTH: u32 = 256;

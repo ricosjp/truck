@@ -98,8 +98,8 @@ where
     C: ParametricCurve,
     C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>,
 {
-    let gen = ends.0.midpoint(ends.1);
-    let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
+    let seed = ends.0.midpoint(ends.1);
+    let p = 0.5 + (0.2 * HashGen::hash1(seed) - 0.1);
     let t = range.0 * (1.0 - p) + range.1 * p;
     let mid = ends.0 + (ends.1 - ends.0) * p;
     let dist2 = curve.evaluate(t).distance2(mid);
@@ -160,15 +160,11 @@ where
     #[inline(always)]
     fn derivative_u(&self, u: f64, _: f64) -> Self::Vector { self.curve0.derivative(u) }
     #[inline(always)]
-    fn derivative_v(&self, _: f64, v: f64) -> Self::Vector {
-        self.curve1.derivative(v) * (-1.0)
-    }
+    fn derivative_v(&self, _: f64, v: f64) -> Self::Vector { self.curve1.derivative(v) * (-1.0) }
     #[inline(always)]
     fn derivative_uu(&self, u: f64, _: f64) -> Self::Vector { self.curve0.derivative_2(u) }
     #[inline(always)]
-    fn derivative_vv(&self, _: f64, v: f64) -> Self::Vector {
-        self.curve1.derivative_2(v) * (-1.0)
-    }
+    fn derivative_vv(&self, _: f64, v: f64) -> Self::Vector { self.curve1.derivative_2(v) * (-1.0) }
     #[inline(always)]
     fn derivative_uv(&self, _: f64, _: f64) -> Self::Vector { P::Diff::zero() }
     #[inline(always)]

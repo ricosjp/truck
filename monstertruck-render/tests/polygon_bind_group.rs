@@ -1,9 +1,9 @@
 mod common;
 use image::{DynamicImage, ImageBuffer, Rgba};
-use std::sync::Arc;
+use monstertruck_gpu::*;
 use monstertruck_meshing::prelude::obj;
-use monstertruck_platform::*;
 use monstertruck_render::*;
+use std::sync::Arc;
 use wgpu::*;
 
 const PICTURE_SIZE: (u32, u32) = (256, 256);

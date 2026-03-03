@@ -27,8 +27,8 @@
 //! Also, see the sample `newton-cuberoot.wgsl`, default shader, in `examples`.
 #![allow(deprecated)]
 
+use monstertruck_gpu::*;
 use std::sync::Arc;
-use monstertruck_platform::*;
 use wgpu::*;
 use winit::event::*;
 use winit::event_loop::*;
@@ -141,12 +141,10 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
             Arc::new(bind_group_util::create_bind_group(
                 handler.device(),
                 layout,
-                vec![BufferHandler::from_slice(
-                    &self.mouse,
-                    handler.device(),
-                    BufferUsages::UNIFORM,
-                )
-                .binding_resource()],
+                vec![
+                    BufferHandler::from_slice(&self.mouse, handler.device(), BufferUsages::UNIFORM)
+                        .binding_resource(),
+                ],
             ))
         }
 
@@ -228,7 +226,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
             Plane {
                 module,
                 mouse: [0.0; 4],
-                id: RenderId::gen(),
+                id: RenderId::generate(),
             }
         }
 

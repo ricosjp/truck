@@ -4,8 +4,8 @@
 //! - Input: irregular_sphere.obj
 //! - Output: regular_sphere.obj
 
-use monstertruck_meshing::filters::*;
 use monstertruck_mesh::*;
+use monstertruck_meshing::filters::*;
 
 fn main() {
     const PATH: &str = concat!(

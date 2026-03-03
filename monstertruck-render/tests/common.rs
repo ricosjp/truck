@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
+use monstertruck_gpu::*;
 use rayon::prelude::*;
 use std::io::Write;
 use std::sync::Arc;
-use monstertruck_platform::*;
 use wgpu::*;
 
 #[derive(Clone, Debug)]
@@ -21,7 +21,7 @@ macro_rules! new_plane {
             shader: include_str!($shader),
             vs_entpt: $vs_endpt,
             fs_entpt: $fs_endpt,
-            id: RenderId::gen(),
+            id: RenderId::generate(),
         }
     };
 }

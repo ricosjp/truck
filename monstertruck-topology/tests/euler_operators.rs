@@ -1,7 +1,7 @@
-use std::ops::Bound;
 use monstertruck_core::{assert_near, cgmath64::*, tolerance::*};
-use monstertruck_traits::*;
 use monstertruck_topology::*;
+use monstertruck_traits::*;
+use std::ops::Bound;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Segment {
@@ -34,7 +34,9 @@ impl ParametricCurve for Segment {
             + (self.ends.1 - self.ends.0) * (t - self.range.0) / (self.range.1 - self.range.0)
     }
     #[inline(always)]
-    fn derivative(&self, _: f64) -> Vector3 { (self.ends.1 - self.ends.0) / (self.range.1 - self.range.0) }
+    fn derivative(&self, _: f64) -> Vector3 {
+        (self.ends.1 - self.ends.0) / (self.range.1 - self.range.0)
+    }
     #[inline(always)]
     fn derivative_2(&self, _: f64) -> Vector3 { Vector3::zero() }
     #[inline(always)]
@@ -148,9 +150,10 @@ fn segment_test() {
     let pt = seg.subs(0.324);
     let a = seg.search_parameter(pt, None, 0).unwrap();
     assert_near!(a, 0.324);
-    assert!(seg
-        .search_parameter(pt + Vector3::new(0.1, 0.0, -0.4), None, 0)
-        .is_none());
+    assert!(
+        seg.search_parameter(pt + Vector3::new(0.1, 0.0, -0.4), None, 0)
+            .is_none()
+    );
 }
 
 #[test]

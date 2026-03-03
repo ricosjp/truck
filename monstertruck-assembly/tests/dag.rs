@@ -1,6 +1,6 @@
+use monstertruck_assembly::dag::*;
 use proptest::{prelude::*, property_test};
 use std::collections::BTreeSet;
-use monstertruck_assembly::dag::*;
 
 #[test]
 fn a_little_complex_case() {

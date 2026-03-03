@@ -1,7 +1,7 @@
 use crate::*;
+use monstertruck_core::entry_map::FxEntryMap as EntryMap;
 use std::fmt::Debug;
 use std::hash::Hash;
-use monstertruck_core::entry_map::FxEntryMap as EntryMap;
 
 impl<V: Copy + Hash + Debug + Eq, A: Attributes<V>> PolygonMesh<V, A> {
     /// Contract attributes and expand polygon.

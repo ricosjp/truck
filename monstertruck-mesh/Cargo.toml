@@ -1,9 +1,9 @@
 [package]
 name = "monstertruck-mesh"
-version = "0.6.0"
-authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2021"
-description = "defines polygon data structure and some algorithms handling mesh, including meshing the shapes"
+version = "0.1.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>", "Moritz Moeller <virtualritz@protonmail.com>"]
+edition = "2024"
+description = "Polygon mesh data structures and algorithms"
 homepage = "https://github.com/virtualritz/truck"
 repository = "https://github.com/virtualritz/truck"
 license = "Apache-2.0"

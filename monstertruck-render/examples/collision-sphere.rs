@@ -1,10 +1,10 @@
 mod app;
 use app::*;
+use monstertruck_gpu::*;
+use monstertruck_meshing::prelude::*;
+use monstertruck_render::*;
 use std::f64::consts::PI;
 use std::sync::Arc;
-use monstertruck_meshing::prelude::*;
-use monstertruck_platform::*;
-use monstertruck_render::*;
 use winit::{dpi::*, event::*, keyboard::*};
 
 struct MyApp {

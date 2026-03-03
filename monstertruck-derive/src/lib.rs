@@ -13,8 +13,8 @@
 )]
 
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
 use proc_macro_error::proc_macro_error;
+use proc_macro2::TokenStream as TokenStream2;
 use quote::*;
 use syn::*;
 
@@ -190,8 +190,11 @@ pub fn derive_bounded_curve(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::BoundedCurve };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -210,7 +213,7 @@ pub fn derive_bounded_curve(input: TokenStream) -> TokenStream {
             };
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #top_ty: #trait_name,
@@ -228,7 +231,7 @@ pub fn derive_bounded_curve(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name,
@@ -252,8 +255,11 @@ pub fn derive_bounded_surface(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::BoundedSurface };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -264,7 +270,7 @@ pub fn derive_bounded_surface(input: TokenStream) -> TokenStream {
             };
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -280,7 +286,7 @@ pub fn derive_bounded_surface(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name {
@@ -302,8 +308,11 @@ pub fn derive_cut(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::Cut };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -314,7 +323,7 @@ pub fn derive_cut(input: TokenStream) -> TokenStream {
             };
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -330,7 +339,7 @@ pub fn derive_cut(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name {
@@ -350,8 +359,11 @@ pub fn derive_invertible(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::Invertible };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -363,7 +375,7 @@ pub fn derive_invertible(input: TokenStream) -> TokenStream {
             };
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)*
@@ -380,7 +392,7 @@ pub fn derive_invertible(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name,
@@ -402,8 +414,11 @@ pub fn derive_parameter_division_1d(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::ParameterDivision1D };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -420,7 +435,7 @@ pub fn derive_parameter_division_1d(input: TokenStream) -> TokenStream {
             };
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #top_ty: #trait_name,
@@ -438,7 +453,7 @@ pub fn derive_parameter_division_1d(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name {
@@ -461,8 +476,11 @@ pub fn derive_parameter_division_2d(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::ParameterDivision2D };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -473,7 +491,7 @@ pub fn derive_parameter_division_2d(input: TokenStream) -> TokenStream {
             };
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -489,7 +507,7 @@ pub fn derive_parameter_division_2d(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name {
@@ -511,8 +529,11 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::ParametricCurve };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -531,7 +552,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where #(#where_predicates,)*
                       #(#tys: #trait_name,)*
                       Self: Clone {
@@ -549,7 +570,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where #(#where_predicates,)*
                       #field_type: #trait_name,
                       Self: Clone, {
@@ -577,8 +598,11 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::ParametricSurface };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -601,7 +625,7 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -619,7 +643,7 @@ pub fn derive_parametric_surface(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
@@ -667,8 +691,8 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
     let trait_name0 = quote! { monstertruck_traits::ParametricSurface };
     let trait_name1 = quote! { monstertruck_traits::ParametricSurface3D };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen
+    let generics_params = input.generics;
+    let where_predicates = generics_params
         .where_clause
         .iter()
         .flat_map(|x| &x.predicates)
@@ -699,7 +723,7 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name0 for #ty #gen
+                impl #generics_params #trait_name0 for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name0,)* {
@@ -709,7 +733,7 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                 }
 
                 #[automatically_derived]
-                impl #gen #trait_name1 for #ty #gen
+                impl #generics_params #trait_name1 for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name0,)* {
@@ -725,7 +749,7 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name0 for #ty #gen
+                impl #generics_params #trait_name0 for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name0, {
@@ -748,7 +772,7 @@ pub fn derive_parametric_surface3d(input: TokenStream) -> TokenStream {
                     fn v_period(&self) -> Option<f64> { self.0.v_period() }
                 }
                 #[automatically_derived]
-                impl #gen #trait_name1 for #ty #gen
+                impl #generics_params #trait_name1 for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name0, {
@@ -768,8 +792,11 @@ pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::SearchNearestParameter::<D1> };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -787,7 +814,7 @@ pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -804,7 +831,7 @@ pub fn derive_snp_d1(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
@@ -832,8 +859,11 @@ pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::SearchNearestParameter::<D2> };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -851,7 +881,7 @@ pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -868,7 +898,7 @@ pub fn derive_snp_d2(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
@@ -896,8 +926,11 @@ pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::SearchParameter::<D1> };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -916,7 +949,7 @@ pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #top_ty: #trait_name,
@@ -934,7 +967,7 @@ pub fn derive_sp_d1(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
@@ -962,8 +995,11 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::SearchParameter::<D2> };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -981,7 +1017,7 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -998,7 +1034,7 @@ pub fn derive_sp_d2(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
@@ -1026,8 +1062,11 @@ pub fn derive_transform_m3(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::Transformed::<Matrix3> };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -1040,7 +1079,7 @@ pub fn derive_transform_m3(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -1056,7 +1095,7 @@ pub fn derive_transform_m3(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
@@ -1081,8 +1120,11 @@ pub fn derive_transform_m4(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_traits::Transformed::<Matrix4> };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -1095,7 +1137,7 @@ pub fn derive_transform_m4(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -1111,7 +1153,7 @@ pub fn derive_transform_m4(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
@@ -1135,8 +1177,11 @@ pub fn derive_step_length(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_step::out::StepLength };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -1148,7 +1193,7 @@ pub fn derive_step_length(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -1164,7 +1209,7 @@ pub fn derive_step_length(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
@@ -1184,8 +1229,11 @@ pub fn derive_display_by_step(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_step::out::DisplayByStep };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -1197,7 +1245,7 @@ pub fn derive_display_by_step(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -1213,7 +1261,7 @@ pub fn derive_display_by_step(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
@@ -1235,8 +1283,11 @@ pub fn derive_step_curve(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_step::out::StepCurve };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -1248,7 +1299,7 @@ pub fn derive_step_curve(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -1264,7 +1315,7 @@ pub fn derive_step_curve(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
@@ -1284,8 +1335,11 @@ pub fn derive_step_surface(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let trait_name = quote! { monstertruck_step::out::StepSurface };
     let ty = input.ident;
-    let gen = input.generics;
-    let where_predicates = gen.where_clause.iter().flat_map(|x| &x.predicates);
+    let generics_params = input.generics;
+    let where_predicates = generics_params
+        .where_clause
+        .iter()
+        .flat_map(|x| &x.predicates);
     match input.data {
         Data::Enum(DataEnum { ref variants, .. }) => {
             let variant = variants.into_iter().next().expect("empty enum!");
@@ -1297,7 +1351,7 @@ pub fn derive_step_surface(input: TokenStream) -> TokenStream {
             );
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #(#tys: #trait_name,)* {
@@ -1313,7 +1367,7 @@ pub fn derive_step_surface(input: TokenStream) -> TokenStream {
             let field_type = &field[0].ty;
             quote! {
                 #[automatically_derived]
-                impl #gen #trait_name for #ty #gen
+                impl #generics_params #trait_name for #ty #generics_params
                 where
                     #(#where_predicates,)*
                     #field_type: #trait_name, {
@@ -1332,10 +1386,10 @@ pub fn derive_step_surface(input: TokenStream) -> TokenStream {
 pub fn derive_self_same_geometry(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let ident = input.ident;
-    let gen = input.generics;
+    let generics_params = input.generics;
     quote! {
         #[automatically_derived]
-        impl #gen ToSameGeometry<Self> for #ident #gen where Self: Clone {
+        impl #generics_params ToSameGeometry<Self> for #ident #generics_params where Self: Clone {
             #[inline(always)]
             fn to_same_geometry(&self) -> Self { self.clone() }
         }

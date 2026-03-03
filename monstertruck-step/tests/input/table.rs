@@ -1,10 +1,10 @@
+use monstertruck_step::r#in::*;
 use ruststep::{
     ast::{DataSection, Name},
     primitive::Logical,
     tables::PlaceHolder,
 };
 use std::{collections::HashMap, str::FromStr};
-use monstertruck_step::r#in::*;
 
 #[test]
 fn read() {

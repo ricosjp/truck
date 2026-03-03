@@ -14,9 +14,9 @@
 //!     10.1145/882262.882295.
 
 use crate::{prelude::*, *};
+use monstertruck_core::cgmath64::control_point::ControlPoint;
 use parking_lot::RwLock;
 use std::sync::Arc;
-use monstertruck_core::cgmath64::control_point::ControlPoint;
 
 /// The compound type which defines a connection within a tmesh.
 /// The first element of the tuple is the (optional) point the connection interfaces to.

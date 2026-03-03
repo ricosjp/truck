@@ -1,10 +1,10 @@
 use super::*;
 use derive_more::{From, TryInto};
-use serde::{Deserialize, Serialize};
 #[doc(hidden)]
 pub use monstertruck_geometry::prelude::{algo, inv_or_zero};
 pub use monstertruck_geometry::{decorators::*, nurbs::*, specifieds::*, t_spline::*};
 pub use monstertruck_mesh::PolylineCurve;
+use serde::{Deserialize, Serialize};
 
 /// 3-dimensional curve
 #[derive(

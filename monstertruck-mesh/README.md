@@ -1,17 +1,29 @@
-# monstertruck-mesh
+# `monstertruck-mesh`
 
-[![Crates.io](https://img.shields.io/crates/v/monstertruck-mesh.svg)](https://crates.io/crates/monstertruck-mesh) [![Docs.rs](https://docs.rs/monstertruck-mesh/badge.svg)](https://docs.rs/monstertruck-mesh)
+Polygon mesh data structures and algorithms.
 
-Defines polyline-polygon data structure and some algorithms handling mesh.
+> Forked from [`truck-polymesh`](https://crates.io/crates/truck-polymesh) v0.6.0 by [ricosjp](https://github.com/ricosjp/truck).
 
-## Sample Codes
+## Quick Start
 
-### obj_stl
+```rust
+use monstertruck_mesh::*;
 
-Converts OBJ and STL to each other.
+let positions = vec![
+    Point3::new(0.0, 0.0, 0.0),
+    Point3::new(1.0, 0.0, 0.0),
+    Point3::new(0.0, 1.0, 0.0),
+];
+let faces = Faces::from_iter(&[[0, 1, 2]]);
+let mesh = PolygonMesh::new(
+    StandardAttributes { positions, ..Default::default() },
+    faces,
+);
 
-usage:
-
-```bash
-cargo run --example obj_stl <input-file>
+assert_eq!(mesh.positions().len(), 3);
+assert_eq!(mesh.tri_faces().len(), 1);
 ```
+
+## License
+
+Apache License 2.0

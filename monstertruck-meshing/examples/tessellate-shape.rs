@@ -6,9 +6,9 @@
 //!
 //! The default `<output file>` is output.obj.
 
-use monstertruck_meshing::{analyzers::*, filters::*, tessellation::*};
-use monstertruck_modeling::{geometry::*, Point3};
 use monstertruck_mesh::TOLERANCE;
+use monstertruck_meshing::{analyzers::*, filters::*, tessellation::*};
+use monstertruck_modeling::{Point3, geometry::*};
 use monstertruck_topology::compress::*;
 type CShell = CompressedShell<Point3, Curve, Surface>;
 type CSolid = CompressedSolid<Point3, Curve, Surface>;
@@ -16,7 +16,9 @@ type CSolid = CompressedSolid<Point3, Curve, Surface>;
 fn main() {
     let args: Vec<_> = std::env::args().collect();
     if args.len() < 2 {
-        panic!("usage: tessellate-shape <input json file> <output obj file>\nThe default <output file> is output.obj.")
+        panic!(
+            "usage: tessellate-shape <input json file> <output obj file>\nThe default <output file> is output.obj."
+        )
     }
     let file = std::fs::read_to_string(&args[1]).unwrap();
     let mut poly = {

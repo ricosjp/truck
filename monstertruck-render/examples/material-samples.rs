@@ -8,12 +8,12 @@
 
 mod app;
 use app::*;
-use std::f64::consts::PI;
-use std::sync::Arc;
+use monstertruck_gpu::*;
 use monstertruck_meshing::prelude::*;
 use monstertruck_modeling::*;
-use monstertruck_platform::*;
 use monstertruck_render::*;
+use std::f64::consts::PI;
+use std::sync::Arc;
 
 const N: usize = 5;
 const BACKGROUND: [f64; 4] = [45.0 / 255.0, 36.0 / 255.0, 42.0 / 255.0, 1.0];

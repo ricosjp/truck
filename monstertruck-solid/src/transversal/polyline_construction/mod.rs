@@ -1,7 +1,7 @@
-use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::collections::VecDeque;
 use monstertruck_core::{cgmath64::*, tolerance::*};
 use monstertruck_meshing::prelude::PolylineCurve;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use std::collections::VecDeque;
 
 pub fn construct_polylines(lines: &[(Point3, Point3)]) -> Vec<PolylineCurve<Point3>> {
     let mut graph: Graph = lines.iter().collect();

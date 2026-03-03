@@ -192,12 +192,12 @@ impl<P, C, S> Solid<P, C, S> {
                 .map(move |(i, _)| i);
             find_res.map(move |i| (shell, i))
         });
-        if let Some((shell, i)) = tuple {
-            if let Some((face0, face1)) = shell[i].cut_by_edge(edge) {
-                shell[i] = face0;
-                shell.push(face1);
-                return true;
-            }
+        if let Some((shell, i)) = tuple
+            && let Some((face0, face1)) = shell[i].cut_by_edge(edge)
+        {
+            shell[i] = face0;
+            shell.push(face1);
+            return true;
         }
         false
     }

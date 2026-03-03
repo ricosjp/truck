@@ -3,8 +3,8 @@
 //! - Input: bunny.obj
 //! - Output: smooth_bunny.obj
 
-use monstertruck_meshing::filters::*;
 use monstertruck_mesh::*;
+use monstertruck_meshing::filters::*;
 
 fn main() {
     const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/obj/bunny.obj",);

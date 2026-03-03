@@ -1,13 +1,13 @@
 #![allow(clippy::too_many_arguments)]
 
+use monstertruck_geometry::prelude as truck;
+use monstertruck_step::{
+    r#in::{step_geometry::*, *},
+    out::*,
+};
 use proptest::*;
 use ruststep::{ast::DataSection, tables::*};
 use std::{f64::consts::PI, str::FromStr};
-use monstertruck_geometry::prelude as truck;
-use monstertruck_step::{
-    out::*,
-    r#in::{step_geometry::*, *},
-};
 
 fn float_to_str(x: f64) -> String {
     if f64::abs(x) < 1.0e-6 {
@@ -50,12 +50,18 @@ fn exec_cartesian_point(coord: [f64; 3]) {
     let pt = Point2::new(coord[0], coord[1]);
     exec_test_near::<CartesianPointHolder, Point2>(
         pt,
-        &format!("DATA;{}ENDSEC;", monstertruck_step::out::StepDisplay::new(pt, 1)),
+        &format!(
+            "DATA;{}ENDSEC;",
+            monstertruck_step::out::StepDisplay::new(pt, 1)
+        ),
     );
     let pt = Point3::from(coord);
     exec_test_near::<CartesianPointHolder, Point3>(
         pt,
-        &format!("DATA;{}ENDSEC;", monstertruck_step::out::StepDisplay::new(pt, 1)),
+        &format!(
+            "DATA;{}ENDSEC;",
+            monstertruck_step::out::StepDisplay::new(pt, 1)
+        ),
     );
 }
 

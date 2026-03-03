@@ -271,10 +271,10 @@ fn get_components(adjacency: &[Vec<usize>]) -> Vec<Vec<usize>> {
 fn is_in_the_plane(positions: &[Point3], normals: &[Vector3], face: &[Vertex], tol2: f64) -> bool {
     let n = FaceNormal::new(positions, face, 0).normal;
     for v in face {
-        if let Some(nor) = v.nor {
-            if n.distance2(normals[nor]) < tol2 {
-                return true;
-            }
+        if let Some(nor) = v.nor
+            && n.distance2(normals[nor]) < tol2
+        {
+            return true;
         }
     }
     false

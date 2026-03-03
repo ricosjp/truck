@@ -651,16 +651,30 @@ impl<P> Drop for TnurccEdge<P> {
 
 impl<P> fmt::Display for TnurccEdge<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Index: {}\n\tOrigin: {}\n\tDest: {}\n\tFace Left: {}\n\tFace Right: {}\n{}-----{}\n   |\n{}-----{}", 
+        write!(
+            f,
+            "Index: {}\n\tOrigin: {}\n\tDest: {}\n\tFace Left: {}\n\tFace Right: {}\n{}-----{}\n   |\n{}-----{}",
             self.index,
             self.origin.read().index,
             self.dest.read().index,
-            self.face_left.as_ref().map_or(-1, |f| f.read().index as i32),
-            self.face_right.as_ref().map_or(-1, |f| f.read().index as i32),
-            self.connections[TnurccConnection::LeftAcw as usize].as_ref().map_or(-1, |e| e.read().index as i32),
-            self.connections[TnurccConnection::RightCw as usize].as_ref().map_or(-1, |e| e.read().index as i32),
-            self.connections[TnurccConnection::LeftCw as usize].as_ref().map_or(-1, |e| e.read().index as i32),
-            self.connections[TnurccConnection::RightAcw as usize].as_ref().map_or(-1, |e| e.read().index as i32),
+            self.face_left
+                .as_ref()
+                .map_or(-1, |f| f.read().index as i32),
+            self.face_right
+                .as_ref()
+                .map_or(-1, |f| f.read().index as i32),
+            self.connections[TnurccConnection::LeftAcw as usize]
+                .as_ref()
+                .map_or(-1, |e| e.read().index as i32),
+            self.connections[TnurccConnection::RightCw as usize]
+                .as_ref()
+                .map_or(-1, |e| e.read().index as i32),
+            self.connections[TnurccConnection::LeftCw as usize]
+                .as_ref()
+                .map_or(-1, |e| e.read().index as i32),
+            self.connections[TnurccConnection::RightAcw as usize]
+                .as_ref()
+                .map_or(-1, |e| e.read().index as i32),
         )
     }
 }

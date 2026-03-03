@@ -19,7 +19,7 @@ impl WireFrameInstance {
             strips: Arc::clone(&self.strips),
             state: self.state.clone(),
             shaders: self.shaders.clone(),
-            id: RenderId::gen(),
+            id: RenderId::generate(),
         }
     }
     /// Returns the wireframe state
@@ -139,7 +139,7 @@ impl Rendered for WireFrameInstance {
                 alpha_to_coverage_enabled: sample_count > 1,
             },
             label: None,
-            multiview: None,
+            multiview_mask: None,
             cache: None,
         });
         Arc::new(pipeline)
@@ -168,7 +168,7 @@ impl ToInstance<WireFrameInstance> for Vec<(Point3, Point3)> {
             strips: Arc::new(ib),
             state: state.clone(),
             shaders: shaders.clone(),
-            id: RenderId::gen(),
+            id: RenderId::generate(),
         }
     }
 }

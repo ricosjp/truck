@@ -203,7 +203,7 @@ The version is of the bottom crate `monstertruck-render`.
 
 - a small behavior change: [`NormalFilters::add_smooth_normals`](https://docs.rs/monstertruck-mesh/0.2.1/monstertruck_mesh/prelude/trait.NormalFilters.html#tymethod.add_smooth_normals).
 - fix a bug: [`Splitting::into_components`](https://docs.rs/monstertruck-mesh/0.2.1/monstertruck_mesh/prelude/trait.Splitting.html#tymethod.into_components).
-- an internal change: [`RenderID::gen`](https://docs.rs/monstertruck-platform/0.2.1/monstertruck_platform/struct.RenderID.html#method.gen).
+- an internal change: [`RenderID::gen`](https://docs.rs/monstertruck-gpu/0.2.1/monstertruck_gpu/struct.RenderID.html#method.gen).
 
 ### v0.2.0
 
@@ -235,7 +235,7 @@ The version is of the bottom crate `monstertruck-render`.
 - added a feature `serde` to `cgmath` at `monstertruck-core`.
   - remove the explicit dependency to `cgmath` from `monstertruck-mesh`.
   - plans to add `nalgebra` as an alternative backend (unreleased in this version).
-- abolished [`monstertruck_platform::RenderID::default`](https://docs.rs/monstertruck-platform/0.1.0/monstertruck_platform/struct.RenderID.html#impl-Default) and added [`RenderID::gen`](https://docs.rs/monstertruck-platform/0.2.0/monstertruck_platform/struct.RenderID.html#method.gen).
+- abolished [`monstertruck_gpu::RenderID::default`](https://docs.rs/monstertruck-gpu/0.1.0/monstertruck_gpu/struct.RenderID.html#impl-Default) and added [`RenderID::gen`](https://docs.rs/monstertruck-gpu/0.2.0/monstertruck_gpu/struct.RenderID.html#method.gen).
 - added [`Error`](https://docs.rs/monstertruck-modeling/0.2.1/monstertruck_modeling/errors/enum.Error.html) to `monstertruck_modeling`.
 - made [`monstertruck_topology::CompressedShell`](https://docs.rs/monstertruck-topology/0.2.0/monstertruck_topology/struct.CompressedShell.html) public API and added [`monstertruck_topology::CompressedSolid`](https://docs.rs/monstertruck-topology/0.2.0/monstertruck_topology/struct.CompressedSolid.html).
 

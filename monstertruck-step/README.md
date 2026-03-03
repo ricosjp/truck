@@ -1,21 +1,23 @@
-# monstertruck-step
+# `monstertruck-step`
 
-[![Crates.io](https://img.shields.io/crates/v/monstertruck-step.svg)](https://crates.io/crates/monstertruck-step) [![Docs.rs](https://docs.rs/monstertruck-step/badge.svg)](https://docs.rs/monstertruck-step)
+STEP file import and export.
 
-Reads/writes STEP files from/to truck.
+> Forked from [`truck-stepio`](https://crates.io/crates/truck-stepio) v0.3.0 by [ricosjp](https://github.com/ricosjp/truck).
 
-## Sample Codes
+## Quick Start
 
-### shape-to-step
+```rust
+use monstertruck_step::r#in::{*, step_geometry::*};
 
-Convert a truck shape JSON file to a STEP file.
+// Parse a STEP file
+let step_string = std::fs::read_to_string("model.step").unwrap();
+let table = Table::from_step(&step_string).unwrap();
 
-#### usage
-
-```bash
-shape-to-step <input shape file> [output shape file]
+// Extract a shell and convert to topology
+let step_shell = table.shell.values().next().unwrap();
+let compressed = table.to_compressed_shell(step_shell).unwrap();
 ```
 
-### step-to-mesh
+## License
 
-Parse STEP data, extract shapes, and generate meshes.
+Apache License 2.0

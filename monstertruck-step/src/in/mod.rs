@@ -3,21 +3,21 @@
 /// re-export [`ruststep`](https://docs.rs/ruststep/latest/ruststep/)
 pub use ruststep;
 
+use monstertruck_assembly::assy::*;
+use monstertruck_geometry::prelude as geom;
+use monstertruck_topology::compress::*;
 use ruststep::{
+    Holder,
     ast::{DataSection, EntityInstance, Name, Parameter, SubSuperRecord},
     primitive::Logical,
     tables::{EntityTable, IntoOwned, PlaceHolder},
-    Holder,
 };
 use serde::{Deserialize, Serialize};
 use std::result::Result;
 use std::{collections::HashMap, f64::consts::PI};
-use monstertruck_assembly::assy::*;
-use monstertruck_geometry::prelude as truck;
-use monstertruck_topology::compress::*;
 
 pub mod convert;
-/// Geometry parsed from STEP that can be handled by truck
+/// Geometry parsed from STEP that can be handled by monstertruck
 pub mod step_geometry;
 use step_geometry::*;
 
@@ -236,17 +236,17 @@ impl Table {
                         .insert(*id, Deserialize::deserialize(record)?);
                 }
                 "ORIENTED_EDGE" => {
-                    if let Parameter::List(params) = &record.parameter {
-                        if params.len() == 5 {
-                            self.oriented_edge.insert(
-                                *id,
-                                OrientedEdgeHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    edge_element: Deserialize::deserialize(&params[3])?,
-                                    orientation: Deserialize::deserialize(&params[4])?,
-                                },
-                            );
-                        }
+                    if let Parameter::List(params) = &record.parameter
+                        && params.len() == 5
+                    {
+                        self.oriented_edge.insert(
+                            *id,
+                            OrientedEdgeHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                edge_element: Deserialize::deserialize(&params[3])?,
+                                orientation: Deserialize::deserialize(&params[4])?,
+                            },
+                        );
                     }
                 }
                 "EDGE_LOOP" => {
@@ -270,17 +270,17 @@ impl Table {
                         .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "ORIENTED_FACE" => {
-                    if let Parameter::List(params) = &record.parameter {
-                        if params.len() == 4 {
-                            self.oriented_face.insert(
-                                *id,
-                                OrientedFaceHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    face_element: Deserialize::deserialize(&params[2])?,
-                                    orientation: Deserialize::deserialize(&params[3])?,
-                                },
-                            );
-                        }
+                    if let Parameter::List(params) = &record.parameter
+                        && params.len() == 4
+                    {
+                        self.oriented_face.insert(
+                            *id,
+                            OrientedFaceHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                face_element: Deserialize::deserialize(&params[2])?,
+                                orientation: Deserialize::deserialize(&params[3])?,
+                            },
+                        );
                     }
                 }
                 "OPEN_SHELL" => {
@@ -292,31 +292,31 @@ impl Table {
                         .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "ORIENTED_OPEN_SHELL" => {
-                    if let Parameter::List(params) = &record.parameter {
-                        if params.len() == 4 {
-                            self.oriented_shell.insert(
-                                *id,
-                                OrientedShellHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    shell_element: Deserialize::deserialize(&params[2])?,
-                                    orientation: Deserialize::deserialize(&params[3])?,
-                                },
-                            );
-                        }
+                    if let Parameter::List(params) = &record.parameter
+                        && params.len() == 4
+                    {
+                        self.oriented_shell.insert(
+                            *id,
+                            OrientedShellHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                shell_element: Deserialize::deserialize(&params[2])?,
+                                orientation: Deserialize::deserialize(&params[3])?,
+                            },
+                        );
                     }
                 }
                 "ORIENTED_CLOSED_SHELL" => {
-                    if let Parameter::List(params) = &record.parameter {
-                        if params.len() == 4 {
-                            self.oriented_shell.insert(
-                                *id,
-                                OrientedShellHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    shell_element: Deserialize::deserialize(&params[2])?,
-                                    orientation: Deserialize::deserialize(&params[3])?,
-                                },
-                            );
-                        }
+                    if let Parameter::List(params) = &record.parameter
+                        && params.len() == 4
+                    {
+                        self.oriented_shell.insert(
+                            *id,
+                            OrientedShellHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                shell_element: Deserialize::deserialize(&params[2])?,
+                                orientation: Deserialize::deserialize(&params[3])?,
+                            },
+                        );
                     }
                 }
                 "SHELL_BASED_SURFACE_MODEL" => {
@@ -324,17 +324,17 @@ impl Table {
                         .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "MANIFOLD_SOLID_BREP" => {
-                    if let Parameter::List(params) = &record.parameter {
-                        if params.len() == 2 {
-                            self.manifold_solid_brep.insert(
-                                *id,
-                                ManifoldSolidBrepHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    outer: Deserialize::deserialize(&params[1])?,
-                                    voids: Vec::new(),
-                                },
-                            );
-                        }
+                    if let Parameter::List(params) = &record.parameter
+                        && params.len() == 2
+                    {
+                        self.manifold_solid_brep.insert(
+                            *id,
+                            ManifoldSolidBrepHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                outer: Deserialize::deserialize(&params[1])?,
+                                voids: Vec::new(),
+                            },
+                        );
                     }
                 }
                 "BREP_WITH_VOIDS" => {
@@ -342,23 +342,23 @@ impl Table {
                         .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "DEFINITIONAL_REPRESENTATION" => {
-                    if let Parameter::List(params) = &record.parameter {
-                        if params.len() == 3 {
-                            self.definitional_representation.insert(
-                                *id,
-                                DefinitionalRepresentationHolder {
-                                    label: Deserialize::deserialize(&params[0])?,
-                                    representation_item: Deserialize::deserialize(&params[1])?,
-                                    context_of_items: match &params[2] {
-                                        Parameter::Ref(x) => PlaceHolder::Ref(x.clone()),
-                                        _ => PlaceHolder::Owned(DummyHolder {
-                                            record: format!("{:?}", params[2]),
-                                            is_simple: true,
-                                        }),
-                                    },
+                    if let Parameter::List(params) = &record.parameter
+                        && params.len() == 3
+                    {
+                        self.definitional_representation.insert(
+                            *id,
+                            DefinitionalRepresentationHolder {
+                                label: Deserialize::deserialize(&params[0])?,
+                                representation_item: Deserialize::deserialize(&params[1])?,
+                                context_of_items: match &params[2] {
+                                    Parameter::Ref(x) => PlaceHolder::Ref(x.clone()),
+                                    _ => PlaceHolder::Owned(DummyHolder {
+                                        record: format!("{:?}", params[2]),
+                                        is_simple: true,
+                                    }),
                                 },
-                            );
-                        }
+                            },
+                        );
                     }
                 }
                 "APPLICATION_CONTEXT" => {
@@ -378,17 +378,17 @@ impl Table {
                         .insert(*id, Deserialize::deserialize(&record.parameter)?);
                 }
                 "PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE" => {
-                    if let Parameter::List(params) = &record.parameter {
-                        if params.len() >= 3 {
-                            self.product_definition_formation.insert(
-                                *id,
-                                ProductDefinitionFormationHolder {
-                                    id: Deserialize::deserialize(&params[0])?,
-                                    description: Deserialize::deserialize(&params[1])?,
-                                    of_product: Deserialize::deserialize(&params[2])?,
-                                },
-                            );
-                        }
+                    if let Parameter::List(params) = &record.parameter
+                        && params.len() >= 3
+                    {
+                        self.product_definition_formation.insert(
+                            *id,
+                            ProductDefinitionFormationHolder {
+                                id: Deserialize::deserialize(&params[0])?,
+                                description: Deserialize::deserialize(&params[1])?,
+                                of_product: Deserialize::deserialize(&params[2])?,
+                            },
+                        );
                     }
                 }
                 "PRODUCT_DEFINITION_CONTEXT" => {
@@ -1120,7 +1120,7 @@ pub struct Line {
     #[holder(use_place_holder)]
     pub dir: Vector,
 }
-impl<'a, P> From<&'a Line> for truck::Line<P>
+impl<'a, P> From<&'a Line> for geom::Line<P>
 where
     P: EuclideanSpace + From<&'a CartesianPoint>,
     P::Diff: From<&'a Vector>,
@@ -1316,7 +1316,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&UniformCurve> for BsplineCurv
     }
 }
 
-fn uniform_knots(num_ctrl: usize, degree: usize) -> truck::Result<KnotVector> {
+fn uniform_knots(num_ctrl: usize, degree: usize) -> geom::Result<KnotVector> {
     KnotVector::try_from(
         (0..degree + num_ctrl + 1)
             .map(|i| i as f64 - degree as f64)
@@ -1477,7 +1477,7 @@ impl TryFrom<&Circle> for step_geometry::Ellipse<Point2, Matrix3> {
     fn try_from(circle: &Circle) -> Result<Self, Self::Error> {
         let transform = Matrix3::try_from(&circle.position)? * Matrix3::from_scale(circle.radius);
         Ok(
-            Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
+            Processor::new(geom::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
                 .transformed(transform),
         )
     }
@@ -1489,7 +1489,7 @@ impl TryFrom<&Circle> for step_geometry::Ellipse<Point3, Matrix4> {
     fn try_from(circle: &Circle) -> Result<Self, Self::Error> {
         let transform = Matrix4::try_from(&circle.position)? * Matrix4::from_scale(circle.radius);
         Ok(
-            Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
+            Processor::new(geom::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
                 .transformed(transform),
         )
     }
@@ -1516,7 +1516,7 @@ impl TryFrom<&Ellipse> for step_geometry::Ellipse<Point2, Matrix3> {
         let transform =
             Matrix3::try_from(&ellipse.position)? * Matrix3::from_nonuniform_scale(r0, r1);
         Ok(
-            Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
+            Processor::new(geom::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
                 .transformed(transform),
         )
     }
@@ -1530,7 +1530,7 @@ impl TryFrom<&Ellipse> for step_geometry::Ellipse<Point3, Matrix4> {
         let transform = Matrix4::try_from(&ellipse.position)?
             * Matrix4::from_nonuniform_scale(r0, r1, f64::min(r0, r1));
         Ok(
-            Processor::new(truck::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
+            Processor::new(geom::TrimmedCurve::new(UnitCircle::new(), (0.0, 2.0 * PI)))
                 .transformed(transform),
         )
     }
@@ -1557,7 +1557,7 @@ impl TryFrom<&Hyperbola> for step_geometry::Hyperbola<Point2, Matrix3> {
         let transform =
             Matrix3::try_from(&hyperbola.position)? * Matrix3::from_nonuniform_scale(r0, r1);
         Ok(
-            Processor::new(truck::TrimmedCurve::new(UnitHyperbola::new(), (-1.0, 1.0)))
+            Processor::new(geom::TrimmedCurve::new(UnitHyperbola::new(), (-1.0, 1.0)))
                 .transformed(transform),
         )
     }
@@ -1571,7 +1571,7 @@ impl TryFrom<&Hyperbola> for step_geometry::Hyperbola<Point3, Matrix4> {
         let transform = Matrix4::try_from(&hyperbola.position)?
             * Matrix4::from_nonuniform_scale(r0, r1, f64::min(r0, r1));
         Ok(
-            Processor::new(truck::TrimmedCurve::new(UnitHyperbola::new(), (-1.0, 1.0)))
+            Processor::new(geom::TrimmedCurve::new(UnitHyperbola::new(), (-1.0, 1.0)))
                 .transformed(transform),
         )
     }
@@ -1596,7 +1596,7 @@ impl TryFrom<&Parabola> for step_geometry::Parabola<Point2, Matrix3> {
         let transform =
             Matrix3::try_from(&parabola.position)? * Matrix3::from_scale(parabola.focal_dist);
         Ok(
-            Processor::new(truck::TrimmedCurve::new(UnitParabola::new(), (-1.0, 1.0)))
+            Processor::new(geom::TrimmedCurve::new(UnitParabola::new(), (-1.0, 1.0)))
                 .transformed(transform),
         )
     }
@@ -1609,7 +1609,7 @@ impl TryFrom<&Parabola> for step_geometry::Parabola<Point3, Matrix4> {
         let transform =
             Matrix4::try_from(&parabola.position)? * Matrix4::from_scale(parabola.focal_dist);
         Ok(
-            Processor::new(truck::TrimmedCurve::new(UnitParabola::new(), (-1.0, 1.0)))
+            Processor::new(geom::TrimmedCurve::new(UnitParabola::new(), (-1.0, 1.0)))
                 .transformed(transform),
         )
     }
@@ -1795,7 +1795,7 @@ pub struct Plane {
     position: Axis2Placement3d,
 }
 
-impl From<&Plane> for truck::Plane {
+impl From<&Plane> for geom::Plane {
     #[inline(always)]
     fn from(plane: &Plane) -> Self {
         let mat = Matrix4::from(&plane.position);
@@ -1822,7 +1822,7 @@ impl From<&SphericalSurface> for step_geometry::SphericalSurface {
     #[inline(always)]
     fn from(ss: &SphericalSurface) -> Self {
         let mat = Matrix4::from(&ss.position);
-        let sphere = Sphere(truck::Sphere::new(Point3::origin(), ss.radius));
+        let sphere = Sphere(geom::Sphere::new(Point3::origin(), ss.radius));
         Processor::new(sphere).transformed(mat)
     }
 }
@@ -2299,7 +2299,7 @@ impl EdgeCurve {
     ) -> Result<Curve2D, StepConvertingError> {
         let mut curve = match curve {
             CurveAny::Line(line) => {
-                let line = truck::Line::<Point2>::from(line.as_ref());
+                let line = geom::Line::<Point2>::from(line.as_ref());
                 let p = line.projection(p);
                 let q = line.projection(q);
                 Curve2D::Line(Line(p, q))
@@ -2398,7 +2398,7 @@ impl EdgeCurve {
             },
             CurveAny::Pcurve(_) => return Err("Pcurves cannot be parsed to 2D curves.".into()),
             CurveAny::SurfaceCurve(_) => {
-                return Err("Surface curves cannot be parsed to 2D curves.".into())
+                return Err("Surface curves cannot be parsed to 2D curves.".into());
             }
         };
         if !same_sense {
@@ -2542,7 +2542,7 @@ impl EdgeCurve {
                     Point2::new(v.0, v.1),
                     true,
                 )?;
-                Curve3D::Pcurve(truck::ParameterCurve::new(
+                Curve3D::Pcurve(geom::ParameterCurve::new(
                     Box::new(curve2d),
                     Box::new(surface),
                 ))
@@ -2645,7 +2645,7 @@ impl FaceBoundHolder {
     fn bound_holder(&self, table: &Table) -> Option<EdgeLoopHolder> {
         match &self.bound {
             PlaceHolder::Owned(holder) => Some(holder.clone()),
-            PlaceHolder::Ref(Name::Entity(ref idx)) => table.edge_loop.get(idx).cloned(),
+            PlaceHolder::Ref(Name::Entity(idx)) => table.edge_loop.get(idx).cloned(),
             _ => None,
         }
     }
@@ -2684,7 +2684,7 @@ impl FaceSurfaceHolder {
             .iter()
             .map(|bound| match bound {
                 PlaceHolder::Owned(bound) => Some(bound.clone()),
-                PlaceHolder::Ref(Name::Entity(ref idx)) => table.face_bound.get(idx).cloned(),
+                PlaceHolder::Ref(Name::Entity(idx)) => table.face_bound.get(idx).cloned(),
                 _ => None,
             })
             .collect()
@@ -2709,7 +2709,7 @@ pub struct OrientedFace {
 impl OrientedFaceHolder {
     fn face_element_holder(&self, table: &Table) -> Option<FaceSurfaceHolder> {
         match &self.face_element {
-            PlaceHolder::Ref(Name::Entity(ref idx)) => table.face_surface.get(idx).cloned(),
+            PlaceHolder::Ref(Name::Entity(idx)) => table.face_surface.get(idx).cloned(),
             PlaceHolder::Owned(x) => Some(x.clone()),
             _ => None,
         }
@@ -2737,7 +2737,7 @@ impl ShellHolder {
     ) -> impl Iterator<Item = Option<FaceAnyHolder>> + 'a {
         self.cfs_faces.iter().map(|face| match face {
             PlaceHolder::Owned(holder) => Some(holder.clone()),
-            PlaceHolder::Ref(Name::Entity(ref idx)) => table
+            PlaceHolder::Ref(Name::Entity(idx)) => table
                 .oriented_face
                 .get(idx)
                 .cloned()

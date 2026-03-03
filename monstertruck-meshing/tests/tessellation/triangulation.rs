@@ -155,10 +155,11 @@ fn robust_closed() {
         }
     });
 
-    assert!(cube
-        .triangulation(0.01)
-        .face_iter()
-        .all(|face| face.surface().is_none()));
+    assert!(
+        cube.triangulation(0.01)
+            .face_iter()
+            .all(|face| face.surface().is_none())
+    );
 
     let mut mesh = cube.robust_triangulation(0.01).to_polygon();
     mesh.put_together_same_attrs(TOLERANCE2)

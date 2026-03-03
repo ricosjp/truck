@@ -1,7 +1,7 @@
+use monstertruck_geometry::prelude::*;
 use proptest::prelude::*;
 use std::f64::consts::PI;
 use std::ops::RangeBounds;
-use monstertruck_geometry::prelude::*;
 
 proptest! {
     #[test]

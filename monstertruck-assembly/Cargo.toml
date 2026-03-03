@@ -1,7 +1,12 @@
 [package]
 name = "monstertruck-assembly"
 version = "0.1.0"
+authors = ["Moritz Moeller <virtualritz@protonmail.com>"]
 edition = "2024"
+description = "Assembly data structures using a directed acyclic graph (DAG)"
+homepage = "https://github.com/virtualritz/truck"
+repository = "https://github.com/virtualritz/truck"
+license = "Apache-2.0"
 
 [dependencies]
 rayon = { workspace = true }

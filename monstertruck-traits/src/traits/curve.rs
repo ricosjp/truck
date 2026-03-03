@@ -1,11 +1,11 @@
 use super::*;
-use std::fmt::Debug;
-use thiserror::Error;
 use monstertruck_core::{
     assert_near,
     cgmath64::{Point2, Point3, Vector2, Vector3},
     tolerance::Tolerance,
 };
+use std::fmt::Debug;
+use thiserror::Error;
 
 /// A curve defined by a mapping `P(t)` from a scalar parameter `t` to a point.
 ///
@@ -271,10 +271,14 @@ where
 #[derive(Clone, Copy, PartialEq, Debug, Error)]
 pub enum ConcatError<Point: Debug> {
     /// Failed to concat curves since the end parameter of the first curve is different form the start parameter of the second curve.
-    #[error("The end parameter {0} of the first curve is different from the start parameter {1} of the second curve.")]
+    #[error(
+        "The end parameter {0} of the first curve is different from the start parameter {1} of the second curve."
+    )]
     DisconnectedParameters(f64, f64),
     /// Failed to concat curves since the end point of the first curve is different from the start point of the second curve.
-    #[error("The end point {0:?} of the first curve is different from the start point {1:?} of the second curve.")]
+    #[error(
+        "The end point {0:?} of the first curve is different from the start point {1:?} of the second curve."
+    )]
     DisconnectedPoints(Point, Point),
 }
 
@@ -311,7 +315,7 @@ impl<C> CurveCollector<C> {
             CurveCollector::Singleton => {
                 *self = CurveCollector::Curve(curve.clone().into());
             }
-            CurveCollector::Curve(ref mut curve0) => {
+            CurveCollector::Curve(curve0) => {
                 *curve0 = curve0.try_concat(curve)?;
             }
         }

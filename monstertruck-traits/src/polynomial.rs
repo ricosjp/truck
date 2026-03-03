@@ -1,6 +1,6 @@
 use crate::*;
-use std::ops::Bound;
 use monstertruck_core::{cgmath64::*, hash::HashGen, tolerance::*};
+use std::ops::Bound;
 
 const PRESEARCH_DIVISION: usize = 50;
 
@@ -177,7 +177,9 @@ impl<P: EuclideanSpace<Scalar = f64>> ParametricSurface for PolynomialSurface<P>
 impl ParametricSurface3D for PolynomialSurface<Point3> {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 {
-        self.derivative_u(u, v).cross(self.derivative_v(u, v)).normalize()
+        self.derivative_u(u, v)
+            .cross(self.derivative_v(u, v))
+            .normalize()
     }
 }
 

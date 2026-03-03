@@ -563,7 +563,8 @@ impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParametricSurfa
     fn derivative_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
         if m < 7 && n < 7 {
             let mut ders = [[V::zero(); 8]; 8];
-            (0..=m).for_each(|i| (0..=n).for_each(|j| ders[i][j] = self.0.derivative_mn(i, j, u, v)));
+            (0..=m)
+                .for_each(|i| (0..=n).for_each(|j| ders[i][j] = self.0.derivative_mn(i, j, u, v)));
             let ders = std::array::from_fn::<_, 8, _>(|i| &ders[i][..=n]);
             multi_rat_der(&ders[..=m])
         } else {
@@ -585,7 +586,11 @@ impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParametricSurfa
     }
     #[inline(always)]
     fn derivative_uu(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
-        rat_der(&[self.0.evaluate(u, v), self.0.derivative_u(u, v), self.0.derivative_uu(u, v)])
+        rat_der(&[
+            self.0.evaluate(u, v),
+            self.0.derivative_u(u, v),
+            self.0.derivative_uu(u, v),
+        ])
     }
     #[inline(always)]
     fn derivative_uv(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
@@ -596,7 +601,11 @@ impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParametricSurfa
     }
     #[inline(always)]
     fn derivative_vv(&self, u: f64, v: f64) -> <V::Point as EuclideanSpace>::Diff {
-        rat_der(&[self.0.evaluate(u, v), self.0.derivative_v(u, v), self.0.derivative_vv(u, v)])
+        rat_der(&[
+            self.0.evaluate(u, v),
+            self.0.derivative_v(u, v),
+            self.0.derivative_vv(u, v),
+        ])
     }
     #[inline(always)]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) { self.parameter_range() }
@@ -865,7 +874,10 @@ fn test_include3d() {
             Vector4::new(1.0, 1.0, 2.0, 1.0),
         ],
     ];
-    let surface = NurbsSurface::new(BsplineSurface::new((knot_vec.clone(), knot_vec), control_points));
+    let surface = NurbsSurface::new(BsplineSurface::new(
+        (knot_vec.clone(), knot_vec),
+        control_points,
+    ));
 
     let knot_vec = KnotVector::from(vec![
         0.0, 0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0, 1.0,

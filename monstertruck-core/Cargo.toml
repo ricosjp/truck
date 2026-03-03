@@ -1,9 +1,9 @@
 [package]
 name = "monstertruck-core"
-version = "0.5.0"
-authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2021"
-description = "Basic structs and traits: importing cgmath, curve and surface traits, tolerance, etc..."
+version = "0.1.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>", "Moritz Moeller <virtualritz@protonmail.com>"]
+edition = "2024"
+description = "Core types and traits for linear algebra, curves, surfaces, and tolerances"
 homepage = "https://github.com/virtualritz/truck"
 repository = "https://github.com/virtualritz/truck"
 license = "Apache-2.0"
@@ -12,8 +12,8 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
 [dependencies]
-cgmath = { version = "0.18.0", features = ["serde"] }
-matext4cgmath = "0.1.0"
+cgmath = { workspace = true }
+matext4cgmath = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true }
 

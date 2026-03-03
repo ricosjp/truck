@@ -6,12 +6,12 @@
 //! - Enter "P" on the keyboard to switch between parallel projection and perspective projection of the camera.
 //! - Enter "L" on the keyboard to switch the point light source/uniform light source of the light.
 
+use monstertruck_gpu::*;
+use monstertruck_meshing::prelude::*;
+use monstertruck_render::*;
 use std::f64::consts::PI;
 use std::io::Read;
 use std::sync::Arc;
-use monstertruck_meshing::prelude::*;
-use monstertruck_platform::*;
-use monstertruck_render::*;
 use winit::{dpi::*, event::*, keyboard::*};
 mod app;
 use app::*;

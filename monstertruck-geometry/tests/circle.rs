@@ -1,6 +1,6 @@
+use monstertruck_geometry::prelude::*;
 use proptest::prelude::*;
 use std::f64::consts::PI;
-use monstertruck_geometry::prelude::*;
 
 proptest! {
     #[test]

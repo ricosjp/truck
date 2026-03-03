@@ -1,6 +1,6 @@
-use proptest::prelude::*;
 use monstertruck_geometry::prelude::*;
 use monstertruck_traits::polynomial::*;
+use proptest::prelude::*;
 
 fn exec_pcurve_derivation(
     curve_coef: &[[f64; 2]],

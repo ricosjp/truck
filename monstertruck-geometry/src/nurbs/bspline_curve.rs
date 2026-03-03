@@ -346,8 +346,8 @@ where P: ControlPoint<f64> + MetricSpace<Metric = f64> + HashGen<f64>
                 .collect::<Vec<_>>();
             let bsp = Self::try_interpolate(knot_vec, parameter_points).ok()?;
             let is_approx = (0..len).all(|i| {
-                let gen = *bsp.control_point(i);
-                let rat = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
+                let seed = *bsp.control_point(i);
+                let rat = 0.5 + (0.2 * HashGen::hash1(seed) - 0.1);
                 let t = range.0 + (range.1 - range.0) * rat;
                 curve.subs(t).distance2(bsp.subs(t)) < tol * tol
             });
@@ -1297,8 +1297,8 @@ where
         C: ParametricCurve<Point = P, Vector = <P as EuclideanSpace>::Diff>,
     {
         let bezier = Self::cubic_bezier_interpolation(ends.0, ends.1, enders.0, enders.1, range);
-        let gen = ends.0.midpoint(ends.1);
-        let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
+        let seed = ends.0.midpoint(ends.1);
+        let p = 0.5 + (0.2 * HashGen::hash1(seed) - 0.1);
         let t = range.0 * (1.0 - p) + range.1 * p;
         let ders0 = bezier.ders(1, t);
         let ders1 = curve.ders(1, t);

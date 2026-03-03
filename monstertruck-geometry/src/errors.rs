@@ -213,7 +213,9 @@ the number of control points: {1}"
     #[error("The T-mesh is malformed and should no longer be used.")]
     TmeshMalformedMesh,
     /// A knot could not be inserted without violating Rule 3.
-    #[error("A knot could not be inserted into the mesh at the desired location without violating Rule 3.")]
+    #[error(
+        "A knot could not be inserted into the mesh at the desired location without violating Rule 3."
+    )]
     TmeshKnotVectorsNotEqual,
     /// A control point with the same knot coordinates already exists.
     #[error("A control point with the same knot coordinates already exists.")]
@@ -240,7 +242,9 @@ the number of control points: {1}"
     #[error("A T-NURCC face must have at least two points and one edge defining it.")]
     TnurccMalformedFace,
     /// Automatically connecting two T-NURCC edges would result in a bad topological state.
-    #[error("Automatically connecting the two edges {0} and {1} would result in a bad topological state.")]
+    #[error(
+        "Automatically connecting the two edges {0} and {1} would result in a bad topological state."
+    )]
     TnurccBadConnectionConditions(usize, usize),
     /// Missing face in T-NURCC constructor.
     #[error("Missing face in T-NURCC constructor.")]

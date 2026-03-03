@@ -1,6 +1,6 @@
 mod common;
 use common::Plane;
-use monstertruck_platform::*;
+use monstertruck_gpu::*;
 use wgpu::*;
 
 const PICTURE_WIDTH: u32 = 256;
@@ -36,14 +36,14 @@ fn exec_math_util_test(backend: Backends, out_dir: &str) {
         shader: &shader,
         vs_entpt: "vs_main",
         fs_entpt: "fs_main",
-        id: RenderId::gen(),
+        id: RenderId::generate(),
     };
     let buffer1 = common::render_one(&mut scene, &plane);
     let plane = Plane {
         shader: &shader,
         vs_entpt: "vs_main",
         fs_entpt: "fs_main_anti",
-        id: RenderId::gen(),
+        id: RenderId::generate(),
     };
     let buffer2 = common::render_one(&mut scene, &plane);
     save_buffer(out_dir.clone() + "unicolor.png", &buffer0);

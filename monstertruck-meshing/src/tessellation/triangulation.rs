@@ -1,8 +1,8 @@
 #![allow(clippy::many_single_char_names)]
 
 use super::*;
-use crate::filters::{NormalFilters, StructuringFilter};
 use crate::Point2;
+use crate::filters::{NormalFilters, StructuringFilter};
 use array_macro::array;
 use handles::FixedVertexHandle;
 use itertools::Itertools;
@@ -190,16 +190,14 @@ where
 
         // Fast path: untrimmed face with bounded surface domain.
         let is_untrimmed = boundaries.iter().all(|wire| wire.is_empty());
-        if is_untrimmed {
-            if let (Some(urange), Some(vrange)) = surface.try_range_tuple() {
-                let polygon =
-                    untrimmed_tessellation(surface, (urange, vrange), tolerance, quad_config.mode);
-                return CompressedFace {
-                    boundaries,
-                    orientation: face.orientation,
-                    surface: Some(polygon),
-                };
-            }
+        if is_untrimmed && let (Some(urange), Some(vrange)) = surface.try_range_tuple() {
+            let polygon =
+                untrimmed_tessellation(surface, (urange, vrange), tolerance, quad_config.mode);
+            return CompressedFace {
+                boundaries,
+                orientation: face.orientation,
+                surface: Some(polygon),
+            };
         }
 
         let create_edge = |edge_idx: &CompressedEdgeIndex| match edge_idx.orientation {
@@ -546,11 +544,12 @@ impl PolyBoundary {
                         normalize_range(&mut curve0, 0, urange);
                         normalize_range(&mut curve1, 0, urange);
                     }
-                } else if !p0.y.near(&p1.y) && !q0.y.near(&q1.y) {
-                    if let (_, Some(vrange)) = surface.try_range_tuple() {
-                        normalize_range(&mut curve0, 1, vrange);
-                        normalize_range(&mut curve1, 1, vrange);
-                    }
+                } else if !p0.y.near(&p1.y)
+                    && !q0.y.near(&q1.y)
+                    && let (_, Some(vrange)) = surface.try_range_tuple()
+                {
+                    normalize_range(&mut curve0, 1, vrange);
+                    normalize_range(&mut curve1, 1, vrange);
                 }
                 let ((p0, p1), (q0, q1)) = (end_pts(&curve0), end_pts(&curve1));
                 let vec0 = polyline_on_surface(surface, p1, q0, tolerance, &mut point_cache);
@@ -559,20 +558,20 @@ impl PolyBoundary {
             }
             _ => {}
         }
-        if !closed.iter().any(|curve| loop_orientation(curve)) {
-            if let (Some((u0, u1)), Some((v0, v1))) = surface.try_range_tuple() {
-                let p = [
-                    surface_point_with_cache(surface, Point2::new(u0, v0), &mut point_cache),
-                    surface_point_with_cache(surface, Point2::new(u1, v0), &mut point_cache),
-                    surface_point_with_cache(surface, Point2::new(u1, v1), &mut point_cache),
-                    surface_point_with_cache(surface, Point2::new(u0, v1), &mut point_cache),
-                ];
-                let vec0 = polyline_on_surface(surface, p[0], p[1], tolerance, &mut point_cache);
-                let vec1 = polyline_on_surface(surface, p[1], p[2], tolerance, &mut point_cache);
-                let vec2 = polyline_on_surface(surface, p[2], p[3], tolerance, &mut point_cache);
-                let vec3 = polyline_on_surface(surface, p[3], p[0], tolerance, &mut point_cache);
-                closed.push(connect_edges([vec0, vec1, vec2, vec3]));
-            }
+        if !closed.iter().any(|curve| loop_orientation(curve))
+            && let (Some((u0, u1)), Some((v0, v1))) = surface.try_range_tuple()
+        {
+            let p = [
+                surface_point_with_cache(surface, Point2::new(u0, v0), &mut point_cache),
+                surface_point_with_cache(surface, Point2::new(u1, v0), &mut point_cache),
+                surface_point_with_cache(surface, Point2::new(u1, v1), &mut point_cache),
+                surface_point_with_cache(surface, Point2::new(u0, v1), &mut point_cache),
+            ];
+            let vec0 = polyline_on_surface(surface, p[0], p[1], tolerance, &mut point_cache);
+            let vec1 = polyline_on_surface(surface, p[1], p[2], tolerance, &mut point_cache);
+            let vec2 = polyline_on_surface(surface, p[2], p[3], tolerance, &mut point_cache);
+            let vec3 = polyline_on_surface(surface, p[3], p[0], tolerance, &mut point_cache);
+            closed.push(connect_edges([vec0, vec1, vec2, vec3]));
         }
         let (mut uv_min, mut uv_max) = (
             Point2::new(f64::INFINITY, f64::INFINITY),
@@ -1301,23 +1300,23 @@ fn insert_surface(
     insert_res.windows(2).for_each(|vec| {
         vec[0].windows(2).zip(&vec[1]).for_each(|(a, z)| {
             if let Some(x) = a[0] {
-                if let Some(y) = a[1] {
-                    if triangulation.can_add_constraint(x, y) {
-                        triangulation.add_constraint(x, y);
-                    }
+                if let Some(y) = a[1]
+                    && triangulation.can_add_constraint(x, y)
+                {
+                    triangulation.add_constraint(x, y);
                 }
-                if let Some(z) = z {
-                    if triangulation.can_add_constraint(x, *z) {
-                        triangulation.add_constraint(x, *z);
-                    }
+                if let Some(z) = z
+                    && triangulation.can_add_constraint(x, *z)
+                {
+                    triangulation.add_constraint(x, *z);
                 }
             }
         });
         let idx = vec[0].len() - 1;
-        if let (Some(x), Some(y)) = (vec[0][idx], vec[1][idx]) {
-            if triangulation.can_add_constraint(x, y) {
-                triangulation.add_constraint(x, y);
-            }
+        if let (Some(x), Some(y)) = (vec[0][idx], vec[1][idx])
+            && triangulation.can_add_constraint(x, y)
+        {
+            triangulation.add_constraint(x, y);
         }
     });
 }
@@ -1405,8 +1404,8 @@ fn polyline_on_surface(
 #[ignore]
 #[cfg(not(target_arch = "wasm32"))]
 fn par_bench() {
-    use std::time::Instant;
     use monstertruck_modeling::*;
+    use std::time::Instant;
     const JSON: &str = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../resources/shape/bottle.json"

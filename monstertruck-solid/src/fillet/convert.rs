@@ -6,56 +6,46 @@ use super::types::{self, Curve, ParameterCurveLinear};
 
 type InternalShell = types::Shell;
 
-/// Surface types that can be converted to/from `NurbsSurface<Vector4>` for filleting.
-pub trait FilletableSurface: Clone {
-    /// Convert to the internal NURBS representation. Returns `None` if unsupported.
-    fn to_nurbs_surface(&self) -> Option<NurbsSurface<Vector4>>;
-    /// Wrap a NURBS surface back into this type.
-    fn from_nurbs_surface(surface: NurbsSurface<Vector4>) -> Self;
+/// Intersection curve type used internally by fillet operations.
+pub type FilletIntersectionCurve =
+    IntersectionCurve<ParameterCurveLinear, Box<NurbsSurface<Vector4>>, Box<NurbsSurface<Vector4>>>;
+
+/// Surface types that can participate in fillet operations.
+///
+/// Automatically implemented for any type satisfying the bounds.
+pub trait FilletableSurface:
+    Clone + TryInto<NurbsSurface<Vector4>> + From<NurbsSurface<Vector4>> {
 }
 
-/// Curve types that can be converted to/from fillet-internal curve types.
-pub trait FilletableCurve: Clone {
-    /// Convert to a NURBS curve. Returns `None` if unsupported.
-    fn to_nurbs_curve(&self) -> Option<NurbsCurve<Vector4>>;
-    /// Wrap a NURBS curve back into this type.
-    fn from_nurbs_curve(c: NurbsCurve<Vector4>) -> Self;
-    /// Convert from a ParameterCurve (line on NURBS surface).
-    fn from_pcurve(c: ParameterCurveLinear) -> Self;
-    /// Convert from an intersection curve.
-    fn from_intersection_curve(
-        c: IntersectionCurve<
-            ParameterCurveLinear,
-            Box<NurbsSurface<Vector4>>,
-            Box<NurbsSurface<Vector4>>,
-        >,
-    ) -> Self;
+impl<T> FilletableSurface for T where T: Clone + TryInto<NurbsSurface<Vector4>> + From<NurbsSurface<Vector4>> {}
+
+/// Curve types that can participate in fillet operations.
+///
+/// Automatically implemented for any type satisfying the bounds.
+pub trait FilletableCurve:
+    Clone
+    + TryInto<NurbsCurve<Vector4>>
+    + From<NurbsCurve<Vector4>>
+    + From<ParameterCurveLinear>
+    + From<FilletIntersectionCurve> {
 }
 
-// Identity impl: NurbsSurface<Vector4> passes through.
-impl FilletableSurface for NurbsSurface<Vector4> {
-    fn to_nurbs_surface(&self) -> Option<NurbsSurface<Vector4>> { Some(self.clone()) }
-    fn from_nurbs_surface(surface: NurbsSurface<Vector4>) -> Self { surface }
+impl<T> FilletableCurve for T where T: Clone
+        + TryInto<NurbsCurve<Vector4>>
+        + From<NurbsCurve<Vector4>>
+        + From<ParameterCurveLinear>
+        + From<FilletIntersectionCurve>
+{
 }
 
-// Identity impl: internal Curve maps each variant directly.
-impl FilletableCurve for Curve {
-    fn to_nurbs_curve(&self) -> Option<NurbsCurve<Vector4>> {
-        match self {
-            Curve::NurbsCurve(c) => Some(c.clone()),
-            _ => None,
+// TryFrom for extracting NurbsCurve from internal Curve type.
+impl TryFrom<Curve> for NurbsCurve<Vector4> {
+    type Error = ();
+    fn try_from(curve: Curve) -> std::result::Result<Self, ()> {
+        match curve {
+            Curve::NurbsCurve(c) => Ok(c),
+            _ => Err(()),
         }
-    }
-    fn from_nurbs_curve(c: NurbsCurve<Vector4>) -> Self { Curve::NurbsCurve(c) }
-    fn from_pcurve(c: ParameterCurveLinear) -> Self { Curve::ParameterCurve(c) }
-    fn from_intersection_curve(
-        c: IntersectionCurve<
-            ParameterCurveLinear,
-            Box<NurbsSurface<Vector4>>,
-            Box<NurbsSurface<Vector4>>,
-        >,
-    ) -> Self {
-        Curve::IntersectionCurve(c)
     }
 }
 
@@ -76,8 +66,8 @@ pub(super) fn convert_shell_in<C: FilletableCurve, S: FilletableSurface>(
     let internal_shell: InternalShell = shell
         .try_mapped(
             |p| Some(*p),
-            |c| c.to_nurbs_curve().map(Curve::NurbsCurve),
-            |s| s.to_nurbs_surface(),
+            |c| c.clone().try_into().ok().map(Curve::NurbsCurve),
+            |s| s.clone().try_into().ok(),
         )
         .ok_or(FilletError::UnsupportedGeometry {
             context: "failed to convert shell curves or surfaces to NURBS",
@@ -112,12 +102,12 @@ pub(super) fn convert_shell_out<C: FilletableCurve, S: FilletableSurface>(
             |p| Some(*p),
             |c| {
                 Some(match c {
-                    Curve::NurbsCurve(nc) => C::from_nurbs_curve(nc.clone()),
-                    Curve::ParameterCurve(pc) => C::from_pcurve(pc.clone()),
-                    Curve::IntersectionCurve(ic) => C::from_intersection_curve(ic.clone()),
+                    Curve::NurbsCurve(nc) => C::from(nc.clone()),
+                    Curve::ParameterCurve(pc) => C::from(pc.clone()),
+                    Curve::IntersectionCurve(ic) => C::from(ic.clone()),
                 })
             },
-            |s| Some(S::from_nurbs_surface(s.clone())),
+            |s| Some(S::from(s.clone())),
         )
         .ok_or(FilletError::UnsupportedGeometry {
             context: "failed to convert internal shell back to external types",

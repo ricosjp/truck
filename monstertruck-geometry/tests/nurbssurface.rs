@@ -1,5 +1,5 @@
-use proptest::prelude::*;
 use monstertruck_geometry::prelude::*;
+use proptest::prelude::*;
 
 #[test]
 fn nurbs_sphere() {
@@ -97,7 +97,10 @@ fn endpoint_test_surface() -> NurbsSurface<Vector4> {
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
-    NurbsSurface::new(BsplineSurface::new((knot_vector_u, knot_vector_v), control_points))
+    NurbsSurface::new(BsplineSurface::new(
+        (knot_vector_u, knot_vector_v),
+        control_points,
+    ))
 }
 
 fn seam_samples() -> impl Iterator<Item = f64> { (0..=20).map(|i| i as f64 / 20.0) }

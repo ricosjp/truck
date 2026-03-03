@@ -311,7 +311,7 @@ impl SurfaceInfo {
 
     fn routine(&mut self, ders: &CurveDers<Vector3>, n: usize) {
         let SurfaceInfo {
-            ders: ref sders,
+            ders: sders,
             uvders,
             tders,
             uderders,
@@ -492,9 +492,9 @@ pub(super) fn v_parameter_division_for_fillet<S>(
                 continue;
             }
             let (u_gen, v_gen) = ((u[0] + u[1]) / 2.0, (v[0] + v[1]) / 2.0);
-            let gen = surface.subs(u_gen, v_gen);
-            let p = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
-            let q = 0.5 + (0.2 * HashGen::hash1(gen) - 0.1);
+            let seed = surface.subs(u_gen, v_gen);
+            let p = 0.5 + (0.2 * HashGen::hash1(seed) - 0.1);
+            let q = 0.5 + (0.2 * HashGen::hash1(seed) - 0.1);
             let u0 = u[0] * (1.0 - p) + u[1] * p;
             let v0 = v[0] * (1.0 - q) + v[1] * q;
             let p0 = surface.subs(u0, v0);

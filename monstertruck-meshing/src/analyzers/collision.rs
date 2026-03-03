@@ -110,13 +110,12 @@ fn colliding_segment_pairs(sort_endpoints: Vec<EndPoint>) -> impl Iterator<Item 
                   }| match r#type {
                 EndPointType::Front => {
                     current[segnum].push(index);
-                    Some(current[1 - segnum].clone().into_iter().map(move |i| {
-                        if segnum == 0 {
-                            (index, i)
-                        } else {
-                            (i, index)
-                        }
-                    }))
+                    Some(
+                        current[1 - segnum]
+                            .clone()
+                            .into_iter()
+                            .map(move |i| if segnum == 0 { (index, i) } else { (i, index) }),
+                    )
                 }
                 EndPointType::Back => {
                     let i = current[segnum]

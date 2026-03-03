@@ -2,8 +2,8 @@
 //!
 //! Generated json file can be visualized by `simple-shape-viewer`, an example of `monstertruck-render`.
 
-use std::f64::consts::PI;
 use monstertruck_modeling::*;
+use std::f64::consts::PI;
 
 fn main() {
     let v0 = builder::vertex(Point3::new(0.0, 0.5, 0.0));

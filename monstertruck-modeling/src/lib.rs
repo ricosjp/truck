@@ -112,13 +112,13 @@ mod sweep;
 mod topo_impls;
 
 #[cfg(feature = "fillet")]
-mod fillet_impls;
+mod fillet_impl;
 
 /// Fillet operations for shell edges.
 ///
 /// Requires the `fillet` feature flag. Re-exports from [`monstertruck_solid`].
 #[cfg(feature = "fillet")]
 pub use monstertruck_solid::{
-    fillet_edges_generic as fillet_edges, FilletError, FilletOptions, FilletProfile,
-    FilletableCurve, FilletableSurface, RadiusSpec,
+    FilletError, FilletIntersectionCurve, FilletOptions, FilletProfile, RadiusSpec,
+    fillet_edges_generic as fillet_edges,
 };

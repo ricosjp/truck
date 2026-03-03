@@ -14,9 +14,9 @@
     unused_qualifications
 )]
 
+use monstertruck_core::bounding_box::Bounded;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, ops::Bound};
-use monstertruck_core::bounding_box::Bounded;
 
 const INCLUDE_CURVE_TRIALS: usize = 100;
 const PRESEARCH_DIVISION: usize = 50;

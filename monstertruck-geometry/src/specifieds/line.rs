@@ -234,7 +234,8 @@ fn line() {
             .unwrap(),
         0.5
     );
-    assert!(line
-        .search_parameter(Point2::new(1.0, 1.0), None, 0)
-        .is_none());
+    assert!(
+        line.search_parameter(Point2::new(1.0, 1.0), None, 0)
+            .is_none()
+    );
 }

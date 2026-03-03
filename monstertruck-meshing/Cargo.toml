@@ -1,8 +1,9 @@
 [package]
 name = "monstertruck-meshing"
-version = "0.4.0"
-edition = "2021"
-description = "Mesh algorigthms, include tessellations of the shape."
+version = "0.1.0"
+authors = ["Moritz Moeller <virtualritz@protonmail.com>"]
+edition = "2024"
+description = "Tessellation and meshing algorithms for B-rep shapes"
 homepage = "https://github.com/virtualritz/truck"
 repository = "https://github.com/virtualritz/truck"
 license = "Apache-2.0"
@@ -22,7 +23,7 @@ array-macro = { workspace = true }
 derive_more = { workspace = true }
 itertools = { workspace = true }
 rustc-hash = { workspace = true }
-spade = { version = "2.15.0", optional = true }
+spade = { workspace = true, optional = true }
 monstertruck-core = { workspace = true }
 monstertruck-geometry = { workspace = true }
 monstertruck-mesh = { workspace = true }
@@ -30,7 +31,7 @@ monstertruck-topology = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rayon = { workspace = true }
-vtkio = { version = "0.6.3", optional = true }
+vtkio = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

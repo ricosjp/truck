@@ -1,9 +1,9 @@
 [package]
 name = "monstertruck-geometry"
-version = "0.5.0"
-authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2021"
-description = "Geometrical structs: knot vector, B-spline, NURBS, and T-spline"
+version = "0.1.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>", "Moritz Moeller <virtualritz@protonmail.com>"]
+edition = "2024"
+description = "Geometric primitives: knot vectors, B-splines, NURBS, and T-splines"
 homepage = "https://github.com/virtualritz/truck"
 repository = "https://github.com/virtualritz/truck"
 license = "Apache-2.0"

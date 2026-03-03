@@ -8,7 +8,7 @@ impl PolygonInstance {
             polygon: self.polygon.clone(),
             state: self.state.clone(),
             shaders: self.shaders.clone(),
-            id: RenderId::gen(),
+            id: RenderId::generate(),
         }
     }
     /// Returns a reference to the instance descriptor.
@@ -26,12 +26,11 @@ impl PolygonInstance {
 
     #[inline(always)]
     fn non_textured_bdl(&self, device: &Device) -> BindGroupLayout {
-        bind_group_util::create_bind_group_layout(device, {
-            &[
-                PolygonState::matrix_bgl_entry(),
-                PolygonState::material_bgl_entry(),
-            ]
-        })
+        let entries = [
+            PolygonState::matrix_bgl_entry(),
+            PolygonState::material_bgl_entry(),
+        ];
+        bind_group_util::create_bind_group_layout(device, &entries)
     }
 
     #[inline(always)]
@@ -186,7 +185,7 @@ impl Rendered for PolygonInstance {
                 alpha_to_coverage_enabled: sample_count > 1,
             },
             label: None,
-            multiview: None,
+            multiview_mask: None,
             cache: None,
         });
         Arc::new(pipeline)

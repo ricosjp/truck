@@ -1,9 +1,9 @@
 #![cfg(not(target_arch = "wasm32"))]
 
+use monstertruck_core::{bounding_box::*, cgmath64::*, prop_assert_near, tolerance::*};
+use monstertruck_gpu::*;
 use proptest::prelude::*;
 use std::f64::consts::PI;
-use monstertruck_core::{bounding_box::*, cgmath64::*, prop_assert_near, tolerance::*};
-use monstertruck_platform::*;
 
 proptest! {
     #[test]

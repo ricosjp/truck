@@ -948,10 +948,10 @@ where P: ControlPoint<f64> + Debug + Clone
                     TnurccFaceSide::Left => edge.read().face_right.as_ref().map(Arc::clone),
                     TnurccFaceSide::Right => edge.read().face_left.as_ref().map(Arc::clone),
                 };
-                if let Some(f) = other {
-                    if !visited_faces.contains(&f.read().index) {
-                        queue.push_back(f);
-                    }
+                if let Some(f) = other
+                    && !visited_faces.contains(&f.read().index)
+                {
+                    queue.push_back(f);
                 }
             }
         }
@@ -1025,10 +1025,10 @@ where P: ControlPoint<f64> + Debug + Clone
                         TnurccFaceSide::Left => edge.read().face_right.as_ref().map(Arc::clone),
                         TnurccFaceSide::Right => edge.read().face_left.as_ref().map(Arc::clone),
                     };
-                    if let Some(f) = other {
-                        if !visited_faces.contains(&f.read().index) {
-                            queue.push_back(f);
-                        }
+                    if let Some(f) = other
+                        && !visited_faces.contains(&f.read().index)
+                    {
+                        queue.push_back(f);
                     }
                 }
             }
@@ -1172,13 +1172,9 @@ where P: ControlPoint<f64> + Debug + Clone
                 let weight = [dir.flip(), dir.clockwise(), dir.anti_clockwise()]
                     .iter()
                     .filter_map(|&d| {
-                        borrow.connections[d as usize].as_ref().and_then(|c| {
-                            if c.0.is_some() {
-                                Some(c.1)
-                            } else {
-                                None
-                            }
-                        })
+                        borrow.connections[d as usize]
+                            .as_ref()
+                            .and_then(|c| if c.0.is_some() { Some(c.1) } else { None })
                     })
                     .next()
                     .unwrap_or(if dir.horizontal() {
@@ -1557,11 +1553,13 @@ mod tests {
         assert_eq!(
             surface.control_points.len(),
             (8 + 12 + 6),
-            "Number of points after subdivide should be the sum of points, edges, and faces prior to subdividing");
+            "Number of points after subdivide should be the sum of points, edges, and faces prior to subdividing"
+        );
         assert_eq!(
             surface.edges.len(),
             (12 * 2 + 4 * 6),
-            "Number of edges after subdivide should be the sum of twice the count of edges prior subdividing and the sum of the number of edges on each face for each face");
+            "Number of edges after subdivide should be the sum of twice the count of edges prior subdividing and the sum of the number of edges on each face for each face"
+        );
     }
 
     #[test]

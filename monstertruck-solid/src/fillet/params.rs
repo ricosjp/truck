@@ -1,5 +1,5 @@
-use std::num::NonZeroUsize;
 use monstertruck_geometry::prelude::*;
+use std::num::NonZeroUsize;
 
 /// Profile shape for fillet operations.
 #[derive(Debug, Clone, Default)]

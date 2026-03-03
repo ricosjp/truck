@@ -81,12 +81,12 @@
     unused_qualifications
 )]
 
+use monstertruck_core::{id::Id, tolerance::*};
+use monstertruck_traits::*;
 use parking_lot::Mutex;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
-use monstertruck_core::{id::Id, tolerance::*};
-use monstertruck_traits::*;
 
 #[cfg(feature = "rclite")]
 use rclite::Arc;

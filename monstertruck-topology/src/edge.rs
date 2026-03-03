@@ -530,7 +530,9 @@ impl<P, C> Edge<P, C> {
 #[derive(Clone, Debug, Error)]
 pub enum ConcatError<P: Debug> {
     /// Failed to concat edges since the end point of the first curve is different from the start point of the second curve.
-    #[error("The end point {0:?} of the first curve is different from the start point {1:?} of the second curve.")]
+    #[error(
+        "The end point {0:?} of the first curve is different from the start point {1:?} of the second curve."
+    )]
     DisconnectedVertex(Vertex<P>, Vertex<P>),
     #[error("The end vertices are the same vertex {0:?}.")]
     SameVertex(Vertex<P>),

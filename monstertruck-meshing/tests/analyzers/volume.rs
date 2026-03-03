@@ -1,8 +1,8 @@
 use super::*;
 use array_macro::array;
+use monstertruck_modeling::*;
 use proptest::prelude::*;
 use std::f64::consts::PI;
-use monstertruck_modeling::*;
 
 /// create uniform unit vector from [0.0f64..1.0f64; 2]
 fn dir_from_array(arr: [f64; 2]) -> Vector3 {

@@ -1,76 +1,23 @@
-# monstertruck-modeling
+# `monstertruck-modeling`
 
-[![Crates.io](https://img.shields.io/crates/v/monstertruck-modeling.svg)](https://crates.io/crates/monstertruck-modeling) [![Docs.rs](https://docs.rs/monstertruck-modeling/badge.svg)](https://docs.rs/monstertruck-modeling)
+Integrated geometric and topological modeling algorithms.
 
-Integrated modeling algorithms by geometry and topology
+> Forked from [`truck-modeling`](https://crates.io/crates/truck-modeling) v0.6.0 by [ricosjp](https://github.com/ricosjp/truck).
 
-## Sample Codes
+## Quick Start
 
-### bottle
+```rust
+use monstertruck_modeling::*;
 
-Modeling a bottle.
+// Build a unit cube by three successive extrusions: point → edge → face → solid
+let v = builder::vertex(Point3::new(-0.5, -0.5, -0.5));
+let e = builder::extrude(&v, Vector3::unit_x());
+let f = builder::extrude(&e, Vector3::unit_y());
+let cube: Solid = builder::extrude(&f, Vector3::unit_z());
 
-This is a benchmark for comparison with Open CASCADE Technology.
-We want to reproduce the bottle made in the [OCCT tutorial].
-When the `fillet` feature is enabled, the body edges are filleted just like
-the OCCT tutorial (`BRepFilletAPI_MakeFillet` at radius = thickness / 12).
-
-```bash
-cargo run -p monstertruck-modeling --features fillet --example bottle
+assert_eq!(cube.boundaries()[0].len(), 6); // six faces
 ```
 
-Generated json file can be visualized by `simple-shape-viewer`, an example of `monstertruck-render`.
+## License
 
-[OCCT tutorial]: https://dev.opencascade.org/doc/overview/html/occt__tutorial.html
-
-### cone
-
-Modeling cone.
-
-Generated json file can be visualized by `simple-shape-viewer`, an example of `monstertruck-render`.
-
-### cube-in-cube
-
-An example of the solid with several boundaries
-
-### cube
-
-Modeling a unit cube by three sweeps.
-
-Generated json file can be visualized by `simple-shape-viewer`, an example of `monstertruck-render`.
-
-### cylinder
-
-Modeling a cylinder by two sweeps.
-
-Generated json file can be visualized by `simple-shape-viewer`, an example of `monstertruck-render`.
-
-### punched-cube
-
-Modeling a unit cube with a hole through it.
-
-Generated json file can be visualized by `simple-shape-viewer`, an example of `monstertruck-render`.
-
-### sphere
-
-Modeling a sphere
-
-Generated json file can be visualized by `simple-shape-viewer`, an example of `monstertruck-render`.
-
-### torus-punched-cube
-
-A cube punched by a torus.
-
-Generated json file can be visualized by `simple-shape-viewer`, an example of `monstertruck-render`.
-
-### torus
-
-Modeling a torus by two sweeps.
-
-Generated json file can be visualized by `simple-shape-viewer`, an example of `monstertruck-render`.
-
-### tsudumi
-
-Modeling a one-leaf hyperboloid.
-
-Generated json file can be visualized by `simple-shape-viewer`, an example of `monstertruck-render`.
+Apache License 2.0

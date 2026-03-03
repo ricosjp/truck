@@ -7,7 +7,7 @@ static MAXID: AtomicUsize = AtomicUsize::new(0);
 impl RenderId {
     /// Generate the unique `RenderId`.
     #[inline(always)]
-    pub fn gen() -> Self { RenderId(MAXID.fetch_add(1, Ordering::SeqCst)) }
+    pub fn generate() -> Self { RenderId(MAXID.fetch_add(1, Ordering::SeqCst)) }
 }
 
 async fn init_default_device(
@@ -639,8 +639,7 @@ impl Scene {
                         &self.bind_group_layout,
                         &render_object.bind_group_layout,
                     ],
-                    push_constant_ranges: &[],
-                    label: None,
+                    ..Default::default()
                 });
                 render_object.pipeline =
                     object.pipeline(handler, &pipeline_layout, &self.scene_desc);

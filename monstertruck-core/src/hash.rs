@@ -3,13 +3,13 @@ use cgmath::num_traits::{Float, FromPrimitive};
 /// Deterministic hash generator
 pub trait HashGen<S> {
     /// deterministic hash, output 1-dim
-    fn hash1(gen: Self) -> S;
+    fn hash1(seed: Self) -> S;
     /// deterministic hash, output 2-dim
-    fn hash2(gen: Self) -> [S; 2];
+    fn hash2(seed: Self) -> [S; 2];
     /// deterministic hash, output 3-dim
-    fn hash3(gen: Self) -> [S; 3];
+    fn hash3(seed: Self) -> [S; 3];
     /// deterministic hash, output 4-dim
-    fn hash4(gen: Self) -> [S; 4];
+    fn hash4(seed: Self) -> [S; 4];
 }
 
 impl<S: Float + FromPrimitive> HashGen<S> for S {
@@ -331,19 +331,19 @@ impl<S: Float + FromPrimitive> HashGen<S> for [S; 4] {
 }
 
 impl<S: Float + FromPrimitive> HashGen<S> for [S; 1] {
-    fn hash1(gen: Self) -> S { S::hash1(gen[0]) }
-    fn hash2(gen: Self) -> [S; 2] { S::hash2(gen[0]) }
-    fn hash3(gen: Self) -> [S; 3] { S::hash3(gen[0]) }
-    fn hash4(gen: Self) -> [S; 4] { S::hash4(gen[0]) }
+    fn hash1(seed: Self) -> S { S::hash1(seed[0]) }
+    fn hash2(seed: Self) -> [S; 2] { S::hash2(seed[0]) }
+    fn hash3(seed: Self) -> [S; 3] { S::hash3(seed[0]) }
+    fn hash4(seed: Self) -> [S; 4] { S::hash4(seed[0]) }
 }
 
 macro_rules! derive_hashgen {
     ($from: ty, $into: ty) => {
         impl<S: Float + FromPrimitive> HashGen<S> for $from {
-            fn hash1(gen: Self) -> S { <$into>::hash1(gen.into()) }
-            fn hash2(gen: Self) -> [S; 2] { <$into>::hash2(gen.into()) }
-            fn hash3(gen: Self) -> [S; 3] { <$into>::hash3(gen.into()) }
-            fn hash4(gen: Self) -> [S; 4] { <$into>::hash4(gen.into()) }
+            fn hash1(seed: Self) -> S { <$into>::hash1(seed.into()) }
+            fn hash2(seed: Self) -> [S; 2] { <$into>::hash2(seed.into()) }
+            fn hash3(seed: Self) -> [S; 3] { <$into>::hash3(seed.into()) }
+            fn hash4(seed: Self) -> [S; 4] { <$into>::hash4(seed.into()) }
         }
     };
 }
@@ -358,8 +358,8 @@ derive_hashgen!(Vector3<S>, [S; 3]);
 derive_hashgen!(Vector4<S>, [S; 4]);
 
 /// Take one random unit vector
-pub fn take_one_unit<G: HashGen<f64>>(gen: G) -> Vector3<f64> {
-    let u = HashGen::hash2(gen);
+pub fn take_one_unit<G: HashGen<f64>>(seed: G) -> Vector3<f64> {
+    let u = HashGen::hash2(seed);
     let theta = 2.0 * std::f64::consts::PI * u[0];
     let z = 2.0 * u[1] - 1.0;
     let r = f64::sqrt(1.0 - z * z);

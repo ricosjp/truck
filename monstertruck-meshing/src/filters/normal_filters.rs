@@ -196,10 +196,10 @@ impl NormalFilters for PolygonMesh {
             .iter_mut()
             .for_each(move |normal| *normal = normal.normalize());
         faces.face_iter_mut().flatten().for_each(|v| {
-            if let Some(idx) = v.nor {
-                if !normals[idx].magnitude2().near(&1.0) {
-                    v.nor = None;
-                }
+            if let Some(idx) = v.nor
+                && !normals[idx].magnitude2().near(&1.0)
+            {
+                v.nor = None;
             }
         });
         drop(mesh);

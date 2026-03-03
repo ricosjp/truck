@@ -1,7 +1,7 @@
-use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use monstertruck_geometry::prelude::*;
 use monstertruck_meshing::rexport_polymesh::*;
 use monstertruck_topology::compress::*;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 type Edge<C> = CompressedEdge<C>;
 type EdgeIndex = CompressedEdgeIndex;
@@ -21,12 +21,12 @@ use split_closed_faces::split_closed_faces;
 /// Splits closed edges and faces
 ///
 /// # Details
-/// The topology of the shapes handled by truck has the following rules
+/// The topology of the shapes handled by monstertruck has the following rules
 /// - The endpoints of the edges must be different.
 /// - The boundaries of the faces must be a simple wire.
 ///
 /// Shapes created in other CAD systems do not necessarily follow these rules.
-/// When such shapes are handled by truck, this method is applied at the stage
+/// When such shapes are handled by monstertruck, this method is applied at the stage
 /// of `CompressedShell` and `CompressedSolid`, which are intermediate forms.
 ///
 /// # Remarks

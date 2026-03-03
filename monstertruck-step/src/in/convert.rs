@@ -6,7 +6,7 @@ impl Table {
         edge: &PlaceHolder<EdgeAnyHolder>,
     ) -> Option<(u64, EdgeCurveHolder)> {
         use PlaceHolder::Ref;
-        let Ref(Name::Entity(ref idx)) = edge else {
+        let Ref(Name::Entity(idx)) = edge else {
             return None;
         };
         self.oriented_edge
@@ -40,15 +40,15 @@ impl Table {
         use PlaceHolder::Ref;
         let mut vidx_map = HashMap::<u64, usize>::new();
         let vertex_to_point = |v: PlaceHolder<VertexPointHolder>| {
-            if let Ref(Name::Entity(ref idx)) = v {
-                if !vidx_map.contains_key(idx) {
-                    let len = vidx_map.len();
-                    vidx_map.insert(*idx, len);
-                    let p = EntityTable::<VertexPointHolder>::get_owned(self, *idx)
-                        .map_err(|e| eprintln!("{e}"))
-                        .ok()?;
-                    return Some(Point3::from(&p.vertex_geometry));
-                }
+            if let Ref(Name::Entity(idx)) = v
+                && !vidx_map.contains_key(&idx)
+            {
+                let len = vidx_map.len();
+                vidx_map.insert(idx, len);
+                let p = EntityTable::<VertexPointHolder>::get_owned(self, idx)
+                    .map_err(|e| eprintln!("{e}"))
+                    .ok()?;
+                return Some(Point3::from(&p.vertex_geometry));
             }
             None
         };
@@ -121,17 +121,17 @@ impl Table {
             .edge_list
             .into_iter()
             .filter_map(|edge| {
-                let Ref(Name::Entity(ref idx)) = edge else {
+                let Ref(Name::Entity(idx)) = edge else {
                     return None;
                 };
-                let edge_idx = if let Some(oriented_edge) = self.oriented_edge.get(idx) {
+                let edge_idx = if let Some(oriented_edge) = self.oriented_edge.get(&idx) {
                     CompressedEdgeIndex {
                         index: *eidx_map.get(&oriented_edge.edge_element_idx()?)?,
                         orientation: oriented_edge.orientation == ori,
                     }
                 } else {
                     CompressedEdgeIndex {
-                        index: *eidx_map.get(idx)?,
+                        index: *eidx_map.get(&idx)?,
                         orientation: ori,
                     }
                 };
@@ -179,7 +179,7 @@ impl Table {
             .collect()
     }
 
-    /// Constructs `CompressedShell` of `truck` from `Shell` in STEP file
+    /// Constructs `CompressedShell` from `Shell` in STEP file
     /// # Example
     /// ```
     /// use monstertruck_step::r#in::{*, step_geometry::*};
@@ -204,7 +204,7 @@ impl Table {
         shell.to_compressed_shell(self)
     }
 
-    /// Constructs `CompressedShell`s of `truck` from `ShellBasedSurfaceModel` in STEP file
+    /// Constructs `CompressedShell`s from `ShellBasedSurfaceModel` in STEP file
     pub fn to_compressed_shells(
         &self,
         shells: &ShellBasedSurfaceModelHolder,
@@ -225,7 +225,7 @@ impl Table {
         Ok(res)
     }
 
-    /// Constructs `CompressedSolid` of `truck` from `ManifoldSolidBrep` in STEP file
+    /// Constructs `CompressedSolid` from `ManifoldSolidBrep` in STEP file
     /// # Example
     /// ```
     /// use monstertruck_step::r#in::{*, step_geometry::*};
@@ -241,7 +241,7 @@ impl Table {
     /// let step_solid = table.manifold_solid_brep.values().next().unwrap();
     /// // convert STEP shell to `CompressedSolid`
     /// let csolid = table.to_compressed_solid(step_solid).unwrap();
-    /// // Convert to truck `Solid`
+    /// // Convert to `Solid`
     /// let solid = Solid::extract(csolid).unwrap();
     /// // The cube has 6 faces!
     /// assert_eq!(solid.boundaries()[0].len(), 6);

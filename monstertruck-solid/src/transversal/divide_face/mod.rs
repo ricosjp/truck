@@ -2,10 +2,10 @@
 
 use super::faces_classification::FacesClassification;
 use super::loops_store::*;
-use rustc_hash::FxHashMap as HashMap;
-use std::ops::Deref;
 use monstertruck_meshing::prelude::*;
 use monstertruck_topology::*;
+use rustc_hash::FxHashMap as HashMap;
+use std::ops::Deref;
 
 fn create_parameter_boundary<P, C, S>(
     face: &Face<P, C, S>,

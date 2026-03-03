@@ -1,8 +1,8 @@
-use std::collections::HashSet;
-use std::f64::consts::PI;
 use monstertruck_geometry::prelude::*;
 use monstertruck_modeling::topo_traits::*;
 use monstertruck_topology::{shell::ShellCondition, *};
+use std::collections::HashSet;
+use std::f64::consts::PI;
 
 type Line = monstertruck_geometry::prelude::Line<Point3>;
 type Surface = BsplineSurface<Point3>;

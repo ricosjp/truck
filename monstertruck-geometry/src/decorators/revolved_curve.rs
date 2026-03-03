@@ -1,6 +1,6 @@
 use super::*;
-use std::f64::consts::PI;
 use monstertruck_traits::ParametricCurve as PcurveTrait;
+use std::f64::consts::PI;
 
 impl Revolution {
     fn new(origin: Point3, axis: Vector3) -> Self {
@@ -190,8 +190,11 @@ impl<C: ParametricCurve3D> PcurveTrait for ProjectedCurve<C> {
     }
     #[inline(always)]
     fn derivative_2(&self, t: f64) -> Self::Vector {
-        self.revolution
-            .proj_vector2(self.curve.evaluate(t), self.curve.derivative(t), self.curve.derivative_2(t))
+        self.revolution.proj_vector2(
+            self.curve.evaluate(t),
+            self.curve.derivative(t),
+            self.curve.derivative_2(t),
+        )
     }
     #[inline(always)]
     fn parameter_range(&self) -> ParameterRange { self.curve.parameter_range() }

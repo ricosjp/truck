@@ -3,8 +3,8 @@
 //! - Input: sample.obj
 //! - Output: planes_parts_#.obj, others_parts_#.obj
 
-use monstertruck_meshing::{analyzers::*, filters::*};
 use monstertruck_mesh::*;
+use monstertruck_meshing::{analyzers::*, filters::*};
 
 fn main() {
     const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/obj/sample.obj",);

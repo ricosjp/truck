@@ -4,11 +4,11 @@
 //! cargo run -p monstertruck-meshing --example bench-tessellation
 //! ```
 
-use std::time::Instant;
-use monstertruck_meshing::{analyzers::*, filters::*, tessellation::*};
-use monstertruck_modeling::{geometry::*, Point3};
 use monstertruck_mesh::TOLERANCE;
+use monstertruck_meshing::{analyzers::*, filters::*, tessellation::*};
+use monstertruck_modeling::{Point3, geometry::*};
 use monstertruck_topology::compress::*;
+use std::time::Instant;
 
 type CShell = CompressedShell<Point3, Curve, Surface>;
 type CSolid = CompressedSolid<Point3, Curve, Surface>;

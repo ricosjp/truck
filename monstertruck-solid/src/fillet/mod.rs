@@ -20,7 +20,7 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-pub use convert::{FilletableCurve, FilletableSurface};
+pub use convert::{FilletIntersectionCurve, FilletableCurve, FilletableSurface};
 pub use edge_select::{fillet_edges, fillet_edges_generic};
 pub use error::FilletError;
 pub use ops::{fillet, fillet_along_wire, fillet_with_side};

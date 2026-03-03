@@ -1,11 +1,11 @@
 mod common;
 use common::Plane;
 use image::{DynamicImage, ImageBuffer, Rgba};
-use std::sync::Arc;
+use monstertruck_gpu::*;
 use monstertruck_meshing::prelude::obj;
 use monstertruck_modeling::*;
-use monstertruck_platform::*;
 use monstertruck_render::*;
+use std::sync::Arc;
 use wgpu::*;
 
 const CUBE_OBJ: &[u8] = include_bytes!(concat!(
@@ -60,7 +60,7 @@ fn nontex_raytracing(scene: &mut Scene) -> Vec<u8> {
         shader: &shader,
         vs_entpt: "vs_main",
         fs_entpt: "nontex_raytracing",
-        id: RenderId::gen(),
+        id: RenderId::generate(),
     };
     common::render_one(scene, &plane)
 }
@@ -117,7 +117,7 @@ fn tex_raytracing(scene: &mut Scene) -> Vec<u8> {
         shader: &shader,
         vs_entpt: "vs_main",
         fs_entpt: "tex_raytracing",
-        id: RenderId::gen(),
+        id: RenderId::generate(),
     };
     common::render_one(scene, &plane)
 }

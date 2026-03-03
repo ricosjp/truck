@@ -1,5 +1,5 @@
-use std::ops::Bound;
 use monstertruck_core::cgmath64::*;
+use std::ops::Bound;
 
 mod curve;
 pub use curve::*;

@@ -1,6 +1,6 @@
 //! Serialized topological data exchange format
 //!
-//! Topological data structures in truck is subject to editing and has complex reference relationships.
+//! Topological data structures in monstertruck are subject to editing and has complex reference relationships.
 //! They are not suitable for direct serialization and must be converted to lighter and simpler data structures.
 //! These structures, prefixed with `Compressed`, are a group of structures that are easy to serialize,
 //! but not suitable for real-time shape editing.

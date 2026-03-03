@@ -15,8 +15,8 @@
 
 use bytemuck::{Pod, Zeroable};
 use image::DynamicImage;
+use monstertruck_gpu::{wgpu::*, *};
 use std::sync::Arc;
-use monstertruck_platform::{wgpu::*, *};
 
 /// Re-exports `monstertruck_mesh`.
 pub mod polymesh {

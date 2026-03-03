@@ -1,7 +1,7 @@
 use crate::*;
+use monstertruck_core::entry_map::FxEntryMap as EntryMap;
 use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use monstertruck_core::entry_map::FxEntryMap as EntryMap;
 
 /// A face adjacent to the specified face
 #[derive(Clone, Debug)]

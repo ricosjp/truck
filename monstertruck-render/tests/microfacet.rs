@@ -1,6 +1,6 @@
 mod common;
 use common::Plane;
-use monstertruck_platform::*;
+use monstertruck_gpu::*;
 use wgpu::*;
 
 const PICTURE_SIZE: (u32, u32) = (256, 256);
@@ -36,7 +36,7 @@ fn exec_microfacet_module_test(backend: Backends, out_dir: &str) {
         shader: &shader,
         vs_entpt: "vs_main",
         fs_entpt: "fs_main",
-        id: RenderId::gen(),
+        id: RenderId::generate(),
     };
     let buffer0 = common::render_one(&mut scene, &plane);
     common::save_buffer(

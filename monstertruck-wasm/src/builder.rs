@@ -1,4 +1,4 @@
-use crate::{wasm_bindgen, AbstractShape, Edge, Face, IntoWasm, Vertex, Wire};
+use crate::{AbstractShape, Edge, Face, IntoWasm, Vertex, Wire, wasm_bindgen};
 use monstertruck_modeling::*;
 
 macro_rules! intopt {
@@ -147,5 +147,9 @@ pub fn revolve(
     division: usize,
 ) -> AbstractShape {
     intopt!(Point3, origin, Vector3, axis);
-    derive_all_sweepable!(shape, builder::revolve, (origin, axis, Rad(angle), division))
+    derive_all_sweepable!(
+        shape,
+        builder::revolve,
+        (origin, axis, Rad(angle), division)
+    )
 }

@@ -1,9 +1,9 @@
 [package]
-name = "monstertruck-platform"
-version = "0.6.0"
-authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
-edition = "2021"
-description = "graphic utility library based on wgpu"
+name = "monstertruck-gpu"
+version = "0.1.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>", "Moritz Moeller <virtualritz@protonmail.com>"]
+edition = "2024"
+description = "Graphics utility crate built on wgpu"
 homepage = "https://github.com/virtualritz/truck"
 repository = "https://github.com/virtualritz/truck"
 license = "Apache-2.0"
@@ -18,10 +18,10 @@ webgl = ["wgpu/webgl"]
 [dependencies]
 bytemuck = { workspace = true }
 derive_more = { workspace = true }
-futures-intrusive = "0.5.0"
+futures-intrusive = { workspace = true }
 rustc-hash = { workspace = true }
 monstertruck-core = { workspace = true }
-wgpu = "27.0.1"
+wgpu = { workspace = true }
 winit = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -31,8 +31,8 @@ web-time = { workspace = true }
 [dev-dependencies]
 env_logger = { workspace = true }
 image = { workspace = true }
-log = "0.4.29"
-naga = { version = "27.0.3", features = ["wgsl-in"] }
+log = { workspace = true }
+naga = { workspace = true }
 pollster = { workspace = true }
 rayon = { workspace = true }
 

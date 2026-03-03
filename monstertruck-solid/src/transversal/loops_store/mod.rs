@@ -1,11 +1,11 @@
 #![allow(clippy::many_single_char_names)]
 
 use super::*;
-use rustc_hash::FxHashMap as HashMap;
 use monstertruck_core::cgmath64::*;
 use monstertruck_geometry::prelude::*;
 use monstertruck_meshing::prelude::*;
 use monstertruck_topology::{Vertex, *};
+use rustc_hash::FxHashMap as HashMap;
 
 type PolylineCurve = monstertruck_meshing::prelude::PolylineCurve<Point3>;
 

@@ -6,8 +6,8 @@
 //! cargo run --example obj_stl <input-file>
 //! ```
 
-use stl::*;
 use monstertruck_mesh::*;
+use stl::*;
 
 fn main() {
     let args = &mut std::env::args();

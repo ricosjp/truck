@@ -14,13 +14,13 @@
 )]
 
 mod healing;
-pub use healing::{extract_healed, RobustSplitClosedEdgesAndFaces, SplitClosedEdgesAndFaces};
+pub use healing::{RobustSplitClosedEdgesAndFaces, SplitClosedEdgesAndFaces, extract_healed};
 mod transversal;
-pub use transversal::{and, difference, or, symmetric_difference, ShapeOpsCurve, ShapeOpsSurface};
+pub use transversal::{ShapeOpsCurve, ShapeOpsSurface, and, difference, or, symmetric_difference};
 mod alternative;
 pub mod fillet;
 pub use fillet::{
-    fillet, fillet_along_wire, fillet_edges, fillet_edges_generic, fillet_with_side, FilletError,
-    FilletOptions, FilletProfile, FilletableCurve, FilletableSurface, ParameterCurveLinear,
-    RadiusSpec,
+    FilletError, FilletIntersectionCurve, FilletOptions, FilletProfile, FilletableCurve,
+    FilletableSurface, ParameterCurveLinear, RadiusSpec, fillet, fillet_along_wire, fillet_edges,
+    fillet_edges_generic, fillet_with_side,
 };

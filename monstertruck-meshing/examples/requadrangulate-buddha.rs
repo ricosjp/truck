@@ -3,8 +3,8 @@
 //! - Input: happy-buddha.obj
 //! - Output: requadrangulated-buddha.obj
 
-use monstertruck_meshing::filters::*;
 use monstertruck_mesh::*;
+use monstertruck_meshing::filters::*;
 
 const INPUT: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),

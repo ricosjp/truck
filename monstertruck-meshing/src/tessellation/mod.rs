@@ -1,6 +1,6 @@
 use crate::*;
-use spade::{iterators::*, *};
 use monstertruck_topology::{compress::*, *};
+use spade::{iterators::*, *};
 
 /// Tessellation output primitive preference.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -87,9 +87,8 @@ pub use parallelizable::*;
 pub trait PolylineableCurve:
     ParametricCurve3D + BoundedCurve + ParameterDivision1D<Point = Point3> + Parallelizable {
 }
-impl<
-        C: ParametricCurve3D + BoundedCurve + ParameterDivision1D<Point = Point3> + Parallelizable,
-    > PolylineableCurve for C
+impl<C: ParametricCurve3D + BoundedCurve + ParameterDivision1D<Point = Point3> + Parallelizable>
+    PolylineableCurve for C
 {
 }
 

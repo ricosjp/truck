@@ -1,6 +1,6 @@
 use cgmath::*;
-use num_traits::FromPrimitive;
 use monstertruck_core::hash::*;
+use num_traits::FromPrimitive;
 
 const VEC2UNIT: Vector2<f64> = Vector2::new(1.0, 1.0);
 const VEC3UNIT: Vector3<f64> = Vector3::new(1.0, 1.0, 1.0);

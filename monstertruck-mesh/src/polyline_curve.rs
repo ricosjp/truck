@@ -1,7 +1,7 @@
 use crate::*;
 use itertools::Itertools;
-use std::ops::{Bound, Deref, DerefMut};
 use monstertruck_core::cgmath64::control_point::ControlPoint;
+use std::ops::{Bound, Deref, DerefMut};
 
 impl PolylineCurve<Point2> {
     /// Signed area of area enclosed when endpoints are connected

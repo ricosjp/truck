@@ -155,12 +155,11 @@ pub fn fillet_along_wire(shell: &mut Shell, wire: &Wire, options: &FilletOptions
 
     // Validate variable radius constraint for closed wire fillets.
     // Open wires don't wrap around, so f(0) ≈ f(1) is only needed for closed wires.
-    if wire.is_closed() {
-        if let RadiusSpec::Variable(f) = &options.radius {
-            if !f(0.0).near2(&f(1.0)) {
-                return Err(FilletError::VariableRadiusUnsupported);
-            }
-        }
+    if wire.is_closed()
+        && let RadiusSpec::Variable(f) = &options.radius
+        && !f(0.0).near2(&f(1.0))
+    {
+        return Err(FilletError::VariableRadiusUnsupported);
     }
     if !wire.is_continuous() {
         return Err(FilletError::DiscontinuousWire);

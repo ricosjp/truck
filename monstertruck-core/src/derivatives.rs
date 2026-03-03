@@ -750,7 +750,9 @@ impl<V> SurfaceDerivatives<V> {
         V::Scalar: BaseFloat,
     {
         if order > self.max_order || order > curve_ders.max_order {
-            panic!("calculating derivative with order={order}, but the orders of given derivatives are less than {order}.");
+            panic!(
+                "calculating derivative with order={order}, but the orders of given derivatives are less than {order}."
+            );
         }
         (1..=order).fold(V::zero(), |sum, len| {
             let iter = CompositionIter::<32>::try_new(order, len).unwrap();

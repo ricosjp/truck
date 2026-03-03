@@ -1,6 +1,6 @@
-use stl::{IntoStlIterator, StlFace, StlReader, StlType};
 use monstertruck_core::assert_near;
 use monstertruck_mesh::*;
+use stl::{IntoStlIterator, StlFace, StlReader, StlType};
 type Result<T> = std::result::Result<T, errors::Error>;
 
 const ASCII_BUNNY: &[u8] = include_bytes!(concat!(

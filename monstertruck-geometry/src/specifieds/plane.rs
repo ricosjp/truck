@@ -187,7 +187,7 @@ impl IncludeCurve<NurbsCurve<Vector4>> for Plane {
 impl ParameterDivision2D for Plane {
     #[inline(always)]
     fn parameter_division(&self, range: ((f64, f64), (f64, f64)), _: f64) -> (Vec<f64>, Vec<f64>) {
-        (vec![range.0 .0, range.0 .1], vec![range.1 .0, range.1 .1])
+        (vec![range.0.0, range.0.1], vec![range.1.0, range.1.1])
     }
 }
 

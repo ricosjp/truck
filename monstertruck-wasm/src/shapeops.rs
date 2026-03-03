@@ -1,4 +1,4 @@
-use crate::{wasm_bindgen, IntoWasm, Solid};
+use crate::{IntoWasm, Solid, wasm_bindgen};
 use monstertruck_solid as shapeops;
 
 const SHAPEOPS_TOLERANCE: f64 = 0.05;

@@ -48,7 +48,9 @@ impl IncludeCurve<Curve3D> for Plane {
                 .iter()
                 .all(|p| self.search_parameter(*p, None, 1).is_some()),
             Curve3D::Pcurve(_) => {
-                eprintln!("IncludeCurve<Curve3D> for Plane: Pcurve case is unimplemented!\nReturns always false.");
+                eprintln!(
+                    "IncludeCurve<Curve3D> for Plane: Pcurve case is unimplemented!\nReturns always false."
+                );
                 false
             }
         }

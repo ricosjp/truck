@@ -1,8 +1,9 @@
 [package]
 name = "monstertruck-solid"
-version = "0.4.0"
-edition = "2021"
-description = "Provides boolean operations to Solid"
+version = "0.1.0"
+authors = ["Moritz Moeller <virtualritz@protonmail.com>"]
+edition = "2024"
+description = "Boolean operations, fillets, and shape healing for solids"
 homepage = "https://github.com/virtualritz/truck"
 repository = "https://github.com/virtualritz/truck"
 license = "Apache-2.0"
@@ -19,7 +20,6 @@ smallvec = { workspace = true }
 thiserror = { workspace = true }
 monstertruck-core = { workspace = true }
 monstertruck-geometry = { workspace = true }
-
 monstertruck-traits = { workspace = true }
 monstertruck-meshing = { workspace = true }
 monstertruck-topology = { workspace = true }

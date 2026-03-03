@@ -2,7 +2,7 @@ use super::*;
 use crate::errors::Error;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 /// Evaluates the cubic B-spline basis function at parameter `u` for knot vector `a` (length 5).
 ///
@@ -3131,22 +3131,25 @@ mod tests {
         let mut mesh = Tmesh::new(points, 1.0);
 
         // Test errors on inserting a point into the center of a face (unconnected point)
-        assert!(mesh
-            .try_add_absolute_point(Point3::from((0.5, 0.5, 0.0)), (0.5, 0.5))
-            .is_err_and(|e| { e == Error::TmeshConnectionNotFound }),
-            "Expected Error TmeshConnectionNotFound when attempting to insert a point in a location with no intersecting mesh edges.");
+        assert!(
+            mesh.try_add_absolute_point(Point3::from((0.5, 0.5, 0.0)), (0.5, 0.5))
+                .is_err_and(|e| { e == Error::TmeshConnectionNotFound }),
+            "Expected Error TmeshConnectionNotFound when attempting to insert a point in a location with no intersecting mesh edges."
+        );
 
         // Test errors on zero intervals (duplicate point)
-        assert!(mesh
-            .try_add_absolute_point(Point3::from((0.0, 0.0, 0.0)), (0.0, 0.0))
-            .is_err_and(|e| { e == Error::TmeshExistingControlPoint }),
-            "Expected Error TmeshExistingControlPoint when attempting to insert a point in a location where a control point already exists.");
+        assert!(
+            mesh.try_add_absolute_point(Point3::from((0.0, 0.0, 0.0)), (0.0, 0.0))
+                .is_err_and(|e| { e == Error::TmeshExistingControlPoint }),
+            "Expected Error TmeshExistingControlPoint when attempting to insert a point in a location where a control point already exists."
+        );
 
         // Test errrors on out-of-bounds insertions.
-        assert!(mesh
-            .try_add_absolute_point(Point3::from((2.0, 2.0, 0.0)), (2.0, 2.0))
-            .is_err_and(|e| { e == Error::TmeshOutOfBoundsInsertion }),
-            "Expected Error TmeshOutOfBoundsInsertion when attempting to insert a point outside the parametric domain of the mesh.");
+        assert!(
+            mesh.try_add_absolute_point(Point3::from((2.0, 2.0, 0.0)), (2.0, 2.0))
+                .is_err_and(|e| { e == Error::TmeshOutOfBoundsInsertion }),
+            "Expected Error TmeshOutOfBoundsInsertion when attempting to insert a point outside the parametric domain of the mesh."
+        );
     }
 
     /// Constructs the following T-mesh, testing that navigating from the origin to a connection in the
@@ -3500,67 +3503,73 @@ mod tests {
         );
 
         // Test connections
-        assert!(tmesh_test
-            .control_points()
-            .iter()
-            .zip(tmesh_comp.control_points().iter())
-            .all(|p| {
-                // Test all directions of every point in the meshes
-                for dir in TmeshDirection::iter() {
-                    // Compare connection types
-                    if p.0.read().con_type(dir) != p.1.read().con_type(dir) {
-                        return false;
-                    }
-
-                    // Based on the conenction type, compare connected objects
-                    match p.0.read().con_type(dir) {
-                        TmeshConnectionType::Edge => {
-                            // Compare knot intervals
-                            if p.0.read().connection_knot(dir) != p.1.read().connection_knot(dir) {
-                                return false;
-                            }
+        assert!(
+            tmesh_test
+                .control_points()
+                .iter()
+                .zip(tmesh_comp.control_points().iter())
+                .all(|p| {
+                    // Test all directions of every point in the meshes
+                    for dir in TmeshDirection::iter() {
+                        // Compare connection types
+                        if p.0.read().con_type(dir) != p.1.read().con_type(dir) {
+                            return false;
                         }
-                        TmeshConnectionType::Point => {
-                            // Compare knot intervals
-                            if p.0.read().connection_knot(dir) != p.1.read().connection_knot(dir) {
-                                return false;
+
+                        // Based on the conenction type, compare connected objects
+                        match p.0.read().con_type(dir) {
+                            TmeshConnectionType::Edge => {
+                                // Compare knot intervals
+                                if p.0.read().connection_knot(dir)
+                                    != p.1.read().connection_knot(dir)
+                                {
+                                    return false;
+                                }
                             }
+                            TmeshConnectionType::Point => {
+                                // Compare knot intervals
+                                if p.0.read().connection_knot(dir)
+                                    != p.1.read().connection_knot(dir)
+                                {
+                                    return false;
+                                }
 
-                            // Get connection object from both meshes
-                            let test_borrow = p.0.read();
-                            let test_con = test_borrow
-                                .get(dir)
-                                .as_ref()
-                                .expect("Point con type must have a connection");
-                            let comp_borrow = p.1.read();
-                            let comp_con = comp_borrow
-                                .get(dir)
-                                .as_ref()
-                                .expect("Point con type must have a connection");
+                                // Get connection object from both meshes
+                                let test_borrow = p.0.read();
+                                let test_con = test_borrow
+                                    .get(dir)
+                                    .as_ref()
+                                    .expect("Point con type must have a connection");
+                                let comp_borrow = p.1.read();
+                                let comp_con = comp_borrow
+                                    .get(dir)
+                                    .as_ref()
+                                    .expect("Point con type must have a connection");
 
-                            // Compare connected points
-                            if test_con
-                                .0
-                                .as_ref()
-                                .expect("Point con type must have a point connected")
-                                .read()
-                                .point()
-                                != comp_con
+                                // Compare connected points
+                                if test_con
                                     .0
                                     .as_ref()
                                     .expect("Point con type must have a point connected")
                                     .read()
                                     .point()
-                            {
-                                return false;
+                                    != comp_con
+                                        .0
+                                        .as_ref()
+                                        .expect("Point con type must have a point connected")
+                                        .read()
+                                        .point()
+                                {
+                                    return false;
+                                }
                             }
+                            TmeshConnectionType::Tjunction => {}
                         }
-                        TmeshConnectionType::Tjunction => {}
                     }
-                }
 
-                true
-            }))
+                    true
+                })
+        )
     }
 
     /// Creates a plane of the form `x + y = z` and solves it using `subs`.
@@ -4077,7 +4086,13 @@ mod tests {
                     assert!(
                         diff < tol,
                         "Derivative d^({},{}) at ({}, {}) differs: analytical={:?}, numerical={:?}, diff={:.2e}",
-                        m, ord_n, u, v, analytical, numerical, diff
+                        m,
+                        ord_n,
+                        u,
+                        v,
+                        analytical,
+                        numerical,
+                        diff
                     );
                 }
             }
@@ -4102,7 +4117,12 @@ mod tests {
                 assert!(
                     diff < tol,
                     "Derivative d^({},{}) discontinuous at u-knot {}: left={:?}, right={:?}, diff={:.2e}",
-                    m, n, k, left, right, diff
+                    m,
+                    n,
+                    k,
+                    left,
+                    right,
+                    diff
                 );
 
                 // Test continuity across v-knot boundary.
@@ -4112,7 +4132,12 @@ mod tests {
                 assert!(
                     diff < tol,
                     "Derivative d^({},{}) discontinuous at v-knot {}: below={:?}, above={:?}, diff={:.2e}",
-                    m, n, k, below, above, diff
+                    m,
+                    n,
+                    k,
+                    below,
+                    above,
+                    diff
                 );
             }
         }

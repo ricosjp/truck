@@ -1,6 +1,6 @@
 use super::*;
-use std::f64::consts::PI;
 use monstertruck_topology::Shell;
+use std::f64::consts::PI;
 
 #[test]
 fn test_split_closed_edges() {

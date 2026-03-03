@@ -1,9 +1,9 @@
 use crate::*;
+use monstertruck_core::entry_map::FxEntryMap as EntryMap;
 use rayon::prelude::*;
 use rustc_hash::FxHashSet as HashSet;
-use std::collections::{vec_deque, VecDeque};
+use std::collections::{VecDeque, vec_deque};
 use std::iter::Peekable;
-use monstertruck_core::entry_map::FxEntryMap as EntryMap;
 
 impl<P, C> Wire<P, C> {
     /// Creates the empty wire.

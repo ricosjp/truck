@@ -1,5 +1,5 @@
-use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
+use std::collections::hash_map::RandomState;
 use std::hash::*;
 use std::marker::PhantomData;
 

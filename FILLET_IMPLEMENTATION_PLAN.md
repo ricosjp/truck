@@ -15,15 +15,15 @@ The plan is structured so another agent can execute it phase-by-phase with clear
 
 ### 1.1 User-visible status
 
-- `truck-modeling` docs ~~still state fillet is unsupported~~ updated:
-  - `truck-modeling/README.md:15`
-  - `truck-modeling/examples/bottle.rs:5`
+- `monstertruck-modeling` docs ~~still state fillet is unsupported~~ updated:
+  - `monstertruck-modeling/README.md:15`
+  - `monstertruck-modeling/examples/bottle.rs:5`
 
 ### 1.2 Existing internal assets to leverage
 
 - There is already a ~~hidden prototype~~ public fillet module:
-  - `truck-shapeops/src/lib.rs:21` (`pub mod fillet;`)
-  - `truck-shapeops/src/fillet/mod.rs`
+  - `monstertruck-solid/src/lib.rs:21` (`pub mod fillet;`)
+  - `monstertruck-solid/src/fillet/mod.rs`
 - Existing core routines (now split into `geometry.rs`, `ops.rs`, `topology.rs`):
   - round fillet surface builder: `geometry.rs` (`rolling_ball_fillet_surface`)
   - chamfer surface builder: `geometry.rs` (`chamfer_fillet_surface`)
@@ -34,15 +34,15 @@ The plan is structured so another agent can execute it phase-by-phase with clear
   - closed wire fillet: `ops.rs` (`fillet_along_wire_closed`)
 - ~~Known prototype limitation: closed wire not implemented~~ (resolved)
 
-### 1.3 Geometry support already present in `truck-geometry`
+### 1.3 Geometry support already present in `monstertruck-geometry`
 
 - Rolling-ball fillet primitives:
-  - `RbfSurface`: `truck-geometry/src/decorators/mod.rs:321`
-  - constructor: `truck-geometry/src/decorators/rbf_surface/mod.rs:7`
+  - `RbfSurface`: `monstertruck-geometry/src/decorators/mod.rs:321`
+  - constructor: `monstertruck-geometry/src/decorators/rbf_surface/mod.rs:7`
 - Approximation helper:
-  - `ApproxFilletSurface::approx_rolling_ball_fillet`: `truck-geometry/src/decorators/af_surface.rs:231`
+  - `ApproxFilletSurface::approx_rolling_ball_fillet`: `monstertruck-geometry/src/decorators/af_surface.rs:231`
 - T-spline fallback approximation exists:
-  - `to_bspline_surface`: `truck-geometry/src/t_spline/t_mesh.rs:2560`
+  - `to_bspline_surface`: `monstertruck-geometry/src/t_spline/t_mesh.rs:2560`
 
 ---
 
@@ -86,11 +86,11 @@ Use Ayam as algorithmic reference for missing product behaviors.
 
 Implement fillet at two layers:
 
-1. **Core engine in `truck-shapeops`**
+1. **Core engine in `monstertruck-solid`**
    - owns topology surgery and fillet-face generation.
    - edge-centric API (not "CSG-only API").
 
-2. **Ergonomic API in `truck-modeling`**
+2. **Ergonomic API in `monstertruck-modeling`**
    - thin wrapper over shapeops fillet engine.
    - exposed to end users and examples.
 
@@ -100,7 +100,7 @@ Use **canonical NURBS workspace** internally for fillet creation, then map back 
 
 ## 4) Public API Shape (v1 — implemented)
 
-API in `truck-shapeops` (actual shape):
+API in `monstertruck-solid` (actual shape):
 
 - `fillet_edges(shell, edge_ids, params: Option<&FilletOptions>) -> Result<(), FilletError>`
 - `fillet_edges_generic(shell, edges, params: Option<&FilletOptions>) -> Result<(), FilletError>`
@@ -150,16 +150,16 @@ Core parameter types:
 
 ### Tasks
 
-- [x] Refactor `truck-shapeops/src/fillet/mod.rs` into modules:
+- [x] Refactor `monstertruck-solid/src/fillet/mod.rs` into modules:
   - `ops.rs`, `geometry.rs`, `topology.rs`, `params.rs`, `error.rs`, `types.rs`, `convert.rs`, `edge_select.rs`, `tests.rs`
 - [x] Remove prototype markers (`#![allow(dead_code)]`)
 - [x] Convert `Option` returns to `Result<_, FilletError>`
 - [x] Replace `eprintln!` failures with typed errors (9 error variants)
-- [x] Export from `truck-shapeops/src/lib.rs` (public API)
+- [x] Export from `monstertruck-solid/src/lib.rs` (public API)
 
 ### Done criteria
 
-- [x] Public round-fillet API exists in `truck-shapeops`.
+- [x] Public round-fillet API exists in `monstertruck-solid`.
 - [x] Existing fillet tests pass.
 
 ---
@@ -273,21 +273,21 @@ Core parameter types:
 
 ---
 
-## Phase 7 — `truck-modeling` Integration and Docs [DONE]
+## Phase 7 — `monstertruck-modeling` Integration and Docs [DONE]
 
 ### Tasks
 
-- [x] Add wrapper API in `truck-modeling` (`fillet_impls.rs`)
-- [x] Add dependency on `truck-shapeops` in `truck-modeling/Cargo.toml` (optional, behind `fillet` feature)
+- [x] Add wrapper API in `monstertruck-modeling` (`fillet_impls.rs`)
+- [x] Add dependency on `monstertruck-solid` in `monstertruck-modeling/Cargo.toml` (optional, behind `fillet` feature)
 - [x] Update docs/examples that currently state fillet unsupported:
-  - [x] `truck-modeling/README.md:15`
-  - [x] `truck-modeling/examples/bottle.rs:5`
+  - [x] `monstertruck-modeling/README.md:15`
+  - [x] `monstertruck-modeling/examples/bottle.rs:5`
 - [x] Add/refresh example showing filleting after boolean — `fillet-after-boolean.rs`
 - [x] Re-export: `fillet_edges_generic as fillet_edges`, `FilletError`, `FilletOptions`, `FilletProfile`, `RadiusSpec`, `FilletableCurve`, `FilletableSurface`
 
 ### Done criteria
 
-- [x] End users can call fillet from `truck-modeling` with simple API
+- [x] End users can call fillet from `monstertruck-modeling` with simple API
 - [x] Documentation no longer claims fillet is unavailable
 
 ---
@@ -342,7 +342,7 @@ Core parameter types:
 - [x] `fillet_edges_rejects_missing` — error: missing edge
 - [x] `fillet_edges_rejects_boundary` — error: boundary edge
 - [x] `generic_fillet_identity` — generic pipeline with internal types
-- [x] `generic_fillet_modeling_types` — generic pipeline with truck_modeling types
+- [x] `generic_fillet_modeling_types` — generic pipeline with monstertruck_modeling types
 - [x] `generic_fillet_mixed_surfaces` — mixed Plane + NurbsSurface
 - [x] `generic_fillet_unsupported` — unsupported geometry error
 - [x] `fillet_edges_multi_chain` — two independent edges in one call
@@ -366,14 +366,14 @@ Core parameter types:
 Use only allowed verification commands from repo guidance.
 
 - Targeted tests while iterating:
-  - `cargo test -p truck-shapeops --lib -- fillet --skip test_unit_circle`
-  - `cargo test -p truck-modeling --features fillet --test fillet_test`
+  - `cargo test -p monstertruck-solid --lib -- fillet --skip test_unit_circle`
+  - `cargo test -p monstertruck-modeling --features fillet --test fillet_test`
 - Lint:
-  - `cargo clippy -p truck-shapeops --all-targets -- -W warnings`
-  - `cargo clippy -p truck-modeling --features fillet --all-targets -- -W warnings`
+  - `cargo clippy -p monstertruck-solid --all-targets -- -W warnings`
+  - `cargo clippy -p monstertruck-modeling --features fillet --all-targets -- -W warnings`
 - Format:
-  - `cargo fmt -p truck-shapeops -- --check`
-  - `cargo fmt -p truck-modeling -- --check`
+  - `cargo fmt -p monstertruck-solid -- --check`
+  - `cargo fmt -p monstertruck-modeling -- --check`
 
 ---
 
@@ -384,7 +384,7 @@ Use only allowed verification commands from repo guidance.
 3. ~~**PR-C**: chain/closed-loop support + robustness.~~ [DONE]
 4. ~~**PR-D**: profile modes (Chamfer, Ridge, Custom).~~ [DONE]
 5. **PR-E**: optional integration mode.
-6. ~~**PR-F**: `truck-modeling` wrapper + docs/examples.~~ [DONE]
+6. ~~**PR-F**: `monstertruck-modeling` wrapper + docs/examples.~~ [DONE]
 
 Each PR should include focused tests for only that phase.
 

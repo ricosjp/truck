@@ -1,10 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use smallvec::SmallVec;
 use monstertruck_geometry::prelude::Point3;
 use monstertruck_traits::{BoundedCurve, ParametricCurve};
+use smallvec::SmallVec;
 
-use super::convert::{convert_shell_in, convert_shell_out, FilletableCurve, FilletableSurface};
+use super::convert::{FilletableCurve, FilletableSurface, convert_shell_in, convert_shell_out};
 use super::error::FilletError;
 use super::ops;
 use super::params::{FilletOptions, RadiusSpec};
@@ -298,13 +298,13 @@ pub fn fillet_edges(
     }
 
     // Validate per-edge radius count.
-    if let RadiusSpec::PerEdge(ref radii) = options.radius {
-        if radii.len() != edge_ids.len() {
-            return Err(FilletError::PerEdgeRadiusMismatch {
-                given: radii.len(),
-                expected: edge_ids.len(),
-            });
-        }
+    if let RadiusSpec::PerEdge(ref radii) = options.radius
+        && radii.len() != edge_ids.len()
+    {
+        return Err(FilletError::PerEdgeRadiusMismatch {
+            given: radii.len(),
+            expected: edge_ids.len(),
+        });
     }
 
     // Reject edges that are too short for the requested fillet radius.
@@ -447,15 +447,15 @@ pub fn fillet_edges(
 
             shell[face_a_idx] = new_face_a;
             shell[face_b_idx] = new_face_b;
-            if let Some(ns0) = new_side0 {
-                if let Some(idx) = side0_idx {
-                    shell[idx] = ns0;
-                }
+            if let Some(ns0) = new_side0
+                && let Some(idx) = side0_idx
+            {
+                shell[idx] = ns0;
             }
-            if let Some(ns1) = new_side1 {
-                if let Some(idx) = side1_idx {
-                    shell[idx] = ns1;
-                }
+            if let Some(ns1) = new_side1
+                && let Some(idx) = side1_idx
+            {
+                shell[idx] = ns1;
             }
             shell.push(fillet);
         } else {

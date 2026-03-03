@@ -30,8 +30,9 @@ pub trait ParametricSurface: Clone {
     /// Returns all derivatives at `(u, v)` up to order `max_order`.
     fn derivatives(&self, max_order: usize, u: f64, v: f64) -> SurfaceDerivatives<Self::Vector> {
         let mut derivs = SurfaceDerivatives::new(max_order);
-        (0..=max_order)
-            .for_each(|m| (0..=max_order - m).for_each(|n| derivs[m][n] = self.derivative_mn(m, n, u, v)));
+        (0..=max_order).for_each(|m| {
+            (0..=max_order - m).for_each(|n| derivs[m][n] = self.derivative_mn(m, n, u, v))
+        });
         derivs
     }
     /// Deprecated: use [`evaluate`](ParametricSurface::evaluate).
@@ -228,7 +229,7 @@ pub trait ParameterDivision2D {
     ///
     /// `tol` must be greater than or equal to `TOLERANCE`.
     fn parameter_division(&self, range: ((f64, f64), (f64, f64)), tol: f64)
-        -> (Vec<f64>, Vec<f64>);
+    -> (Vec<f64>, Vec<f64>);
 }
 
 impl<S: ParameterDivision2D> ParameterDivision2D for &S {
