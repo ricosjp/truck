@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# rename-truck.sh — Idempotent rename of truck-* crates to monstertruck-*
+# rename-truck.sh -- Idempotent rename of truck-* crates to monstertruck-*
 # Safe to re-run: skips already-renamed directories and content.
 set -euo pipefail
 
@@ -73,7 +73,7 @@ do_replace() {
 echo ""
 echo "=== Step 2: Hyphenated name replacements ==="
 
-# Phase A: Non-standard renames (suffix changes) — MUST come first
+# Phase A: Non-standard renames (suffix changes) -- MUST come first
 declare -a HYPHEN_PHASE_A=(
     "truck-polymesh:monstertruck-mesh"
     "truck-stepio:monstertruck-step"
@@ -114,7 +114,7 @@ done
 echo ""
 echo "=== Step 3: Underscored name replacements ==="
 
-# Phase A: Non-standard renames (suffix changes) — MUST come first
+# Phase A: Non-standard renames (suffix changes) -- MUST come first
 declare -a USCORE_PHASE_A=(
     "truck_polymesh:monstertruck_mesh"
     "truck_stepio:monstertruck_step"

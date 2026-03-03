@@ -614,7 +614,7 @@ fn build_box_shell() -> (Shell, [Edge; 12], Vec<Vertex>) {
         Face::new(vec![wire], bsp.into())
     };
 
-    // Top, front, right, back (partial box — 4 faces sharing edges).
+    // Top, front, right, back (partial box -- 4 faces sharing edges).
     let shell: Shell = [
         plane(0, 1, 2, 3), // face 0: top
         plane(1, 0, 4, 5), // face 1: front
@@ -743,7 +743,7 @@ mod modeling_impl {
             }
         }
     }
-    // From<NurbsSurface<Vector4>> for ModelSurface — provided by derive_more::From
+    // From<NurbsSurface<Vector4>> for ModelSurface -- provided by derive_more::From
 
     impl TryFrom<ModelCurve> for NurbsCurve<Vector4> {
         type Error = ();
@@ -759,7 +759,7 @@ mod modeling_impl {
             }
         }
     }
-    // From<NurbsCurve<Vector4>> for ModelCurve — provided by derive_more::From
+    // From<NurbsCurve<Vector4>> for ModelCurve -- provided by derive_more::From
 
     impl From<ParameterCurveLinear> for ModelCurve {
         fn from(c: ParameterCurveLinear) -> Self {
@@ -796,7 +796,7 @@ mod modeling_impl {
     }
 }
 
-/// Generic fillet with identity (internal) types — verifies the pipeline works as passthrough.
+/// Generic fillet with identity (internal) types -- verifies the pipeline works as passthrough.
 #[test]
 fn generic_fillet_identity() {
     let (mut shell, edge, _) = build_box_shell();
@@ -964,7 +964,7 @@ fn generic_fillet_mixed_surfaces() {
         MSurface::Plane(Plane::new(p[0], p[1], p[3])),
     );
 
-    // Face 1: NurbsSurface (front face) — convert from Bspline
+    // Face 1: NurbsSurface (front face) -- convert from Bspline
     let bsp1 = BsplineSurface::new(
         (KnotVector::bezier_knot(1), KnotVector::bezier_knot(1)),
         vec![vec![p[1], p[5]], vec![p[0], p[4]]],
@@ -1693,7 +1693,7 @@ fn ridge_closed_wire() {
 // Custom profile tests
 // ---------------------------------------------------------------------------
 
-/// Custom with linear profile (0,0)→(1,0) — should behave like chamfer.
+/// Custom with linear profile (0,0)→(1,0) -- should behave like chamfer.
 #[test]
 fn custom_profile_linear() {
     let (mut shell, edge, _) = build_box_shell();
@@ -1821,7 +1821,7 @@ fn fillet_rejects_degenerate_edge() {
     );
 }
 
-/// Custom with degree-2 bump (0,0)→(0.5,1.0)→(1,0) — non-trivial shape.
+/// Custom with degree-2 bump (0,0)→(0.5,1.0)→(1,0) -- non-trivial shape.
 #[test]
 fn custom_profile_bump() {
     let (mut shell, edge, _) = build_box_shell();
@@ -1879,7 +1879,7 @@ fn boolean_shell_converts_for_fillet() {
     let mut cylinder = builder::extrude(&cf, Vector3::unit_z() * 2.0);
     cylinder.not();
 
-    // Boolean AND — produces IntersectionCurve edges.
+    // Boolean AND -- produces IntersectionCurve edges.
     let solid = crate::and(&cube, &cylinder, 0.05).expect("boolean AND failed");
     let shell = solid.into_boundaries().pop().unwrap();
 
@@ -2016,7 +2016,7 @@ fn variable_radius_open_wire() {
     assert_eq!(boundary.front_vertex().unwrap(), &v[0]);
     assert!(!boundary.is_closed());
 
-    // Variable radius where f(0)=0.1, f(1)=0.3 — NOT equal, would fail on closed wire.
+    // Variable radius where f(0)=0.1, f(1)=0.3 -- NOT equal, would fail on closed wire.
     let var_opts = FilletOptions {
         radius: RadiusSpec::Variable(Box::new(|t| 0.1 + 0.2 * t)),
         ..Default::default()

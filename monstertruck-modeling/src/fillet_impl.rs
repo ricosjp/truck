@@ -14,7 +14,7 @@ impl TryFrom<Surface> for NurbsSurface<Vector4> {
         }
     }
 }
-// From<NurbsSurface<Vector4>> for Surface — provided by derive_more::From
+// From<NurbsSurface<Vector4>> for Surface -- provided by derive_more::From
 
 impl TryFrom<Curve> for NurbsCurve<Vector4> {
     type Error = ();
@@ -30,7 +30,7 @@ impl TryFrom<Curve> for NurbsCurve<Vector4> {
         }
     }
 }
-// From<NurbsCurve<Vector4>> for Curve — provided by derive_more::From
+// From<NurbsCurve<Vector4>> for Curve -- provided by derive_more::From
 
 impl From<ParameterCurveLinear> for Curve {
     fn from(c: ParameterCurveLinear) -> Self {

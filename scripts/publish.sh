@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# publish.sh — Publish all monstertruck crates to crates.io in dependency order.
+# publish.sh -- Publish all monstertruck crates to crates.io in dependency order.
 #
 # Usage:
 #   ./scripts/publish.sh          # Dry-run (default)

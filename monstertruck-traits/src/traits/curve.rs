@@ -21,9 +21,9 @@ pub trait ParametricCurve: Clone {
     type Vector: Zero + Copy;
     /// Evaluates the curve at parameter `t`, returning the point `P(t)`.
     fn evaluate(&self, t: f64) -> Self::Point;
-    /// Returns `dP/dt` — the first derivative (tangent) at `t`.
+    /// Returns `dP/dt` -- the first derivative (tangent) at `t`.
     fn derivative(&self, t: f64) -> Self::Vector;
-    /// Returns `d²P/dt²` — the second derivative at `t`.
+    /// Returns `d²P/dt²` -- the second derivative at `t`.
     fn derivative_2(&self, t: f64) -> Self::Vector;
     /// Returns the `n`-th derivative `dⁿP/dtⁿ` at `t`.
     fn derivative_n(&self, n: usize, t: f64) -> Self::Vector;

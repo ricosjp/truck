@@ -528,7 +528,7 @@ fn fillet_along_wire_open(
 
 /// Closed-wire fillet face construction.
 ///
-/// All faces are created uniformly using circular indexing — no special
+/// All faces are created uniformly using circular indexing -- no special
 /// "first" or "last" face since the wire wraps around.
 fn fillet_along_wire_closed(
     shell: &mut Shell,

@@ -9,7 +9,7 @@ Derive macros for geometric traits. Re-exported by `monstertruck-traits` (featur
 ```rust
 use monstertruck_traits::prelude::*;
 
-/// An enum of curve types — derive macros delegate trait methods
+/// An enum of curve types -- derive macros delegate trait methods
 /// to the inner type via match arms.
 #[derive(Clone, ParametricCurve, BoundedCurve)]
 pub enum MyCurve {

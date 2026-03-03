@@ -1725,7 +1725,7 @@ mod tests {
             Point3::from((1.0, 1.0, 0.0)),
             Point3::from((0.0, 1.0, 0.0)),
         ];
-        // Single quad face — edges have only 1 face each.
+        // Single quad face -- edges have only 1 face each.
         let faces = [[0, 1, 2, 3]];
         let result = Tnurcc::from_quad_mesh(points, &faces);
         assert!(

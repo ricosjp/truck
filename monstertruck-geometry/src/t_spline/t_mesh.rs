@@ -1408,7 +1408,7 @@ where P: ControlPoint<f64>
             for &t_level in &h_t_levels {
                 self.try_absolute_local_knot_insertion((s, t_level))?;
             }
-            // Retry — a vertical column now exists at s with edges straddling t.
+            // Retry -- a vertical column now exists at s with edges straddling t.
             return self.try_absolute_local_knot_insertion((s, t));
         }
 
@@ -2096,7 +2096,7 @@ impl Tmesh<Point3> {
         let n_cols = n + 1;
 
         // Precompute all needed partial basis derivatives: B^(p,q)_i for p in 0..=m, q in 0..=n.
-        // Flat layout with strided indexing [p][q][i] populated in [i][p][q] order — the
+        // Flat layout with strided indexing [p][q][i] populated in [i][p][q] order -- the
         // transposed iteration prevents a clean iterator chain, so imperative indexing is used.
         let bd_stride = n_cols * num_points;
         let mut basis_derivs = vec![0.0f64; (m + 1) * bd_stride];
@@ -2515,7 +2515,7 @@ impl<'de> Deserialize<'de> for Tmesh<Point3> {
                 let con = &cons[dir as usize];
                 if let Some((maybe_idx, ki)) = con {
                     if let Some(con_index) = maybe_idx {
-                        // Point connection — skip if already established from the other side.
+                        // Point connection -- skip if already established from the other side.
                         if points[point_index].read().con_type(dir) == TmeshConnectionType::Point {
                             continue;
                         }
@@ -4169,7 +4169,7 @@ mod tests {
         }
     }
 
-    /// Tests `refine_at` at a location where an edge already exists — should behave identically
+    /// Tests `refine_at` at a location where an edge already exists -- should behave identically
     /// to `try_absolute_local_knot_insertion`.
     #[test]
     fn test_refine_at_existing_edge() {
@@ -4232,13 +4232,13 @@ mod tests {
 
         let original = mesh.clone();
 
-        // (0.3, 0.3) has no straddling edge — it's in the interior of a face.
+        // (0.3, 0.3) has no straddling edge -- it's in the interior of a face.
         // Direct LKI would fail.
         assert!(
             mesh.clone()
                 .try_absolute_local_knot_insertion((0.3, 0.3))
                 .is_err(),
-            "Direct LKI should fail at (0.3, 0.3) — no straddling edge."
+            "Direct LKI should fail at (0.3, 0.3) -- no straddling edge."
         );
 
         // refine_at should succeed by inserting intermediate edges.

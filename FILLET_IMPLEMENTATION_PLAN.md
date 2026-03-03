@@ -1,4 +1,4 @@
-# Fillet Implementation Plan (`truck`) — Edge-Centric, All Cases
+# Fillet Implementation Plan (`truck`) -- Edge-Centric, All Cases
 
 This plan is for implementing production-ready fillets in `truck` so a caller can fillet **any shared edge** between two faces:
 
@@ -98,7 +98,7 @@ Use **canonical NURBS workspace** internally for fillet creation, then map back 
 
 ---
 
-## 4) Public API Shape (v1 — implemented)
+## 4) Public API Shape (v1 -- implemented)
 
 API in `monstertruck-solid` (actual shape):
 
@@ -131,7 +131,7 @@ Core parameter types:
 
 ## 5) Phase-by-Phase Execution
 
-## Phase 0 — Stabilize Baseline [DONE]
+## Phase 0 -- Stabilize Baseline [DONE]
 
 ### Tasks
 
@@ -146,7 +146,7 @@ Core parameter types:
 
 ---
 
-## Phase 1 — Productize Existing Prototype [DONE]
+## Phase 1 -- Productize Existing Prototype [DONE]
 
 ### Tasks
 
@@ -164,7 +164,7 @@ Core parameter types:
 
 ---
 
-## Phase 2 — Edge Selection and Adjacency [DONE]
+## Phase 2 -- Edge Selection and Adjacency [DONE]
 
 ### Tasks
 
@@ -173,20 +173,20 @@ Core parameter types:
   - [x] from wire/chain helper (`fillet_along_wire`)
 - [x] Robustly resolve incident faces per edge (`build_edge_face_map`)
 - [x] Validate and reject:
-  - [x] non-manifold edges (>2 faces) — `FilletError::NonManifoldEdge`
-  - [x] boundary edges (<2 faces) — `FilletError::NonManifoldEdge(1)`
-  - [x] degenerate tiny edges — `FilletError::DegenerateEdge`
+  - [x] non-manifold edges (>2 faces) -- `FilletError::NonManifoldEdge`
+  - [x] boundary edges (<2 faces) -- `FilletError::NonManifoldEdge(1)`
+  - [x] degenerate tiny edges -- `FilletError::DegenerateEdge`
 - [x] Ensure edge orientation normalization before geometry build
 - [x] Multi-chain robustness: rebuild `edge_face_map` per chain to avoid stale indices
 
 ### Done criteria
 
 - [x] Same API accepts edges from hand-built B-rep
-- [x] CSG outputs (`and`, `or`) tested — `boolean_shell_converts_for_fillet`
+- [x] CSG outputs (`and`, `or`) tested -- `boolean_shell_converts_for_fillet`
 
 ---
 
-## Phase 3 — Canonical Geometry Workspace [DONE]
+## Phase 3 -- Canonical Geometry Workspace [DONE]
 
 ### Tasks
 
@@ -203,7 +203,7 @@ Core parameter types:
 
 ---
 
-## Phase 4 — Round Fillet for Any Shared Edge [DONE]
+## Phase 4 -- Round Fillet for Any Shared Edge [DONE]
 
 ### Tasks
 
@@ -227,7 +227,7 @@ Core parameter types:
 
 ---
 
-## Phase 5 — Profile Modes (Chamfer, Ridge, Custom) [DONE]
+## Phase 5 -- Profile Modes (Chamfer, Ridge, Custom) [DONE]
 
 ### Tasks
 
@@ -256,7 +256,7 @@ Core parameter types:
 
 ---
 
-## Phase 6 — Optional Integration Mode (Merge vs Keep Separate Fillet Face) [NOT STARTED]
+## Phase 6 -- Optional Integration Mode (Merge vs Keep Separate Fillet Face) [NOT STARTED]
 
 ### Tasks
 
@@ -273,7 +273,7 @@ Core parameter types:
 
 ---
 
-## Phase 7 — `monstertruck-modeling` Integration and Docs [DONE]
+## Phase 7 -- `monstertruck-modeling` Integration and Docs [DONE]
 
 ### Tasks
 
@@ -282,7 +282,7 @@ Core parameter types:
 - [x] Update docs/examples that currently state fillet unsupported:
   - [x] `monstertruck-modeling/README.md:15`
   - [x] `monstertruck-modeling/examples/bottle.rs:5`
-- [x] Add/refresh example showing filleting after boolean — `fillet-after-boolean.rs`
+- [x] Add/refresh example showing filleting after boolean -- `fillet-after-boolean.rs`
 - [x] Re-export: `fillet_edges_generic as fillet_edges`, `FilletError`, `FilletOptions`, `FilletProfile`, `RadiusSpec`, `FilletableCurve`, `FilletableSurface`
 
 ### Done criteria
@@ -309,9 +309,9 @@ Core parameter types:
 
 - [x] Two adjacent NURBS faces with untrimmed shared edge
 - [x] Two adjacent faces with trimmed shared edge
-- [x] CSG-generated shared edge from `and`/`or` — `boolean_shell_converts_for_fillet`
-- [x] Mixed face types (Plane + NurbsSurface) — `generic_fillet_mixed_surfaces`
-- [x] Unsupported surface type error path — `generic_fillet_unsupported`
+- [x] CSG-generated shared edge from `and`/`or` -- `boolean_shell_converts_for_fillet`
+- [x] Mixed face types (Plane + NurbsSurface) -- `generic_fillet_mixed_surfaces`
+- [x] Unsupported surface type error path -- `generic_fillet_unsupported`
 
 ### 6.2 Topological checks
 
@@ -321,10 +321,10 @@ Core parameter types:
 
 ### 6.3 Geometric checks
 
-- [x] Closed-loop seam closure test — `fillet_closed_wire_box_top`, `chamfer_closed_wire`
+- [x] Closed-loop seam closure test -- `fillet_closed_wire_box_top`, `chamfer_closed_wire`
 - [ ] Radius error bounds for round mode
 - [ ] Endpoint and tangency continuity at joins
-- [x] Variable-radius wire test — `variable_radius_closed_wire`
+- [x] Variable-radius wire test -- `variable_radius_closed_wire`
 
 ### 6.4 Regression checks
 
@@ -332,32 +332,32 @@ Core parameter types:
 
 ### 6.5 Test inventory (27 tests)
 
-- [x] `create_fillet_surface` — raw geometry surface creation
-- [x] `create_simple_fillet` — simple 2-face fillet
-- [x] `create_fillet_with_side` — fillet with side face update
-- [x] `fillet_to_nurbs` — fillet on curved (circle arc) edge
-- [x] `fillet_semi_cube` — open wire chain fillet
-- [x] `fillet_closed_wire_box_top` — closed wire fillet
-- [x] `fillet_edges_single_edge` — high-level single edge API
-- [x] `fillet_edges_rejects_missing` — error: missing edge
-- [x] `fillet_edges_rejects_boundary` — error: boundary edge
-- [x] `generic_fillet_identity` — generic pipeline with internal types
-- [x] `generic_fillet_modeling_types` — generic pipeline with monstertruck_modeling types
-- [x] `generic_fillet_mixed_surfaces` — mixed Plane + NurbsSurface
-- [x] `generic_fillet_unsupported` — unsupported geometry error
-- [x] `fillet_edges_multi_chain` — two independent edges in one call
-- [x] `generic_fillet_multi_chain` — multi-chain with modeling types
-- [x] `chamfer_single_edge` — chamfer on single edge
-- [x] `chamfer_semi_cube` — chamfer along open wire
-- [x] `chamfer_closed_wire` — chamfer along closed wire
-- [x] `ridge_single_edge` — ridge on single edge
-- [x] `ridge_semi_cube` — ridge along open wire
-- [x] `ridge_closed_wire` — ridge along closed wire
-- [x] `custom_profile_linear` — custom linear profile
-- [x] `custom_profile_bump` — custom degree-2 bump profile
-- [x] `variable_radius_closed_wire` — variable radius on closed wire
-- [x] `fillet_rejects_degenerate_edge` — error: edge too short for radius
-- [x] `boolean_shell_converts_for_fillet` — CSG result IntersectionCurve conversion
+- [x] `create_fillet_surface` -- raw geometry surface creation
+- [x] `create_simple_fillet` -- simple 2-face fillet
+- [x] `create_fillet_with_side` -- fillet with side face update
+- [x] `fillet_to_nurbs` -- fillet on curved (circle arc) edge
+- [x] `fillet_semi_cube` -- open wire chain fillet
+- [x] `fillet_closed_wire_box_top` -- closed wire fillet
+- [x] `fillet_edges_single_edge` -- high-level single edge API
+- [x] `fillet_edges_rejects_missing` -- error: missing edge
+- [x] `fillet_edges_rejects_boundary` -- error: boundary edge
+- [x] `generic_fillet_identity` -- generic pipeline with internal types
+- [x] `generic_fillet_modeling_types` -- generic pipeline with monstertruck_modeling types
+- [x] `generic_fillet_mixed_surfaces` -- mixed Plane + NurbsSurface
+- [x] `generic_fillet_unsupported` -- unsupported geometry error
+- [x] `fillet_edges_multi_chain` -- two independent edges in one call
+- [x] `generic_fillet_multi_chain` -- multi-chain with modeling types
+- [x] `chamfer_single_edge` -- chamfer on single edge
+- [x] `chamfer_semi_cube` -- chamfer along open wire
+- [x] `chamfer_closed_wire` -- chamfer along closed wire
+- [x] `ridge_single_edge` -- ridge on single edge
+- [x] `ridge_semi_cube` -- ridge along open wire
+- [x] `ridge_closed_wire` -- ridge along closed wire
+- [x] `custom_profile_linear` -- custom linear profile
+- [x] `custom_profile_bump` -- custom degree-2 bump profile
+- [x] `variable_radius_closed_wire` -- variable radius on closed wire
+- [x] `fillet_rejects_degenerate_edge` -- error: edge too short for radius
+- [x] `boolean_shell_converts_for_fillet` -- CSG result IntersectionCurve conversion
 
 ---
 

@@ -30,7 +30,7 @@ This fork exists to accomplish two main goals:
 
 2. **Fix the ergonomics:** The original codebase suffered from unconventional phrasing, non-idiomatic naming conventions, and occasionally confusing translations.
    We have overhauled the project using idiomatic Rust naming conventions and standard, industry-recognized CAD terminology.
-   Our goal is to make the codebase highly inclusive, readable, and accessible–whether you are a non-native English speaker, a Rust fanatic, or a seasoned CAD veteran.
+   Our goal is to make the codebase highly inclusive, readable, and accessible – whether you are a non-native English speaker or a seasoned CAD veteran.
 
 ## Usage
 

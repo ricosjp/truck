@@ -1,10 +1,10 @@
 //! NURBS (Non-Uniform Rational B-Spline) curves and surfaces.
 //!
 //! A B-spline is a piecewise polynomial curve or surface defined by:
-//! - **Degree** — polynomial order (1 = linear, 2 = quadratic, 3 = cubic).
-//! - **Control points** — define the shape; the curve is attracted toward them
+//! - **Degree** -- polynomial order (1 = linear, 2 = quadratic, 3 = cubic).
+//! - **Control points** -- define the shape; the curve is attracted toward them
 //!   but generally does not pass through them (except at endpoints of clamped knot vectors).
-//! - **Knot vector** — a non-decreasing sequence of parameter values that determines
+//! - **Knot vector** -- a non-decreasing sequence of parameter values that determines
 //!   where each polynomial piece begins and ends. Knot count = control points + degree + 1.
 //!
 //! A NURBS curve is a rational B-spline: each control point carries a **weight**,
@@ -127,7 +127,7 @@ pub struct BsplineSurface<P> {
     control_points: Vec<Vec<P>>,
 }
 
-/// Rational B-spline curve — a B-spline with weighted control points.
+/// Rational B-spline curve -- a B-spline with weighted control points.
 ///
 /// The generic parameter `V` is typically `Vector4`: the first three components
 /// are `w·x, w·y, w·z` and the fourth is the weight `w`. This homogeneous
@@ -135,7 +135,7 @@ pub struct BsplineSurface<P> {
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, SelfSameGeometry)]
 pub struct NurbsCurve<V>(BsplineCurve<V>);
 
-/// Rational B-spline surface — a tensor-product B-spline with weighted control points.
+/// Rational B-spline surface -- a tensor-product B-spline with weighted control points.
 ///
 /// The generic parameter `V` is typically `Vector4` (homogeneous coordinates).
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, SelfSameGeometry)]
