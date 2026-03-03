@@ -3,20 +3,20 @@ resolver = "2"
 members = [
     "example-pages-generator",
     "readme-generator",
-    "truck-assembly",
-    "truck-base",
-    "truck-derivers",
-    "truck-geometry",
-    "truck-geotrait",
-    "truck-js",
-    "truck-meshalgo",
-    "truck-modeling",
-    "truck-platform",
-    "truck-polymesh",
-    "truck-rendimpl",
-    "truck-shapeops",
-    "truck-stepio",
-    "truck-topology",
+    "monstertruck-assembly",
+    "monstertruck-core",
+    "monstertruck-derive",
+    "monstertruck-geometry",
+    "monstertruck-traits",
+    "monstertruck-wasm",
+    "monstertruck-meshing",
+    "monstertruck-modeling",
+    "monstertruck-platform",
+    "monstertruck-mesh",
+    "monstertruck-render",
+    "monstertruck-solid",
+    "monstertruck-step",
+    "monstertruck-topology",
 ]
 
 [workspace.dependencies]
@@ -42,22 +42,22 @@ serde_json = "1"
 smallvec = "1"
 thiserror = "2"
 # Internal crates
-truck-assembly = { version = "0.1.0", path = "truck-assembly" }
-truck-base = { version = "0.5.0", path = "truck-base" }
-truck-derivers = { version = "0.1.0", path = "truck-derivers" }
-truck-geometry = { version = "0.5.0", path = "truck-geometry" }
-truck-geotrait = { version = "0.4.0", path = "truck-geotrait" }
-truck-meshalgo = { version = "0.4.0", path = "truck-meshalgo" }
-truck-modeling = { version = "0.6.0", path = "truck-modeling" }
-truck-platform = { version = "0.6.0", path = "truck-platform" }
-truck-polymesh = { version = "0.6.0", path = "truck-polymesh" }
-truck-shapeops = { version = "0.4.0", path = "truck-shapeops" }
-truck-stepio = { version = "0.3.0", path = "truck-stepio" }
-truck-topology = { version = "0.6.0", path = "truck-topology" }
+monstertruck-assembly = { version = "0.1.0", path = "monstertruck-assembly" }
+monstertruck-core = { version = "0.5.0", path = "monstertruck-core" }
+monstertruck-derive = { version = "0.1.0", path = "monstertruck-derive" }
+monstertruck-geometry = { version = "0.5.0", path = "monstertruck-geometry" }
+monstertruck-traits = { version = "0.4.0", path = "monstertruck-traits" }
+monstertruck-meshing = { version = "0.4.0", path = "monstertruck-meshing" }
+monstertruck-modeling = { version = "0.6.0", path = "monstertruck-modeling" }
+monstertruck-platform = { version = "0.6.0", path = "monstertruck-platform" }
+monstertruck-mesh = { version = "0.6.0", path = "monstertruck-mesh" }
+monstertruck-solid = { version = "0.4.0", path = "monstertruck-solid" }
+monstertruck-step = { version = "0.3.0", path = "monstertruck-step" }
+monstertruck-topology = { version = "0.6.0", path = "monstertruck-topology" }
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3"
 web-time = "1"
 winit = "0.30"
 
-[profile.release.package.truck-js]
+[profile.release.package.monstertruck-wasm]
 opt-level = "z"

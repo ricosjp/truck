@@ -46,47 +46,47 @@ cargo run --example rotate-objects
 
 ## crates
 
-### truck-base [![Crates.io](https://img.shields.io/crates/v/truck-base.svg)](https://crates.io/crates/truck-base) [![Docs.rs](https://docs.rs/truck-base/badge.svg)](https://docs.rs/truck-base)
+### monstertruck-core [![Crates.io](https://img.shields.io/crates/v/monstertruck-core.svg)](https://crates.io/crates/monstertruck-core) [![Docs.rs](https://docs.rs/monstertruck-core/badge.svg)](https://docs.rs/monstertruck-core)
 
 basic structs and traits: importing cgmath, curve and surface traits, tolerance, etc...
 
-### truck-geotrait [![Crates.io](https://img.shields.io/crates/v/truck-geotrait.svg)](https://crates.io/crates/truck-geotrait) [![Docs.rs](https://docs.rs/truck-geotrait/badge.svg)](https://docs.rs/truck-geotrait)
+### monstertruck-traits [![Crates.io](https://img.shields.io/crates/v/monstertruck-traits.svg)](https://crates.io/crates/monstertruck-traits) [![Docs.rs](https://docs.rs/monstertruck-traits/badge.svg)](https://docs.rs/monstertruck-traits)
 
 Defines geometric traits: `ParametricCurve`, `ParametricSurface`, and so on.
 
-### truck-geometry [![Crates.io](https://img.shields.io/crates/v/truck-geometry.svg)](https://crates.io/crates/truck-geometry) [![Docs.rs](https://docs.rs/truck-geometry/badge.svg)](https://docs.rs/truck-geometry)
+### monstertruck-geometry [![Crates.io](https://img.shields.io/crates/v/monstertruck-geometry.svg)](https://crates.io/crates/monstertruck-geometry) [![Docs.rs](https://docs.rs/monstertruck-geometry/badge.svg)](https://docs.rs/monstertruck-geometry)
 
 geometrical structs: knot vector, B-spline and NURBS
 
-### truck-topology [![Crates.io](https://img.shields.io/crates/v/truck-topology.svg)](https://crates.io/crates/truck-topology) [![Docs.rs](https://docs.rs/truck-topology/badge.svg)](https://docs.rs/truck-topology)
+### monstertruck-topology [![Crates.io](https://img.shields.io/crates/v/monstertruck-topology.svg)](https://crates.io/crates/monstertruck-topology) [![Docs.rs](https://docs.rs/monstertruck-topology/badge.svg)](https://docs.rs/monstertruck-topology)
 
 topological structs: vertex, edge, wire, face, shell, and solid
 
-### truck-polymesh [![Crates.io](https://img.shields.io/crates/v/truck-polymesh.svg)](https://crates.io/crates/truck-polymesh) [![Docs.rs](https://docs.rs/truck-polymesh/badge.svg)](https://docs.rs/truck-polymesh)
+### monstertruck-mesh [![Crates.io](https://img.shields.io/crates/v/monstertruck-mesh.svg)](https://crates.io/crates/monstertruck-mesh) [![Docs.rs](https://docs.rs/monstertruck-mesh/badge.svg)](https://docs.rs/monstertruck-mesh)
 
 defines polygon data structure and some algorithms handling mesh, including meshing the shapes
 
-### truck-meshalgo [![Crates.io](https://img.shields.io/crates/v/truck-meshalgo.svg)](https://crates.io/crates/truck-meshalgo) [![Docs.rs](https://docs.rs/truck-meshalgo/badge.svg)](https://docs.rs/truck-meshalgo)
+### monstertruck-meshing [![Crates.io](https://img.shields.io/crates/v/monstertruck-meshing.svg)](https://crates.io/crates/monstertruck-meshing) [![Docs.rs](https://docs.rs/monstertruck-meshing/badge.svg)](https://docs.rs/monstertruck-meshing)
 
 Mesh algorighms, include tessellations of the shape.
 
-### truck-modeling [![Crates.io](https://img.shields.io/crates/v/truck-modeling.svg)](https://crates.io/crates/truck-modeling) [![Docs.rs](https://docs.rs/truck-modeling/badge.svg)](https://docs.rs/truck-modeling)
+### monstertruck-modeling [![Crates.io](https://img.shields.io/crates/v/monstertruck-modeling.svg)](https://crates.io/crates/monstertruck-modeling) [![Docs.rs](https://docs.rs/monstertruck-modeling/badge.svg)](https://docs.rs/monstertruck-modeling)
 
 integrated modeling algorithms by geometry and topology
 
-### truck-shapeops [![Crates.io](https://img.shields.io/crates/v/truck-shapeops.svg)](https://crates.io/crates/truck-shapeops) [![Docs.rs](https://docs.rs/truck-shapeops/badge.svg)](https://docs.rs/truck-shapeops)
+### monstertruck-solid [![Crates.io](https://img.shields.io/crates/v/monstertruck-solid.svg)](https://crates.io/crates/monstertruck-solid) [![Docs.rs](https://docs.rs/monstertruck-solid/badge.svg)](https://docs.rs/monstertruck-solid)
 
 Provides boolean operations to Solid
 
-### truck-platform [![Crates.io](https://img.shields.io/crates/v/truck-platform.svg)](https://crates.io/crates/truck-platform) [![Docs.rs](https://docs.rs/truck-platform/badge.svg)](https://docs.rs/truck-platform)
+### monstertruck-platform [![Crates.io](https://img.shields.io/crates/v/monstertruck-platform.svg)](https://crates.io/crates/monstertruck-platform) [![Docs.rs](https://docs.rs/monstertruck-platform/badge.svg)](https://docs.rs/monstertruck-platform)
 
 graphic utility library based on wgpu
 
-### truck-rendimpl [![Crates.io](https://img.shields.io/crates/v/truck-rendimpl.svg)](https://crates.io/crates/truck-rendimpl) [![Docs.rs](https://docs.rs/truck-rendimpl/badge.svg)](https://docs.rs/truck-rendimpl)
+### monstertruck-render [![Crates.io](https://img.shields.io/crates/v/monstertruck-render.svg)](https://crates.io/crates/monstertruck-render) [![Docs.rs](https://docs.rs/monstertruck-render/badge.svg)](https://docs.rs/monstertruck-render)
 
 visualization of shape and polygon mesh based on platform
 
-### truck-js
+### monstertruck-wasm
 
 Javascript wrapper of `truck`.
 

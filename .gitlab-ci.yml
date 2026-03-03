@@ -25,7 +25,7 @@ meshalgo-features-buildcheck:
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
   script:
-    - cd truck-meshalgo
+    - cd monstertruck-meshing
     - cargo check --no-default-features --features analyzers
     - cargo check --no-default-features --features filters
     - cargo check --no-default-features --features tessellation
@@ -58,7 +58,7 @@ page-build:
   script:
     - mkdir public
     - cargo make page-build
-    - mv truck-js/pkg public/adhoc-viewer
+    - mv monstertruck-wasm/pkg public/adhoc-viewer
     - mv dist public/webgpu-examples
   artifacts:
     paths:

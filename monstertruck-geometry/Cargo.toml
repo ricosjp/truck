@@ -1,0 +1,27 @@
+[package]
+name = "monstertruck-geometry"
+version = "0.5.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
+edition = "2021"
+description = "Geometrical structs: knot vector, B-spline, NURBS, and T-spline"
+homepage = "https://github.com/virtualritz/truck"
+repository = "https://github.com/virtualritz/truck"
+license = "Apache-2.0"
+
+keywords = ["truck", "graphics"]
+categories = ["graphics"]
+
+[dependencies]
+parking_lot = { workspace = true }
+serde = { workspace = true }
+smallvec = { workspace = true }
+thiserror = { workspace = true }
+monstertruck-core = { workspace = true }
+monstertruck-traits = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
+proptest = { workspace = true, features = ["attr-macro"] }
+monstertruck-traits = { workspace = true, features = ["derive", "polynomial"] }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+getrandom = { workspace = true }

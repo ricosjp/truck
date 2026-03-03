@@ -8,13 +8,13 @@
 
 ```bash
 # Run tests (this also builds everything)
-cargo test -p truck-geometry --lib
+cargo test -p monstertruck-geometry --lib
 
 # Run all core tests
 cargo make cpu-test
 
 # Run a specific test
-cargo test -p truck-geometry test_name
+cargo test -p monstertruck-geometry test_name
 
 # Format code
 cargo fmt --all

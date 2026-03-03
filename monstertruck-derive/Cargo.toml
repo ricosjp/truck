@@ -1,0 +1,17 @@
+[package]
+name = "monstertruck-derive"
+version = "0.1.0"
+edition = "2021"
+description = "Derive macros generating an impl of the geometric traits."
+homepage = "https://github.com/virtualritz/truck"
+repository = "https://github.com/virtualritz/truck"
+license = "Apache-2.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro-error = "1.0.4"
+proc-macro2 = "1.0.106"
+quote = "1.0.44"
+syn = { version = "2.0.114", features = ["derive", "printing"] }

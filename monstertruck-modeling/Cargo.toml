@@ -1,0 +1,33 @@
+[package]
+name = "monstertruck-modeling"
+version = "0.6.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
+edition = "2021"
+description = "integrated modeling algorithms by geometry and topology"
+homepage = "https://github.com/virtualritz/truck"
+repository = "https://github.com/virtualritz/truck"
+license = "Apache-2.0"
+
+keywords = ["truck", "graphics"]
+categories = ["graphics"]
+
+[features]
+default = []
+fillet = ["monstertruck-solid"]
+
+[dependencies]
+derive_more = { workspace = true }
+itertools = { workspace = true }
+rustc-hash = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+monstertruck-core = { workspace = true }
+monstertruck-geometry = { workspace = true }
+monstertruck-traits = { workspace = true, features = ["derive"] }
+monstertruck-mesh = { workspace = true }
+monstertruck-solid = { workspace = true, optional = true }
+monstertruck-topology = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+serde_json = { workspace = true }

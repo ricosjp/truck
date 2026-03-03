@@ -54,9 +54,9 @@ fn main() {
             "--examples",
             "--release",
             "-p",
-            "truck-platform",
+            "monstertruck-platform",
             "-p",
-            "truck-rendimpl",
+            "monstertruck-render",
         ])
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())

@@ -1,0 +1,19 @@
+//! Modeling a cylinder by two sweeps.
+//!
+//! Generated json file can be visualized by `simple-shape-viewer`, an example of `monstertruck-render`.
+
+use monstertruck_modeling::*;
+
+fn cylinder(height: f64, radius: f64) -> Solid {
+    let vertex = builder::vertex(Point3::new(0.0, -height / 2.0, radius));
+    let circle = builder::revolve(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0), 2);
+    let disk = builder::try_attach_plane(&[circle]).unwrap();
+
+    builder::extrude(&disk, Vector3::new(0.0, height, 0.0))
+}
+
+fn main() {
+    let cylinder = cylinder(1.0, 0.5);
+    let json = serde_json::to_vec_pretty(&cylinder).unwrap();
+    std::fs::write("cylinder.json", json).unwrap();
+}

@@ -1,0 +1,41 @@
+[package]
+name = "monstertruck-render"
+version = "0.6.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
+edition = "2021"
+description = "visualization of shape and polygon mesh based on platform"
+homepage = "https://github.com/virtualritz/truck"
+repository = "https://github.com/virtualritz/truck"
+license = "Apache-2.0"
+
+keywords = ["truck", "graphics"]
+categories = ["graphics"]
+exclude = ["*.png"]
+
+[features]
+default = []
+webgl = ["monstertruck-platform/webgl"]
+
+[dependencies]
+bytemuck = { workspace = true }
+image = { workspace = true }
+itertools = { workspace = true }
+monstertruck-platform = { workspace = true }
+monstertruck-mesh = { workspace = true }
+
+[dev-dependencies]
+async-trait = "0.1.89"
+env_logger = { workspace = true }
+pollster = { workspace = true }
+rayon = { workspace = true }
+serde_json = { workspace = true }
+monstertruck-meshing = { workspace = true }
+monstertruck-modeling = { workspace = true }
+winit = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+console_error_panic_hook = { workspace = true }
+console_log = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+web-sys = { workspace = true, features = ["Location"] }
+web-time = { workspace = true }

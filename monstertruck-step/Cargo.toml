@@ -1,0 +1,39 @@
+[package]
+name = "monstertruck-step"
+version = "0.3.0"
+authors = ["Yoshinori Tanimura <tanimura@ricos.co.jp>"]
+edition = "2021"
+description = "Reads/writes STEP files from/to truck"
+homepage = "https://github.com/virtualritz/truck"
+repository = "https://github.com/virtualritz/truck"
+license = "Apache-2.0"
+
+keywords = ["truck", "graphics"]
+categories = ["graphics"]
+
+[features]
+default = ["in", "derive"]
+in = ["derive", "derive_more", "ruststep", "serde", "monstertruck-traits"]
+derive = ["monstertruck-derive"]
+
+[dependencies]
+chrono = { version = "0.4.43", features = ["wasmbind"] }
+derive_more = { workspace = true, optional = true }
+ruststep = { version = "0.4.0", optional = true }
+serde = { workspace = true, optional = true }
+monstertruck-assembly = { workspace = true }
+monstertruck-derive = { workspace = true, optional = true }
+monstertruck-geometry = { workspace = true }
+monstertruck-traits = { workspace = true, optional = true }
+monstertruck-modeling = { workspace = true }
+monstertruck-mesh = { workspace = true }
+monstertruck-topology = { workspace = true }
+
+[dev-dependencies]
+clap = { version = "4.5.58", features = ["derive"] }
+espr-derive = "0.4.0"
+itertools = { workspace = true }
+proptest = { workspace = true }
+serde_json = { workspace = true }
+monstertruck-meshing = { workspace = true }
+monstertruck-solid = { workspace = true }

@@ -2,17 +2,17 @@ use std::io::Write;
 use std::process::Command;
 
 const WORKSPACES: [&str; 11] = [
-    "truck-base",
-    "truck-geometry",
-    "truck-geotrait",
-    "truck-meshalgo",
-    "truck-modeling",
-    "truck-platform",
-    "truck-polymesh",
-    "truck-rendimpl",
-    "truck-shapeops",
-    "truck-topology",
-    "truck-stepio",
+    "monstertruck-core",
+    "monstertruck-geometry",
+    "monstertruck-traits",
+    "monstertruck-meshing",
+    "monstertruck-modeling",
+    "monstertruck-platform",
+    "monstertruck-mesh",
+    "monstertruck-render",
+    "monstertruck-solid",
+    "monstertruck-topology",
+    "monstertruck-step",
 ];
 
 fn badge_url(path: &str) -> String {
