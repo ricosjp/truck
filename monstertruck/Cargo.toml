@@ -1,0 +1,15 @@
+[package]
+name = "monstertruck"
+version = "0.0.1"
+edition = "2024"
+description = "A Rust CAD kernel — B-rep modeling, NURBS, meshing, and GPU rendering."
+license = "Apache-2.0"
+homepage = "https://github.com/virtualritz/monstertruck"
+repository = "https://github.com/virtualritz/monstertruck"
+readme = "../README.md"
+keywords = ["cad", "brep", "nurbs", "mesh", "geometry"]
+categories = ["graphics", "mathematics", "science"]
+
+# NOTE: 0.0.1 is a name-squat release. Full feature-gated deps come in 0.1.0.
+[dependencies]
+monstertruck-core = { workspace = true }

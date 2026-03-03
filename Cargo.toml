@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "example-pages-generator",
     "readme-generator",
+    "monstertruck",
     "monstertruck-assembly",
     "monstertruck-core",
     "monstertruck-derive",
