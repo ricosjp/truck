@@ -1,5 +1,5 @@
 use super::*;
-use derive_more::{From, TryInto};
+use derive_more::From;
 #[doc(hidden)]
 pub use monstertruck_geometry::prelude::{algo, inv_or_zero};
 pub use monstertruck_geometry::{decorators::*, nurbs::*, specifieds::*, t_spline::*};
@@ -13,7 +13,6 @@ use serde::{Deserialize, Serialize};
     Serialize,
     Deserialize,
     From,
-    TryInto,
     ParametricCurve,
     BoundedCurve,
     ParameterDivision1D,
@@ -118,7 +117,6 @@ impl Curve {
     Serialize,
     Deserialize,
     From,
-    TryInto,
     ParametricSurface,
     ParameterDivision2D,
     Invertible,

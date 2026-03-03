@@ -5,7 +5,7 @@ use crate::{Curve, Surface};
 
 impl TryFrom<Surface> for NurbsSurface<Vector4> {
     type Error = ();
-    fn try_from(surface: Surface) -> Result<Self, ()> {
+    fn try_from(surface: Surface) -> std::result::Result<Self, ()> {
         match surface {
             Surface::Plane(plane) => Ok(NurbsSurface::from(BsplineSurface::from(plane))),
             Surface::BsplineSurface(bsp) => Ok(NurbsSurface::from(bsp)),
@@ -18,7 +18,7 @@ impl TryFrom<Surface> for NurbsSurface<Vector4> {
 
 impl TryFrom<Curve> for NurbsCurve<Vector4> {
     type Error = ();
-    fn try_from(curve: Curve) -> Result<Self, ()> {
+    fn try_from(curve: Curve) -> std::result::Result<Self, ()> {
         match curve {
             Curve::Line(line) => Ok(NurbsCurve::from(BsplineCurve::from(line))),
             Curve::BsplineCurve(bsp) => Ok(NurbsCurve::from(bsp)),
