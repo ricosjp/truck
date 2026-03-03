@@ -182,7 +182,7 @@ impl Table {
     /// Constructs `CompressedShell` from `Shell` in STEP file
     /// # Example
     /// ```
-    /// use monstertruck_step::r#in::{*, step_geometry::*};
+    /// use monstertruck_step::load::{*, step_geometry::*};
     /// // read file
     /// let step_string = include_str!(concat!(
     ///     env!("CARGO_MANIFEST_DIR"),
@@ -228,7 +228,7 @@ impl Table {
     /// Constructs `CompressedSolid` from `ManifoldSolidBrep` in STEP file
     /// # Example
     /// ```
-    /// use monstertruck_step::r#in::{*, step_geometry::*};
+    /// use monstertruck_step::load::{*, step_geometry::*};
     /// monstertruck_topology::prelude!(Point3, Curve3D, Surface);
     /// // read file
     /// let step_string = include_str!(concat!(

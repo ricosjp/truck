@@ -40,7 +40,7 @@ impl Display for FloatDisplay {
 /// display step slice
 /// # Examples
 /// ```
-/// use monstertruck_step::out::SliceDisplay;
+/// use monstertruck_step::save::SliceDisplay;
 /// let slice = &[1.0, 2.0, 3.0, 4.0];
 /// let display = SliceDisplay(slice);
 /// let step_string = display.to_string();
@@ -104,7 +104,7 @@ impl<'a> Display for SliceDisplay<'a, SliceDisplay<'a, f64>> {
 /// display index slice
 /// # Examples
 /// ```
-/// use monstertruck_step::out::*;
+/// use monstertruck_step::save::*;
 /// let indices = [1, 10, 100, 1000, 10000];
 /// let display = IndexSliceDisplay(indices.into_iter());
 /// let step_string = display.to_string();

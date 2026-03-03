@@ -1,12 +1,13 @@
-use super::{monstertruck_step::out, *};
+use super::*;
+use crate::save::{FloatDisplay, StepDisplay, VectorAsDirection};
 
-impl out::ConstStepLength for Processor<Sphere, Matrix4> {
+impl save::ConstStepLength for Processor<Sphere, Matrix4> {
     const LENGTH: usize = Processor::<monstertruck_geometry::prelude::Sphere, Matrix4>::LENGTH;
 }
-impl out::StepLength for Processor<Sphere, Matrix4> {
-    fn step_length(&self) -> usize { <Self as out::ConstStepLength>::LENGTH }
+impl save::StepLength for Processor<Sphere, Matrix4> {
+    fn step_length(&self) -> usize { <Self as save::ConstStepLength>::LENGTH }
 }
-impl out::DisplayByStep for Processor<Sphere, Matrix4> {
+impl save::DisplayByStep for Processor<Sphere, Matrix4> {
     fn fmt(&self, idx: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Processor::new(self.entity().0)
             .transformed(*self.transform())
@@ -14,7 +15,7 @@ impl out::DisplayByStep for Processor<Sphere, Matrix4> {
     }
 }
 
-impl out::DisplayByStep for ElementarySurface {
+impl save::DisplayByStep for ElementarySurface {
     fn fmt(&self, idx: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Plane(x) => x.fmt(idx, f),
@@ -32,11 +33,11 @@ impl out::DisplayByStep for ElementarySurface {
                 let p = trans.transform_point(revo.entity_curve().0);
                 let axis = trans.transform_vector(revo.axis());
 
-                let location = out::StepDisplay::new(o, location_idx);
-                let direction_axis = out::VectorAsDirection(axis);
-                let axis = out::StepDisplay::new(direction_axis, axis_idx);
-                let raw_ref_direction = out::VectorAsDirection((p - o).normalize());
-                let ref_direction = out::StepDisplay::new(raw_ref_direction, ref_direction_idx);
+                let location = StepDisplay::new(o, location_idx);
+                let direction_axis = VectorAsDirection(axis);
+                let axis = StepDisplay::new(direction_axis, axis_idx);
+                let raw_ref_direction = VectorAsDirection((p - o).normalize());
+                let ref_direction = StepDisplay::new(raw_ref_direction, ref_direction_idx);
                 let radius = (p - o).magnitude();
 
                 f.write_fmt(format_args!(
@@ -52,19 +53,19 @@ impl out::DisplayByStep for ElementarySurface {
                 let p = line.0;
                 let v = line.1 - p;
 
-                let radius = out::FloatDisplay(p.x);
-                let semi_angle = out::FloatDisplay(f64::atan(v.x));
+                let radius = FloatDisplay(p.x);
+                let semi_angle = FloatDisplay(f64::atan(v.x));
 
                 let position_idx = idx + 1;
                 let location_idx = idx + 2;
                 let axis_idx = idx + 3;
                 let ref_direction_idx = idx + 4;
 
-                let location = out::StepDisplay::new(transform[3].to_point(), location_idx);
-                let raw_axis = out::VectorAsDirection(transform[2].truncate());
-                let axis = out::StepDisplay::new(raw_axis, axis_idx);
-                let raw_ref_direction = out::VectorAsDirection(transform[0].truncate());
-                let ref_direction = out::StepDisplay::new(raw_ref_direction, ref_direction_idx);
+                let location = StepDisplay::new(transform[3].to_point(), location_idx);
+                let raw_axis = VectorAsDirection(transform[2].truncate());
+                let axis = StepDisplay::new(raw_axis, axis_idx);
+                let raw_ref_direction = VectorAsDirection(transform[0].truncate());
+                let ref_direction = StepDisplay::new(raw_ref_direction, ref_direction_idx);
 
                 f.write_fmt(format_args!(
                     "#{idx} = CONICAL_SURFACE('', #{position_idx}, {radius}, {semi_angle});

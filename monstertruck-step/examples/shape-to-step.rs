@@ -8,7 +8,7 @@
 
 use clap::Parser;
 use monstertruck_modeling::*;
-use monstertruck_step::out;
+use monstertruck_step::save;
 use monstertruck_topology::compress::CompressedSolid;
 
 /// convert from truck shape json to step file.

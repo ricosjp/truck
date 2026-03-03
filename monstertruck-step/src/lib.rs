@@ -19,11 +19,12 @@
     unused_qualifications
 )]
 
-/// STEP input module
+/// STEP file loading (import/parsing).
+///
 /// # Example
 /// ```
 /// # fn main() -> anyhow::Result<()> {
-/// use monstertruck_step::r#in::{*, step_geometry::*};
+/// use monstertruck_step::load::{*, step_geometry::*};
 /// use ruststep::tables::EntityTable;
 /// // read file
 /// let step_string = include_str!(concat!(
@@ -43,10 +44,10 @@
 /// # Ok(())
 /// # }
 /// ```
-#[cfg(feature = "in")]
-pub mod r#in;
-/// STEP output module
-pub mod out;
+#[cfg(feature = "load")]
+pub mod load;
+/// STEP file saving (export/formatting).
+pub mod save;
 
 #[doc(hidden)]
 #[macro_export]

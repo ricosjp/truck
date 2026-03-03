@@ -1,12 +1,12 @@
 use crate::*;
 use monstertruck_meshing::tessellation::*;
-use monstertruck_step::r#in::step_geometry::*;
+use monstertruck_step::load::step_geometry::*;
 use monstertruck_topology::compress::*;
 
 /// step parse table
 #[derive(Clone, Debug, Deref, DerefMut, From, Into)]
 #[wasm_bindgen]
-pub struct Table(monstertruck_step::r#in::Table);
+pub struct Table(monstertruck_step::load::Table);
 
 #[derive(Clone, Debug)]
 enum SubShapeFromStep {
@@ -36,7 +36,7 @@ impl ShapeFromStep {
 impl Table {
     /// read step file
     pub fn from_step(step_str: &str) -> Option<Table> {
-        Some(Table(monstertruck_step::r#in::Table::from_step(step_str)?))
+        Some(Table(monstertruck_step::load::Table::from_step(step_str)?))
     }
     /// get shell indices
     pub fn shell_indices(&self) -> Vec<u64> { self.0.shell.keys().copied().collect() }

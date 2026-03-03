@@ -1,5 +1,5 @@
 use monstertruck_modeling::*;
-use monstertruck_step::out::*;
+use monstertruck_step::save::*;
 
 #[test]
 fn default_shell_template() {

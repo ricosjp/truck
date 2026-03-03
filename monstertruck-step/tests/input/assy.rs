@@ -1,4 +1,4 @@
-use monstertruck_step::r#in::*;
+use monstertruck_step::load::*;
 
 const STEP_DIRECTORY: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/step/");
 

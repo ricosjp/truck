@@ -9,7 +9,7 @@
 use anyhow::Result;
 use monstertruck_modeling::*;
 use monstertruck_solid::{difference, or};
-use monstertruck_step::out::{CompleteStepDisplay, StepModel};
+use monstertruck_step::save::{CompleteStepDisplay, StepModel};
 use std::f64::consts::PI;
 
 /// Create a sphere solid centered at `center` with the given `radius`.

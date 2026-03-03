@@ -2,8 +2,8 @@
 
 use monstertruck_geometry::prelude as truck;
 use monstertruck_step::{
-    r#in::{step_geometry::*, *},
-    out::*,
+    load::{step_geometry::*, *},
+    save::*,
 };
 use proptest::*;
 use ruststep::{ast::DataSection, tables::*};
@@ -52,7 +52,7 @@ fn exec_cartesian_point(coord: [f64; 3]) {
         pt,
         &format!(
             "DATA;{}ENDSEC;",
-            monstertruck_step::out::StepDisplay::new(pt, 1)
+            monstertruck_step::save::StepDisplay::new(pt, 1)
         ),
     );
     let pt = Point3::from(coord);
@@ -60,7 +60,7 @@ fn exec_cartesian_point(coord: [f64; 3]) {
         pt,
         &format!(
             "DATA;{}ENDSEC;",
-            monstertruck_step::out::StepDisplay::new(pt, 1)
+            monstertruck_step::save::StepDisplay::new(pt, 1)
         ),
     );
 }

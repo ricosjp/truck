@@ -12,8 +12,8 @@ keywords = ["truck", "graphics"]
 categories = ["graphics"]
 
 [features]
-default = ["in", "derive"]
-in = ["derive", "derive_more", "ruststep", "serde", "monstertruck-traits"]
+default = ["load", "derive"]
+load = ["derive", "derive_more", "ruststep", "serde", "monstertruck-traits"]
 derive = ["monstertruck-derive"]
 
 [dependencies]

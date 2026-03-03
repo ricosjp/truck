@@ -1,4 +1,4 @@
-use monstertruck_step::r#in::*;
+use monstertruck_step::load::*;
 use ruststep::{
     ast::{DataSection, Name},
     primitive::Logical,

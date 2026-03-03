@@ -1,4 +1,4 @@
-use crate::{self as monstertruck_step};
+use crate::{self as monstertruck_step, save};
 use derive_more::From;
 use monstertruck_derive::{DisplayByStep, StepCurve, StepLength, StepSurface};
 use serde::{Deserialize, Serialize};
@@ -225,7 +225,7 @@ pub enum Surface {
     NurbsSurface(NurbsSurface<Vector4>),
 }
 
-impl monstertruck_step::out::DisplayByStep for Surface {
+impl save::DisplayByStep for Surface {
     fn fmt(&self, idx: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Surface::*;
         match self {
@@ -241,7 +241,7 @@ impl monstertruck_step::out::DisplayByStep for Surface {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, StepSurface)]
 pub struct Sphere(pub monstertruck_geometry::prelude::Sphere);
 
-impl monstertruck_step::out::StepSurface for Processor<Sphere, Matrix4> {
+impl save::StepSurface for Processor<Sphere, Matrix4> {
     #[inline(always)]
     fn same_sense(&self) -> bool { self.orientation() }
 }

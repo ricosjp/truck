@@ -1,5 +1,5 @@
 use monstertruck_meshing::prelude::*;
-use monstertruck_step::r#in::*;
+use monstertruck_step::load::*;
 use monstertruck_topology::shell::ShellCondition;
 
 const STEP_DIRECTORY: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/step/");
