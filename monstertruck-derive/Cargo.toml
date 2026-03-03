@@ -1,6 +1,6 @@
 [package]
 name = "monstertruck-derive"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Moritz Moeller <virtualritz@protonmail.com>"]
 edition = "2024"
 description = "Derive macros for geometric traits"

@@ -1,6 +1,6 @@
 [package]
 name = "monstertruck-assembly"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Moritz Moeller <virtualritz@protonmail.com>"]
 edition = "2024"
 description = "Assembly data structures using a directed acyclic graph (DAG)"
