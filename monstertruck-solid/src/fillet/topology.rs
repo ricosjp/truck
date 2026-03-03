@@ -82,7 +82,7 @@ pub(super) fn cut_face_by_bezier(
             boundary
         })
         .collect::<Vec<_>>();
-    let mut new_face = Face::new(new_boundaries, face.surface());
+    let mut new_face = Face::try_new(new_boundaries, face.surface()).ok()?;
     if !face.orientation() {
         new_face.invert();
     }
@@ -143,7 +143,7 @@ pub(super) fn create_new_side(
     let fillet_surface = Box::new(fillet_curve.surface().clone());
     let new_curve = IntersectionCurve::new(side_surface, fillet_surface, fillet_curve);
     fillet_edge.set_curve(new_curve.into());
-    let mut new_face = Face::new(new_boundaries, side.surface());
+    let mut new_face = Face::try_new(new_boundaries, side.surface()).ok()?;
     if !side.orientation() {
         new_face.invert();
     }

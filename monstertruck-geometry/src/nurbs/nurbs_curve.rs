@@ -67,6 +67,8 @@ impl<V> NurbsCurve<V> {
     /// Normalizes the knot vector. cf.[`BsplineCurve::knot_normalize`]
     #[inline(always)]
     pub fn knot_normalize(&mut self) -> &mut Self {
+        // SAFETY: a valid `NurbsCurve` always has a non-zero-range knot vector,
+        // so normalization cannot fail.
         self.0.knot_vec.try_normalize().unwrap();
         self
     }
@@ -311,6 +313,7 @@ where <V as Homogeneous>::Point: Debug + Tolerance
                 Error::DifferentBackFront(a, b) => ConcatError::DisconnectedParameters(a, b),
                 _ => unreachable!(),
             })?;
+        // SAFETY: both curves have non-empty control points by `NurbsCurve` invariant.
         let front = curve0.0.control_points.last().unwrap().to_point();
         let back = curve1.0.control_points.first().unwrap().to_point();
         if !front.near(&back) {
@@ -392,6 +395,7 @@ where V::Point: Tolerance
             if bezier.is_const() {
                 x += bezier.0.knot_vec.range_length();
             } else {
+                // SAFETY: control points are non-empty by `NurbsCurve` invariant.
                 let s0 = self.0.control_points.last().unwrap().weight();
                 let s1 = bezier.0.control_points[0].weight();
                 bezier

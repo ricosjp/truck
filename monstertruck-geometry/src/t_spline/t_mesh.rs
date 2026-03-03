@@ -1401,6 +1401,7 @@ where P: ControlPoint<f64>
             }
         }
         // Sort bottom-to-top so inferred connections chain upwards.
+        // SAFETY: knot coordinates are finite `f64` values, so `partial_cmp` always returns `Some`.
         h_t_levels.sort_by(|a, b| a.partial_cmp(b).unwrap());
         h_t_levels.dedup_by(|a, b| (*a - *b).so_small());
 
@@ -1425,6 +1426,7 @@ where P: ControlPoint<f64>
                 }
             }
         }
+        // SAFETY: knot coordinates are finite `f64` values, so `partial_cmp` always returns `Some`.
         v_s_levels.sort_by(|a, b| a.partial_cmp(b).unwrap());
         v_s_levels.dedup_by(|a, b| (*a - *b).so_small());
 
@@ -2473,14 +2475,18 @@ impl Serialize for Tmesh<Point3> {
             for dir in TmeshDirection::iter() {
                 cons[dir as usize] = match r.con_type(dir) {
                     TmeshConnectionType::Tjunction => None,
+                    // SAFETY: `Edge` connections always have a knot interval.
                     TmeshConnectionType::Edge => Some((None, r.connection_knot(dir).unwrap())),
                     TmeshConnectionType::Point => {
                         let connected = r.connected_point(dir);
+                        // SAFETY: the connected point came from this mesh,
+                        // so it must exist in `self.control_points`.
                         let idx = self
                             .control_points
                             .iter()
                             .position(|p| std::ptr::eq(p.as_ref(), connected.as_ref()))
                             .unwrap();
+                        // SAFETY: `Point` connections always have a knot interval.
                         Some((Some(idx), r.connection_knot(dir).unwrap()))
                     }
                 };

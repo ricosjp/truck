@@ -55,6 +55,8 @@ impl Plane {
         let a = self.u_axis();
         let b = self.v_axis();
         let c = self.normal();
+        // SAFETY: `u_axis`, `v_axis`, and `normal` are linearly independent by
+        // the `Plane` construction invariant.
         let mat = Matrix3::from_cols(a, b, c).invert().unwrap();
         mat * (pt - self.o)
     }

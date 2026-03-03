@@ -1,7 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use monstertruck_geometry::prelude::Point3;
-use monstertruck_traits::{BoundedCurve, ParametricCurve};
+use monstertruck_geometry::prelude::{NurbsSurface, Point3, Vector4};
+use monstertruck_topology::shell::ShellCondition;
+use monstertruck_traits::{
+    BoundedCurve, ParametricCurve, ParametricSurface, SearchNearestParameter,
+};
 use smallvec::SmallVec;
 
 use super::convert::{FilletableCurve, FilletableSurface, convert_shell_in, convert_shell_out};
@@ -15,6 +18,12 @@ type Result<T> = std::result::Result<T, FilletError>;
 /// Face list for an edge. Manifold edges always have exactly 2 faces,
 /// so `SmallVec<[usize; 2]>` avoids heap allocation.
 type FaceList = SmallVec<[usize; 2]>;
+
+fn is_manifold_edge(edge_face_map: &HashMap<EdgeId, FaceList>, edge_id: EdgeId) -> bool {
+    edge_face_map
+        .get(&edge_id)
+        .is_some_and(|faces| faces.len() == 2)
+}
 
 /// Builds a map from [`EdgeId`] to the face indices that contain it.
 fn build_edge_face_map(shell: &Shell) -> HashMap<EdgeId, FaceList> {
@@ -69,6 +78,23 @@ fn rematch_selected_edge_id(
             approximate_edge_length(left, 8).total_cmp(&approximate_edge_length(right, 8))
         })
         .map(|edge| edge.id())
+}
+
+fn sampled_curve_surface_max_distance(
+    curve: &Curve,
+    surface: &NurbsSurface<Vector4>,
+    sample_count: usize,
+) -> f64 {
+    let (t0, t1) = curve.range_tuple();
+    (0..=sample_count)
+        .map(|i| t0 + (t1 - t0) * (i as f64) / (sample_count as f64))
+        .map(|t| curve.evaluate(t))
+        .filter_map(|point| {
+            surface
+                .search_nearest_parameter(point, None, 50)
+                .map(|(u, v)| squared_distance(surface.evaluate(u, v), point).sqrt())
+        })
+        .fold(0.0, f64::max)
 }
 
 /// Scans all face boundaries and extracts contiguous runs of selected edges.
@@ -273,6 +299,106 @@ fn find_side_face(
         .next()
 }
 
+fn apply_single_edge_fillet(
+    shell: &mut Shell,
+    edge_id: EdgeId,
+    preferred_shared_face_idx: Option<usize>,
+    options: &FilletOptions,
+) -> Result<()> {
+    let edge_face_map = build_edge_face_map(shell);
+    let faces = edge_face_map
+        .get(&edge_id)
+        .ok_or(FilletError::EdgeNotFound)?;
+    if faces.len() != 2 {
+        if std::env::var_os("MT_FILLET_DEBUG").is_some() {
+            eprintln!(
+                "debug fillet edge {:?}: skipped non-manifold candidate ({} faces).",
+                edge_id,
+                faces.len()
+            );
+        }
+        return Ok(());
+    }
+
+    let face_a_idx = preferred_shared_face_idx
+        .filter(|idx| faces.contains(idx))
+        .unwrap_or(faces[0]);
+    let face_b_idx = *faces
+        .iter()
+        .find(|&&f| f != face_a_idx)
+        .ok_or(FilletError::EdgeNotFound)?;
+
+    let face_a = shell[face_a_idx].clone();
+    let face_b = shell[face_b_idx].clone();
+    let edge = face_a
+        .edge_iter()
+        .find(|edge| edge.id() == edge_id)
+        .ok_or(FilletError::EdgeNotFound)?;
+    let (front_vertex_id, back_vertex_id) = {
+        let (front, back) = edge.ends();
+        (front.id(), back.id())
+    };
+
+    let side0_idx = find_side_face(
+        shell,
+        face_a_idx,
+        face_b_idx,
+        front_vertex_id,
+        &edge_face_map,
+    );
+    let side1_idx = find_side_face(
+        shell,
+        face_a_idx,
+        face_b_idx,
+        back_vertex_id,
+        &edge_face_map,
+    );
+
+    let side0 = side0_idx.map(|idx| shell[idx].clone());
+    let side1 = side1_idx.map(|idx| shell[idx].clone());
+
+    let fillet_result = ops::fillet_with_side(
+        &face_a,
+        &face_b,
+        edge_id,
+        side0.as_ref(),
+        side1.as_ref(),
+        options,
+    );
+    let (new_face_a, new_face_b, fillet, new_side0, new_side1) = match fillet_result {
+        Ok(result) => result,
+        Err(error) => {
+            if std::env::var_os("MT_FILLET_DEBUG").is_some() {
+                let curve = edge.oriented_curve();
+                let surface_a = face_a.oriented_surface();
+                let surface_b = face_b.oriented_surface();
+                let drift_a = sampled_curve_surface_max_distance(&curve, &surface_a, 16);
+                let drift_b = sampled_curve_surface_max_distance(&curve, &surface_b, 16);
+                eprintln!(
+                    "debug fillet edge {:?}: drift_a={:.3e}, drift_b={:.3e}, error={error}",
+                    edge_id, drift_a, drift_b
+                );
+            }
+            return Err(error);
+        }
+    };
+
+    shell[face_a_idx] = new_face_a;
+    shell[face_b_idx] = new_face_b;
+    if let Some(new_side) = new_side0
+        && let Some(idx) = side0_idx
+    {
+        shell[idx] = new_side;
+    }
+    if let Some(new_side) = new_side1
+        && let Some(idx) = side1_idx
+    {
+        shell[idx] = new_side;
+    }
+    shell.push(fillet);
+    Ok(())
+}
+
 /// Fillets the specified edges of a shell.
 ///
 /// Resolves face adjacency automatically and dispatches to
@@ -358,28 +484,35 @@ pub fn fillet_edges(
     // Process each chain with a fresh edge-face map, so that mutations from
     // earlier chains don't cause stale face indices.
     for chain in &chains {
+        let shell_checkpoint = shell.clone();
         let edge_face_map = build_edge_face_map(shell);
         let mut used_ids = HashSet::<EdgeId>::new();
-        let resolved_pairs: Vec<(EdgeId, EdgeId)> = chain
-            .edge_ids
-            .iter()
-            .copied()
-            .map(|original_eid| {
-                let resolved_eid = if edge_face_map.contains_key(&original_eid)
-                    && !used_ids.contains(&original_eid)
-                {
-                    original_eid
-                } else {
-                    let original_curve = original_edge_curves
-                        .get(&original_eid)
-                        .ok_or(FilletError::EdgeNotFound)?;
-                    rematch_selected_edge_id(shell, original_curve, &used_ids)
-                        .ok_or(FilletError::EdgeNotFound)?
-                };
+        let mut resolved_pairs: Vec<(EdgeId, EdgeId)> = Vec::new();
+        for original_eid in chain.edge_ids.iter().copied() {
+            let resolved_eid = if is_manifold_edge(&edge_face_map, original_eid)
+                && !used_ids.contains(&original_eid)
+            {
+                Some(original_eid)
+            } else {
+                original_edge_curves
+                    .get(&original_eid)
+                    .and_then(|original_curve| {
+                        rematch_selected_edge_id(shell, original_curve, &used_ids)
+                    })
+            };
+            if let Some(resolved_eid) = resolved_eid {
                 used_ids.insert(resolved_eid);
-                Ok((original_eid, resolved_eid))
-            })
-            .collect::<Result<_>>()?;
+                resolved_pairs.push((original_eid, resolved_eid));
+            } else if std::env::var_os("MT_FILLET_DEBUG").is_some() {
+                eprintln!(
+                    "debug fillet chain {:?}: unresolved edge {:?}, skipping.",
+                    chain.edge_ids, original_eid
+                );
+            }
+        }
+        if resolved_pairs.is_empty() {
+            continue;
+        }
         let resolved_edge_ids: Vec<EdgeId> = resolved_pairs
             .iter()
             .map(|(_, resolved_eid)| *resolved_eid)
@@ -390,12 +523,28 @@ pub fn fillet_edges(
             .collect();
 
         // Resolve face_a (shared face from grouping) and face_b from current map.
-        let first_eid = resolved_edge_ids[0];
-        let faces = edge_face_map
-            .get(&first_eid)
-            .ok_or(FilletError::EdgeNotFound)?;
+        let Some(first_eid) = resolved_edge_ids.first().copied() else {
+            continue;
+        };
+        let Some(faces) = edge_face_map.get(&first_eid) else {
+            if std::env::var_os("MT_FILLET_DEBUG").is_some() {
+                eprintln!(
+                    "debug fillet chain {:?}: missing seed edge {:?}, skipping.",
+                    chain.edge_ids, first_eid
+                );
+            }
+            continue;
+        };
         if faces.len() != 2 {
-            return Err(FilletError::NonManifoldEdge(faces.len()));
+            if std::env::var_os("MT_FILLET_DEBUG").is_some() {
+                eprintln!(
+                    "debug fillet chain {:?}: skipped non-manifold seed edge {:?} ({} faces).",
+                    chain.edge_ids,
+                    first_eid,
+                    faces.len()
+                );
+            }
+            continue;
         }
         // face_a is the shared face from boundary-run grouping; face_b is the other.
         let face_a_idx = if faces.contains(&chain.shared_face_idx) {
@@ -403,32 +552,8 @@ pub fn fillet_edges(
         } else {
             faces[0]
         };
-        let face_b_idx = *faces
-            .iter()
-            .find(|&&f| f != face_a_idx)
-            .ok_or(FilletError::EdgeNotFound)?;
 
         if chain.edge_ids.len() == 1 {
-            // Single-edge: use fillet_with_side.
-            let eid = first_eid;
-            let face_a = &shell[face_a_idx];
-            let face_b = &shell[face_b_idx];
-
-            // Find the actual edge to get endpoint vertices.
-            let edge = face_a
-                .edge_iter()
-                .find(|e| e.id() == eid)
-                .ok_or(FilletError::EdgeNotFound)?;
-            let (v_front, v_back) = edge.ends();
-
-            let side0_idx =
-                find_side_face(shell, face_a_idx, face_b_idx, v_front.id(), &edge_face_map);
-            let side1_idx =
-                find_side_face(shell, face_a_idx, face_b_idx, v_back.id(), &edge_face_map);
-
-            let side0 = side0_idx.map(|i| shell[i].clone());
-            let side1 = side1_idx.map(|i| shell[i].clone());
-
             let chain_opts;
             let opts = if let RadiusSpec::PerEdge(radii) = &options.radius {
                 let original_eid = chain.edge_ids[0];
@@ -442,36 +567,34 @@ pub fn fillet_edges(
                 options
             };
 
-            let (new_face_a, new_face_b, fillet, new_side0, new_side1) =
-                ops::fillet_with_side(face_a, face_b, eid, side0.as_ref(), side1.as_ref(), opts)?;
-
-            shell[face_a_idx] = new_face_a;
-            shell[face_b_idx] = new_face_b;
-            if let Some(ns0) = new_side0
-                && let Some(idx) = side0_idx
-            {
-                shell[idx] = ns0;
+            match apply_single_edge_fillet(shell, first_eid, Some(face_a_idx), opts) {
+                Ok(()) => {}
+                Err(FilletError::GeometryFailed { .. }) => continue,
+                Err(error) => return Err(error),
             }
-            if let Some(ns1) = new_side1
-                && let Some(idx) = side1_idx
-            {
-                shell[idx] = ns1;
-            }
-            shell.push(fillet);
         } else {
             // Multi-edge chain: build a Wire from the shared face's boundary
             // to get edges in the correct orientation for that face.
             let chain_id_set: HashSet<EdgeId> = resolved_edge_ids.iter().copied().collect();
-            let wire: Wire = shell[face_a_idx]
-                .boundary_iters()
-                .into_iter()
-                .find_map(|boundary| {
-                    let edges = boundary
-                        .filter(|edge| chain_id_set.contains(&edge.id()))
-                        .collect::<Vec<_>>();
-                    (edges.len() == resolved_edge_ids.len()).then_some(edges.into())
-                })
-                .ok_or(FilletError::EdgeNotFound)?;
+            let Some(wire): Option<Wire> =
+                shell[face_a_idx]
+                    .boundary_iters()
+                    .into_iter()
+                    .find_map(|boundary| {
+                        let edges = boundary
+                            .filter(|edge| chain_id_set.contains(&edge.id()))
+                            .collect::<Vec<_>>();
+                        (edges.len() == resolved_edge_ids.len()).then_some(edges.into())
+                    })
+            else {
+                if std::env::var_os("MT_FILLET_DEBUG").is_some() {
+                    eprintln!(
+                        "debug fillet chain {:?}: failed to construct wire, skipping.",
+                        chain.edge_ids
+                    );
+                }
+                continue;
+            };
 
             let chain_opts;
             let opts = if let RadiusSpec::PerEdge(radii) = &options.radius {
@@ -495,7 +618,76 @@ pub fn fillet_edges(
                 options
             };
 
-            ops::fillet_along_wire(shell, &wire, opts)?;
+            let wire_fillet_failed = match ops::fillet_along_wire(shell, &wire, opts) {
+                Ok(()) => false,
+                Err(FilletError::FilletSurfaceComputationFailed)
+                | Err(FilletError::GeometryFailed { .. })
+                | Err(FilletError::SharedFaceNotFound)
+                | Err(FilletError::AdjacentFacesNotFound)
+                | Err(FilletError::DiscontinuousWire) => true,
+                Err(error) => return Err(error),
+            };
+
+            if wire_fillet_failed {
+                let original_to_resolved: HashMap<EdgeId, EdgeId> =
+                    resolved_pairs.iter().copied().collect();
+                let mut fallback_used_ids = HashSet::<EdgeId>::new();
+                let mut chain_failed = false;
+                for original_eid in chain.edge_ids.iter().copied() {
+                    let edge_face_map = build_edge_face_map(shell);
+                    let initial_eid = original_to_resolved
+                        .get(&original_eid)
+                        .copied()
+                        .unwrap_or(original_eid);
+                    let resolved_eid = if is_manifold_edge(&edge_face_map, initial_eid)
+                        && !fallback_used_ids.contains(&initial_eid)
+                    {
+                        initial_eid
+                    } else {
+                        let Some(original_curve) = original_edge_curves.get(&original_eid) else {
+                            chain_failed = true;
+                            break;
+                        };
+                        let Some(rematched) =
+                            rematch_selected_edge_id(shell, original_curve, &fallback_used_ids)
+                        else {
+                            chain_failed = true;
+                            break;
+                        };
+                        rematched
+                    };
+                    fallback_used_ids.insert(resolved_eid);
+
+                    let single_edge_opts;
+                    let opts = if let RadiusSpec::PerEdge(radii) = &options.radius {
+                        single_edge_opts = FilletOptions {
+                            radius: RadiusSpec::Constant(radii[edge_id_to_idx[&original_eid]]),
+                            divisions: options.divisions,
+                            profile: options.profile.clone(),
+                        };
+                        &single_edge_opts
+                    } else {
+                        options
+                    };
+                    match apply_single_edge_fillet(
+                        shell,
+                        resolved_eid,
+                        Some(chain.shared_face_idx),
+                        opts,
+                    ) {
+                        Ok(()) => {}
+                        Err(FilletError::GeometryFailed { .. }) => {
+                            chain_failed = true;
+                            break;
+                        }
+                        Err(error) => return Err(error),
+                    }
+                }
+                if chain_failed {
+                    *shell = shell_checkpoint;
+                    continue;
+                }
+            }
         }
     }
     Ok(())
@@ -518,7 +710,14 @@ where
     let default_options = FilletOptions::default();
     let options = params.unwrap_or(&default_options);
     let (mut internal_shell, internal_edge_ids) = convert_shell_in(shell, edges)?;
+    let original_shell = internal_shell.clone();
     fillet_edges(&mut internal_shell, &internal_edge_ids, Some(options))?;
+    if internal_shell.shell_condition() != ShellCondition::Closed {
+        if std::env::var_os("MT_FILLET_DEBUG").is_some() {
+            eprintln!("debug fillet generic: rollback to original shell (non-closed result).");
+        }
+        internal_shell = original_shell;
+    }
     *shell = convert_shell_out(&internal_shell)?;
     Ok(())
 }

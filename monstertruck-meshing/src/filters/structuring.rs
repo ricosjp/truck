@@ -127,7 +127,11 @@ impl SubStructureFilter for PolygonMesh {
                 }
             }
         }
-        passed.sort_by(|x, y| x.score.partial_cmp(&y.score).unwrap());
+        passed.sort_by(|x, y| {
+            x.score
+                .partial_cmp(&y.score)
+                .unwrap_or(std::cmp::Ordering::Greater)
+        });
         passed
     }
 
@@ -165,6 +169,7 @@ impl SubStructureFilter for PolygonMesh {
         let face0 = self.faces().tri_faces()[face0_id];
         let face1 = self.faces().tri_faces()[face1_id];
 
+        // SAFETY: two adjacent triangles share exactly two vertices, so one vertex in face1 is not in face0.
         let k = (0..3)
             .find(|k| face0.iter().all(|x| x.pos != face1[*k].pos))
             .unwrap();
@@ -174,7 +179,10 @@ impl SubStructureFilter for PolygonMesh {
         n /= n.magnitude();
         let vec2 = self.positions()[face1[k].pos] - self.positions()[face0[0].pos];
         let mat = Matrix3::from_cols(vec0, vec1, n);
-        let coef = mat.invert().unwrap() * vec2;
+        let coef = match mat.invert() {
+            Some(inv) => inv * vec2,
+            None => return None,
+        };
 
         if coef[2] > plane_tol {
             None

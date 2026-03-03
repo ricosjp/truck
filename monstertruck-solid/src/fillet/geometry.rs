@@ -209,14 +209,26 @@ impl RelaySphere {
 
     pub(super) fn generate(
         point_on_curve: (Point3, Vector3),
-        surface0: &(impl ParametricSurface3D + SearchParameter<D2, Point = Point3>),
-        surface1: &(impl ParametricSurface3D + SearchParameter<D2, Point = Point3>),
+        surface0: &(
+             impl ParametricSurface3D
+             + SearchParameter<D2, Point = Point3>
+             + SearchNearestParameter<D2, Point = Point3>
+         ),
+        surface1: &(
+             impl ParametricSurface3D
+             + SearchParameter<D2, Point = Point3>
+             + SearchNearestParameter<D2, Point = Point3>
+         ),
         radius: f64,
     ) -> Option<Self> {
         let (p, der) = point_on_curve;
         let (mut p0, mut p1) = (p, p);
-        let (mut u0, mut v0) = surface0.search_parameter(p0, None, 10)?;
-        let (mut u1, mut v1) = surface1.search_parameter(p1, None, 10)?;
+        let (mut u0, mut v0) = surface0
+            .search_nearest_parameter(p0, None, 50)
+            .or_else(|| surface0.search_parameter(p0, None, 10))?;
+        let (mut u1, mut v1) = surface1
+            .search_nearest_parameter(p1, None, 50)
+            .or_else(|| surface1.search_parameter(p1, None, 10))?;
         let mut converged = false;
         let mut center = Point3::origin();
         for _ in 0..100 {
@@ -262,8 +274,14 @@ pub(super) fn relay_spheres(
     let (t0, t1) = curve.range_tuple();
     let generator = move |i: isize| {
         let a = i as f64 / division as f64;
-        let t = (1.0 - a) * t0 + a * t1;
-        RelaySphere::generate((curve.subs(t), curve.der(t)), surface0, surface1, radius(a))
+        let delta = 0.25 / division as f64;
+        [0.0, -delta, delta, -2.0 * delta, 2.0 * delta]
+            .into_iter()
+            .find_map(|offset| {
+                let b = a + offset;
+                let t = (1.0 - b) * t0 + b * t1;
+                RelaySphere::generate((curve.subs(t), curve.der(t)), surface0, surface1, radius(b))
+            })
     };
     let range = match extend {
         true => -1..=(division as isize + 1),

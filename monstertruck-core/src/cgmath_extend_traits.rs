@@ -167,6 +167,7 @@ pub fn rat_der<V: Homogeneous>(ders: &[V]) -> <V::Point as EuclideanSpace>::Diff
         let (s, sw) = (ders[0].truncate(), ders[0].weight());
         let (d, dw) = (ders[1].truncate(), ders[1].weight());
         let (d2, d2w) = (ders[2].truncate(), ders[2].weight());
+        // SAFETY: The integer 2 is representable in any numeric type.
         let two = <V::Scalar as num_traits::NumCast>::from(2).unwrap();
         let sw2 = sw * sw;
         d2 / sw - d * (dw / sw2 * two) + s * (dw * dw * two / (sw2 * sw) - d2w / sw2)
@@ -217,6 +218,7 @@ pub fn rat_ders<V: Homogeneous>(ders: &[V], evals: &mut [<V::Point as EuclideanS
         let mut c = 1;
         let sum = (1..i).fold(evals[0] * ders[i].weight(), |sum, j| {
             c = c * (i - j + 1) / j;
+            // SAFETY: `c` is a small binomial coefficient that fits in any numeric type.
             sum + evals[j] * (ders[i - j].weight() * from(c).unwrap())
         });
         evals[i] = (ders[i].truncate() - sum) / ders[0].weight();
@@ -290,6 +292,7 @@ where
         }
         rat_der(&vders)
     } else if (m, n) == (2, 2) {
+        // SAFETY: The integer 2 is representable in any numeric type.
         let two = <V::Scalar as num_traits::NumCast>::from(2).unwrap();
         let (der0, der1) = (ders[0].as_ref(), ders[1].as_ref());
         let (s, u, v, uv) = (der0[0], der1[0], der0[1], der1[1]);
@@ -394,6 +397,7 @@ where
                 let mut c1 = 1;
                 let (evals, ders) = (evals[i].as_mut(), ders[m - i].as_ref());
                 for j in 0..=n {
+                    // SAFETY: `c0` and `c1` are small binomial coefficients.
                     let (c0_s, c1_s) = (from(c0).unwrap(), from(c1).unwrap());
                     sum = sum + evals[j] * (ders[n - j].weight() * c0_s * c1_s);
                     c1 = c1 * (n - j) / (j + 1);

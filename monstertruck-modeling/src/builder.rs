@@ -174,6 +174,7 @@ where
 /// Returns a homotopic shell from `wire0` to `wire1`.
 /// # Examples
 /// ```
+/// # fn main() -> anyhow::Result<()> {
 /// // connecting two squares.
 /// use monstertruck_modeling::*;
 ///
@@ -192,13 +193,16 @@ where
 ///     builder::line(&v11, &v12),
 /// ];
 ///
-/// let shell: Shell = builder::try_wire_homotopy(&wire0, &wire1).unwrap();
+/// let shell: Shell = builder::try_wire_homotopy(&wire0, &wire1)?;
 /// assert_eq!(shell.len(), 2);
 /// let boundary = shell.extract_boundaries();
 /// assert_eq!(boundary.len(), 1);
 /// assert_eq!(boundary[0].len(), 6);
+/// # Ok(())
+/// # }
 /// ```
 /// ```
+/// # fn main() -> anyhow::Result<()> {
 /// // a triangular tube
 /// use monstertruck_modeling::*;
 ///
@@ -219,12 +223,14 @@ where
 ///     builder::line(&v12, &v10),
 /// ];
 ///
-/// let shell: Shell = builder::try_wire_homotopy(&wire0, &wire1).unwrap();
+/// let shell: Shell = builder::try_wire_homotopy(&wire0, &wire1)?;
 /// assert_eq!(shell.len(), 3);
 /// let boundary = shell.extract_boundaries();
 /// assert_eq!(boundary.len(), 2);
 /// assert_eq!(boundary[0].len(), 3);
 /// assert_eq!(boundary[1].len(), 3);
+/// # Ok(())
+/// # }
 /// ```
 /// # Failures
 /// If the wires have different numbers of edges, then return `Error::NotSameNumberOfEdges`.
@@ -285,15 +291,18 @@ where
 /// Try attatiching a plane whose boundary is `wire`.
 /// # Examples
 /// ```
+/// # fn main() -> anyhow::Result<()> {
 /// use monstertruck_modeling::*;
 ///
 /// // make a disk by attaching a plane into circle
 /// let vertex: Vertex = builder::vertex(Point3::new(1.0, 0.0, 0.0));
 /// let circle: Wire = builder::revolve(&vertex, Point3::origin(), Vector3::unit_y(), Rad(7.0), 2);
-/// let disk: Face = builder::try_attach_plane(vec![circle]).unwrap();
+/// let disk: Face = builder::try_attach_plane(vec![circle])?;
 /// # let surface = disk.oriented_surface();
 /// # let normal = surface.normal(0.5, 0.5);
 /// # assert!(normal.near(&Vector3::unit_y()));
+/// # Ok(())
+/// # }
 /// ```
 /// # Failures
 /// If `wires`` are not in one plane, then return `Error::WireNotInOnePlane`.

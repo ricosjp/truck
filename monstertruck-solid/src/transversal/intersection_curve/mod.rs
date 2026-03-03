@@ -20,25 +20,48 @@ impl<S0, S1> From<IntersectionCurveWithParameters<S0, S1>>
 
 impl<S0, S1> IntersectionCurveWithParameters<S0, S1>
 where
-    S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
-    S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S0: ParametricSurface3D
+        + SearchParameter<D2, Point = Point3>
+        + SearchNearestParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D
+        + SearchParameter<D2, Point = Point3>
+        + SearchNearestParameter<D2, Point = Point3>,
 {
     pub fn try_new(surface0: S0, surface1: S1, poly: PolylineCurve<Point3>) -> Option<Self> {
         let ic = IntersectionCurve::new(&surface0, &surface1, poly);
         let poly = ic.leader();
         let len = poly.len();
+        let recover_triple = |point: Point3| {
+            ic.search_nearest_point(point, None, None, 100).or_else(|| {
+                let p0 = ic
+                    .surface0()
+                    .search_parameter(point, None, 100)
+                    .or_else(|| ic.surface0().search_nearest_parameter(point, None, 100))?;
+                let p1 = ic
+                    .surface1()
+                    .search_parameter(point, None, 100)
+                    .or_else(|| ic.surface1().search_nearest_parameter(point, None, 100))?;
+                let q0 = ic.surface0().subs(p0.0, p0.1);
+                let q1 = ic.surface1().subs(p1.0, p1.1);
+                Some((q0.midpoint(q1), p0.into(), p1.into()))
+            })
+        };
         let mut polyline = PolylineCurve(Vec::new());
         let mut params0 = PolylineCurve(Vec::new());
         let mut params1 = PolylineCurve(Vec::new());
         for i in 0..len - 1 {
-            let (q, p0, p1) = ic.search_triple(i as f64, 100)?;
+            let (q, p0, p1) = ic
+                .search_triple(i as f64, 100)
+                .or_else(|| recover_triple(poly[i]))?;
             polyline.push(q);
             params0.push(p0);
             params1.push(p1);
         }
         let (q, p0, p1) = match poly[0].near(&poly[len - 1]) {
             true => (polyline[0], params0[0], params1[0]),
-            false => ic.search_triple((len - 1) as f64, 100)?,
+            false => ic
+                .search_triple((len - 1) as f64, 100)
+                .or_else(|| recover_triple(poly[len - 1]))?,
         };
         polyline.push(q);
         params0.push(p0);
@@ -85,7 +108,7 @@ where
     type Point = Point3;
     #[inline(always)]
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Point3>) {
-        self.ic.parameter_division(range, tol)
+        self.ic.leader().parameter_division(range, tol)
     }
 }
 
@@ -155,8 +178,12 @@ pub fn intersection_curves<S0, S1>(
     polygon1: &PolygonMesh,
 ) -> Option<Vec<IntersectionTuple<S0, S1>>>
 where
-    S0: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
-    S1: ParametricSurface3D + SearchNearestParameter<D2, Point = Point3>,
+    S0: ParametricSurface3D
+        + SearchParameter<D2, Point = Point3>
+        + SearchNearestParameter<D2, Point = Point3>,
+    S1: ParametricSurface3D
+        + SearchParameter<D2, Point = Point3>
+        + SearchNearestParameter<D2, Point = Point3>,
 {
     let interferences = polygon0.extract_interference(polygon1);
     let polylines = super::polyline_construction::construct_polylines(&interferences);

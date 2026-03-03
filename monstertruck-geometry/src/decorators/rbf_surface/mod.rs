@@ -148,6 +148,9 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
+    // SAFETY (all `contact_circle().unwrap()` below): the `ParametricSurface` trait
+    // requires `v` to lie within the parameter range of the edge curve, where a valid
+    // contact circle always exists.
     fn derivatives(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Vector3> {
         let cc = self.contact_circle(v).unwrap();
         let mut out = SurfaceDers::new(max_order);
@@ -216,6 +219,8 @@ where
         tol: f64,
     ) -> (Vec<f64>, Vec<f64>) {
         nonpositive_tolerance!(tol);
+        // SAFETY: `u_parameter_division` returns `None` only when `contact_circle` fails;
+        // within a valid parameter range, this always succeeds.
         let udiv = self.u_parameter_division(range, tol).unwrap();
         let mut vdiv = vec![range.1.0, range.1.1];
         algo::v_parameter_division_for_fillet(self, &udiv, &mut vdiv, tol);
@@ -276,8 +281,10 @@ where
     type Vector = Vector3;
     fn derivatives(&self, n: usize, t: f64) -> CurveDers<Vector3> {
         if n == 0 {
+            // SAFETY: a single-element array always produces a valid `CurveDers`.
             return CurveDers::try_from([self.evaluate(t).to_vec()]).unwrap();
         }
+        // SAFETY: `t` is within the edge curve parameter range, so `contact_circle` succeeds.
         let cc = self.surface.contact_circle(t).unwrap();
         let rders = self.surface.radius.ders(n, t);
         let cc_ders = self.surface.sub_center_contacts_ders(cc, &rders, n);
@@ -288,6 +295,7 @@ where
     }
     fn derivative_n(&self, n: usize, t: f64) -> Self::Vector { self.derivatives(n, t)[n] }
     fn evaluate(&self, t: f64) -> Self::Point {
+        // SAFETY: `t` is within the edge curve parameter range, so `contact_circle` succeeds.
         let cc = self.surface.contact_circle(t).unwrap();
         match self.index {
             0 => cc.contact_point0.point,

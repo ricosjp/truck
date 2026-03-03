@@ -110,6 +110,28 @@ impl Curve {
     }
 }
 
+impl TryFrom<ParameterCurve<Line<Point2>, Surface>> for Curve {
+    type Error = ();
+    fn try_from(curve: ParameterCurve<Line<Point2>, Surface>) -> std::result::Result<Self, ()> {
+        let range = curve.range_tuple();
+        let (t0, t1) = range;
+        let samples = 16usize;
+        let pts: Vec<Point3> = (0..=samples)
+            .map(|i| t0 + (t1 - t0) * (i as f64) / (samples as f64))
+            .map(|t| curve.subs(t))
+            .collect();
+        let knots: Vec<f64> = (0..=samples).map(|i| i as f64 / samples as f64).collect();
+        let knot_vec = KnotVector::from(
+            std::iter::once(0.0)
+                .chain(knots.iter().copied())
+                .chain(std::iter::once(1.0))
+                .collect::<Vec<_>>(),
+        );
+        let bsp = BsplineCurve::new(knot_vec, pts);
+        Ok(Curve::NurbsCurve(NurbsCurve::from(bsp)))
+    }
+}
+
 /// 3-dimensional surfaces
 #[derive(
     Clone,
@@ -292,7 +314,14 @@ impl SearchNearestParameter<D2> for Surface {
                         algo::surface::presearch(rotted, point, rotted.range_tuple(), 100)
                     }
                 };
-                algo::surface::search_nearest_parameter(rotted, point, hint, trials)
+                algo::surface::search_nearest_parameter(rotted, point, hint, trials).or_else(|| {
+                    let candidate = rotted.subs(hint.0, hint.1);
+                    if candidate.near(&point) {
+                        Some(hint)
+                    } else {
+                        None
+                    }
+                })
             }
         }
     }

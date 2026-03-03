@@ -164,13 +164,16 @@ impl Camera {
                 ortho(-x, x, -y, y, near, far)
             }
         };
+        // SAFETY: camera matrix is a rigid-body transform (Euclidean group), always invertible.
         OPENGL_TO_WGPU_MATRIX * normal_projection * self.matrix.invert().unwrap()
     }
 
     #[inline(always)]
     fn camera_info(&self, aspect: f64) -> CameraInfo {
         CameraInfo {
+            // SAFETY: f64-to-f32 cast is always valid for finite values in a camera matrix.
             camera_matrix: self.matrix.cast().unwrap().into(),
+            // SAFETY: f64-to-f32 cast is always valid for finite values in a projection matrix.
             camera_projection: self.projection(aspect).cast().unwrap().into(),
         }
     }
@@ -338,6 +341,7 @@ impl Camera {
         near_clip: f64,
         points: &[Point3],
     ) -> Self {
+        // SAFETY: direction is an orthonormal basis (rotation matrix), always invertible.
         let inv_dir = direction.invert().unwrap();
         let bbox = points
             .iter()
@@ -410,6 +414,7 @@ impl Camera {
         fov: Rad<f64>,
         points: &[Point3],
     ) -> Camera {
+        // SAFETY: direction is an orthonormal basis (rotation matrix), always invertible.
         let inv_dir = direction.invert().unwrap();
         let tan = (fov / 2.0).tan();
 

@@ -382,6 +382,7 @@ fn signup_vertex_normal(
     overwrite: bool,
 ) {
     let face = faces[face_id].as_mut();
+    // SAFETY: pos_id was collected from this face's vertices, so it must be present.
     let j = (0..face.len()).find(|j| face[*j].pos == pos_id).unwrap();
     if face[j].nor.is_none() || overwrite {
         if let Some(n) = normals.last() {

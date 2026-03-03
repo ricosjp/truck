@@ -69,6 +69,7 @@ where
     let edge_map: HashMap<_, _> = eset
         .into_par_iter()
         .map(move |(id, edge)| {
+            // SAFETY: vmap was built from all vertices in the shell.
             let v0 = vmap.get(&edge.absolute_front().id()).unwrap();
             let v1 = vmap.get(&edge.absolute_back().id()).unwrap();
             let curve = edge.curve();
@@ -77,6 +78,7 @@ where
         })
         .collect();
     let create_edge = |edge: &Edge<Point3, C>| -> Edge<_, _> {
+        // SAFETY: edge_map was built from all edges in the shell.
         let new_edge = edge_map.get(&edge.id()).unwrap();
         match edge.orientation() {
             true => new_edge.clone(),
@@ -344,6 +346,7 @@ impl PolyBoundaryPiece {
             let quot = f64::floor((grav.y - v0) / vp);
             vec.iter_mut().for_each(|p| p.y -= quot * vp);
         }
+        // SAFETY: vec is non-empty because it was built from a non-empty boundary.
         let last = *vec.last().unwrap();
         if !vec[0].near(&last) {
             let Point2 { x: u0, y: v0 } = last.uv;
@@ -357,10 +360,12 @@ impl PolyBoundaryPiece {
 
 fn abs_diff(previous: f64) -> impl Fn(&f64, &f64) -> std::cmp::Ordering {
     let f = move |x: &f64| f64::abs(x - previous);
+    // SAFETY: UV parameters from surface evaluation are finite, so comparison succeeds.
     move |x: &f64, y: &f64| f(x).partial_cmp(&f(y)).unwrap()
 }
 fn get_mindiff(u: f64, u0: f64, up: f64) -> f64 {
     let closure = |i| u + i as f64 * up;
+    // SAFETY: the iterator (-2..=2) is non-empty, containing five elements.
     (-2..=2).map(closure).min_by(abs_diff(u0)).unwrap()
 }
 
@@ -455,6 +460,7 @@ impl PolyBoundary {
         let mut point_cache = HashMap::<UvKey, Point3>::default();
         match open.len() {
             1 => {
+                // SAFETY: open.len() == 1 was matched above.
                 let mut curve = open.pop().unwrap();
                 let p = curve[0];
                 let q = curve[curve.len() - 1];
@@ -535,6 +541,7 @@ impl PolyBoundary {
                 }
             }
             2 => {
+                // SAFETY: open.len() == 2 was matched above.
                 let mut curve1 = open.pop().unwrap();
                 let mut curve0 = open.pop().unwrap();
                 fn end_pts<T: Copy>(vec: &[T]) -> (T, T) { (vec[0], vec[vec.len() - 1]) }

@@ -358,6 +358,7 @@ impl<P, C> Wire<P, C> {
     /// assert_eq!(wire0, backup);
     /// ```
     pub fn swap_edge_into_wire(&mut self, idx: usize, wire: Wire<P, C>) -> bool {
+        // SAFETY: wire is checked non-empty above, so ends_vertices always returns Some.
         if wire.is_empty() || self[idx].ends() != wire.ends_vertices().unwrap() {
             return false;
         }

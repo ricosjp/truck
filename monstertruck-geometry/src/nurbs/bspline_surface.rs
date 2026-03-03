@@ -809,6 +809,7 @@ impl<P: ControlPoint<f64> + Tolerance> BsplineSurface<P> {
             if a.so_small() {
                 break;
             } else {
+                // SAFETY: `new_points` was seeded with one element and only grows.
                 let vec = self
                     .control_points_column_iter(i)
                     .zip(new_points.last().unwrap())
@@ -818,6 +819,7 @@ impl<P: ControlPoint<f64> + Tolerance> BsplineSurface<P> {
             }
         }
 
+        // SAFETY: `new_points` was seeded with one element and only grows.
         for (pt0, pt1) in self
             .control_points_column_iter(idx)
             .zip(new_points.last().unwrap())
@@ -907,6 +909,7 @@ impl<P: ControlPoint<f64> + Tolerance> BsplineSurface<P> {
             if a.so_small() {
                 break;
             } else {
+                // SAFETY: `new_points` was seeded with one element and only grows.
                 let vec = self
                     .control_points_row_iter(i)
                     .zip(new_points.last().unwrap())
@@ -916,6 +919,7 @@ impl<P: ControlPoint<f64> + Tolerance> BsplineSurface<P> {
             }
         }
 
+        // SAFETY: `new_points` was seeded with one element and only grows.
         for (pt0, pt1) in self
             .control_points_row_iter(idx)
             .zip(new_points.last().unwrap())
@@ -1199,6 +1203,7 @@ impl<P: ControlPoint<f64> + Tolerance> BsplineSurface<P> {
         }
 
         let knot_vector_v = self.knot_vector_v().clone();
+        // SAFETY: `u` was just added with full multiplicity, so it exists in the knot vector.
         let k = self.knot_vector_u().floor(u).unwrap();
         let m = self.knot_vector_u().len();
         let n = self.control_points.len();
@@ -1334,9 +1339,13 @@ impl<P: ControlPoint<f64> + Tolerance> BsplineSurface<P> {
                 .collect();
             cc.concat(&BsplineCurve::new(knot_vec, control_points));
             if p + 1 != knots.len() {
+                // SAFETY: `backup` is always `Some` here because it was set
+                // in the identical `p + 1 != knots.len()` guard above.
                 bspsurface = backup.unwrap().cut_v(knots[p]);
             }
         }
+        // SAFETY: `knots.len() >= 2` for any valid B-spline surface, so the loop
+        // always executes at least once and the collector is never `Singleton`.
         let mut curve: BsplineCurve<P> = cc.unwrap();
         curve.knot_normalize();
         curve
@@ -1549,10 +1558,12 @@ impl<P: ControlPoint<f64> + Tolerance> BsplineSurface<P> {
     pub fn splitted_boundary(&self) -> [BsplineCurve<P>; 4] {
         let (knot_vector_u, knot_vector_v) = self.knot_vecs.clone();
         let control_points0 = self.control_points.iter().map(|x| x[0]).collect();
+        // SAFETY: a valid `BsplineSurface` always has non-empty control points.
         let control_points1 = self.control_points.last().unwrap().clone();
         let control_points2 = self
             .control_points
             .iter()
+            // SAFETY: each inner vec is non-empty by the `BsplineSurface` invariant.
             .map(|x| *x.last().unwrap())
             .collect();
         let control_points3 = self.control_points[0].clone();

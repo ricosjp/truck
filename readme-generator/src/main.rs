@@ -24,6 +24,7 @@ fn badge_url(path: &str) -> String {
     )
 }
 
+// Unwraps in this binary crate are acceptable; failures indicate a broken dev environment.
 fn create_readme(path: &str) {
     let mut readme = std::fs::File::create("README.md").unwrap();
     let output = Command::new("cargo").args(["readme"]).output().unwrap();
@@ -70,6 +71,7 @@ fn create_readme(path: &str) {
     }
 }
 
+// Unwraps in main are acceptable; failures indicate a broken dev environment.
 fn main() {
     for path in &WORKSPACES {
         println!("{path}");

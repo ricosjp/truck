@@ -45,14 +45,17 @@ impl_jacobian!(Matrix4, Vector4);
 /// Solve equation by Newton's method
 /// # Examples
 /// ```
+/// # fn main() -> anyhow::Result<()> {
 /// use monstertruck_core::{newton::*, assert_near2};
 ///
 /// let function = |x: f64| CalcOutput {
 ///     value: x * x - 2.0,
 ///     derivation: 2.0 * x,
 /// };
-/// let sqrt2 = solve(function, 1.0, 10).unwrap();
+/// let sqrt2 = solve(function, 1.0, 10).map_err(|e| anyhow::anyhow!("{e}"))?;
 /// assert_near2!(sqrt2, f64::sqrt(2.0));
+/// # Ok(())
+/// # }
 /// ```
 pub fn solve<V, M>(
     function: impl Fn(V) -> CalcOutput<V, M>,

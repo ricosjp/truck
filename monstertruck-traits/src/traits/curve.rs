@@ -419,6 +419,7 @@ where
     C0::Vector: Debug + Tolerance,
     C0::Output: BoundedCurve<Point = C0::Point, Vector = C0::Vector> + Debug,
     C1: BoundedCurve<Point = C0::Point, Vector = C0::Vector>, {
+    // SAFETY: this is a test utility; panicking on concat failure is the intended behavior.
     let concatted = curve0.try_concat(curve1).unwrap();
     let (t0, t1) = curve0.range_tuple();
     let (_, t2) = curve1.range_tuple();

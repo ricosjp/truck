@@ -20,6 +20,7 @@ monstertruck-core = { workspace = true }
 monstertruck-traits = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
+anyhow = { workspace = true }
 proptest = { workspace = true, features = ["attr-macro"] }
 monstertruck-traits = { workspace = true, features = ["derive", "polynomial"] }
 

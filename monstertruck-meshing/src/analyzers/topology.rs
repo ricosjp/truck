@@ -90,6 +90,7 @@ impl Topology for Faces {
         let mut res = Vec::new();
         while !vemap.is_empty() {
             let mut wire = Vec::new();
+            // SAFETY: the while loop condition ensures vemap is non-empty.
             let front = vemap.iter().next().unwrap();
             let front = (*front.0, *front.1);
             vemap.remove(&front.0);

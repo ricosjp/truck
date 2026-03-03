@@ -128,6 +128,8 @@ impl<P> BsplineCurve<P> {
     /// Normalizes the knot vector  
     #[inline(always)]
     pub fn knot_normalize(&mut self) -> &mut Self {
+        // SAFETY: a valid `BsplineCurve` always has a non-zero-range knot vector,
+        // so normalization cannot fail.
         self.knot_vec.try_normalize().unwrap();
         self
     }
@@ -231,6 +233,7 @@ impl<P: ControlPoint<f64>> BsplineCurve<P> {
     /// Interpolate by B-spline curve with the knot vector `knot_vec`.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_geometry::prelude::*;
     ///
     /// let knot_vec = KnotVector::uniform_knot(2, 2);
@@ -240,11 +243,13 @@ impl<P: ControlPoint<f64>> BsplineCurve<P> {
     ///     (0.4, Point3::new(-3.0, 5.0, 6.0)),
     ///     (1.0, Point3::new(6.0, 2.0, 12.0)),
     /// ];
-    /// let curve = BsplineCurve::try_interpolate(knot_vec, parameter_points.clone()).unwrap();
+    /// let curve = BsplineCurve::try_interpolate(knot_vec, parameter_points.clone())?;
     ///
     /// parameter_points.into_iter().for_each(|(t, p)| {
     ///     assert_near!(curve.subs(t), p);
     /// });
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn try_interpolate(
         knot_vec: KnotVector,
@@ -287,6 +292,7 @@ impl<P: ControlPoint<f64>> BsplineCurve<P> {
 
     /// Interpolate by B-spline curve with the knot vector `knot_vec`. cf) [`BsplineCurve::try_interpolate`].
     pub fn interpolate(knot_vec: KnotVector, parameter_points: impl AsMut<[(f64, P)]>) -> Self {
+        // SAFETY: panicking convenience wrapper; callers must ensure valid inputs.
         Self::try_interpolate(knot_vec, parameter_points).unwrap()
     }
 
@@ -568,12 +574,14 @@ impl<P: ControlPoint<f64> + Tolerance> BsplineCurve<P> {
             if a.so_small() {
                 break;
             } else {
+                // SAFETY: `new_points` was seeded with one element and only grows.
                 let p = *new_points.last().unwrap();
                 let p = p + (self.control_points[i] - p) / a;
                 new_points.push(p);
             }
         }
 
+        // SAFETY: `new_points` was seeded with one element and only grows.
         if !new_points.last().unwrap().near(self.control_point(idx)) {
             return Err(Error::CannotRemoveKnot(idx));
         }
@@ -620,6 +628,8 @@ impl<P: ControlPoint<f64> + Tolerance> BsplineCurve<P> {
         for mut bezier in self.bezier_decomposition() {
             result.concat(bezier.elevate_degree_bezier());
         }
+        // SAFETY: `bezier_decomposition` of a valid B-spline always yields at least
+        // one segment, so the collector is never `Singleton`.
         *self = result.unwrap();
         self
     }
@@ -982,6 +992,7 @@ impl<P: ControlPoint<f64> + Tolerance> Cut for BsplineCurve<P> {
             self.add_knot(t);
         }
 
+        // SAFETY: `t` was just added with full multiplicity, so it exists in the knot vector.
         let k = self.knot_vec.floor(t).unwrap();
         let m = self.knot_vec.len();
         let n = self.control_points.len();
@@ -1029,6 +1040,7 @@ impl<P: ControlPoint<f64> + Tolerance> Concat<BsplineCurve<P>> for BsplineCurve<
                 Error::DifferentBackFront(a, b) => ConcatError::DisconnectedParameters(a, b),
                 _ => unreachable!(),
             })?;
+        // SAFETY: both curves have non-empty control points by `BsplineCurve` invariant.
         let front = curve0.control_points.last().unwrap();
         let back = curve1.control_points.first().unwrap();
         if !front.near(back) {
@@ -1107,6 +1119,7 @@ where
                 let res = curve.search_nearest_parameter(pt, Some(hint), 100);
                 let flag = res.map(|res| hint <= res && curve.subs(res).near(&pt));
                 hint = match flag {
+                    // SAFETY: we just matched `Some(true)`, so `res` is `Some`.
                     Some(true) => res.unwrap(),
                     _ => return None,
                 };

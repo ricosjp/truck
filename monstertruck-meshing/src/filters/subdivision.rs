@@ -63,6 +63,7 @@ impl Subdivision for PolygonMesh {
             .iter()
             .flat_map(|v| {
                 let len = self.positions().len();
+                // SAFETY: all edges were inserted from the same set of triangle faces.
                 let e: [StandardVertex; 3] = [
                     (edges.get(&Edge::new(v[1].pos, v[2].pos)).unwrap().idx + len).into(),
                     (edges.get(&Edge::new(v[2].pos, v[0].pos)).unwrap().idx + len).into(),
@@ -114,6 +115,7 @@ enum VertexBoundaryCondition {
 impl VertexBoundaryCondition {
     fn new(v: usize, adjacency: &[usize], edges: &HashMap<Edge, EdgeInfo>) -> Self {
         let binfo = adjacency.iter().copied().fold((None, None), |binfo, w| {
+            // SAFETY: the adjacency list was built from the same edge set.
             let edge = edges.get(&Edge::new(v, w)).unwrap();
             match (edge.second_wing, binfo) {
                 (None, (None, _)) => (Some(w), None),

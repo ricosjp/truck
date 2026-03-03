@@ -1232,7 +1232,10 @@ impl<'a, NE, EE> Path<'a, NE, EE> {
     pub fn edges(&self) -> &[Edge<'a, EE>] { &self.edges }
     /// Returns the terminal node
     #[inline]
-    pub fn terminal_node(&'a self) -> Node<'a, NE, EE> { *self.nodes.last().unwrap() }
+    pub fn terminal_node(&'a self) -> Node<'a, NE, EE> {
+        // SAFETY: a Path always contains at least one node (the starting node).
+        *self.nodes.last().unwrap()
+    }
 }
 
 #[derive(Debug)]
@@ -1278,6 +1281,7 @@ impl<'a, NE, EE> Iterator for PathsIter<'a, NE, EE> {
         }
         let res = self.current.clone();
 
+        // SAFETY: current.nodes is non-empty because PathsIter is initialized with at least one node.
         let leaf = *self.current.nodes.last().unwrap();
         if leaf.is_terminal() {
             let len = self.current.edges.len();
@@ -1288,6 +1292,7 @@ impl<'a, NE, EE> Iterator for PathsIter<'a, NE, EE> {
                 self.current.nodes.truncate(idx + 2);
                 self.current.edges.truncate(idx + 1);
                 self.current.edges[idx] += 1;
+                // SAFETY: the find above ensures edges[idx] + 1 < edges().len(), so edges[idx] is valid.
                 let (_, to) = self.current.nodes[idx]
                     .edge(self.current.edges[idx])
                     .unwrap()
@@ -1297,6 +1302,7 @@ impl<'a, NE, EE> Iterator for PathsIter<'a, NE, EE> {
                 self.end_iter = true;
             }
         } else {
+            // SAFETY: this branch is taken when leaf is not terminal, so edge(0) exists.
             let (_, new_leaf_index) = leaf.edge(0).unwrap().nodes();
             self.current.nodes.push(self.dag.node(new_leaf_index));
             self.current.edges.push(0);
@@ -1335,6 +1341,7 @@ impl<'a, NE, EE> Iterator for MaximalPathsIter<'a, NE, EE> {
         self.current.edges[idx] += 1;
 
         let current_leaf = self.current.nodes[idx];
+        // SAFETY: the find above ensures edges[idx] + 1 < edges().len(), so edges[idx] is valid.
         let (_, next) = current_leaf.edge(self.current.edges[idx]).unwrap().nodes();
         let path = self.dag.first_maximal_path(next);
         self.current.nodes.extend(path.nodes);

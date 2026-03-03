@@ -6,6 +6,7 @@ type Result<T> = std::result::Result<T, errors::Error>;
 /// Writes obj data to output stream
 /// # Examples
 /// ```
+/// # fn main() -> anyhow::Result<()> {
 /// use monstertruck_mesh::*;
 /// let positions = vec![
 ///     Point3::new(0.0, 0.0, 0.0),
@@ -47,7 +48,9 @@ type Result<T> = std::result::Result<T, errors::Error>;
 ///     },
 ///     faces,
 /// );
-/// obj::write(&mesh, std::fs::File::create("meshdata.obj").unwrap());
+/// obj::write(&mesh, std::fs::File::create("meshdata.obj")?);
+/// # Ok(())
+/// # }
 /// ```
 pub fn write<W: Write>(mesh: &PolygonMesh, writer: W) -> Result<()> {
     sub_write(mesh, &mut BufWriter::new(writer))
@@ -115,6 +118,13 @@ impl Faces {
     }
 }
 
+fn next_float(args: &mut std::str::SplitWhitespace<'_>) -> Result<f64> {
+    let token = args
+        .next()
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "missing field"))?;
+    Ok(token.parse::<f64>()?)
+}
+
 fn sub_write<W: Write>(mesh: &PolygonMesh, writer: &mut BufWriter<W>) -> Result<()> {
     write3vec(writer, mesh.positions(), "v")?;
     write2vec(writer, mesh.uv_coords(), "vt")?;
@@ -129,22 +139,23 @@ pub fn read<R: Read>(reader: R) -> Result<PolygonMesh> {
     let mut normals = Vec::new();
     let mut faces = Faces::default();
     let reader = BufReader::new(reader);
-    for line in reader.lines().map(|s| s.unwrap()) {
+    for line in reader.lines() {
+        let line = line?;
         let mut args = line.split_whitespace();
         if let Some(first_str) = args.next() {
             if first_str == "v" {
-                let x = args.next().unwrap().parse::<f64>()?;
-                let y = args.next().unwrap().parse::<f64>()?;
-                let z = args.next().unwrap().parse::<f64>()?;
+                let x = next_float(&mut args)?;
+                let y = next_float(&mut args)?;
+                let z = next_float(&mut args)?;
                 positions.push(Point3::new(x, y, z));
             } else if first_str == "vt" {
-                let u = args.next().unwrap().parse::<f64>()?;
-                let v = args.next().unwrap().parse::<f64>()?;
+                let u = next_float(&mut args)?;
+                let v = next_float(&mut args)?;
                 uv_coords.push(Vector2::new(u, v));
             } else if first_str == "vn" {
-                let x = args.next().unwrap().parse::<f64>()?;
-                let y = args.next().unwrap().parse::<f64>()?;
-                let z = args.next().unwrap().parse::<f64>()?;
+                let x = next_float(&mut args)?;
+                let y = next_float(&mut args)?;
+                let z = next_float(&mut args)?;
                 normals.push(Vector3::new(x, y, z));
             } else if first_str == "f" {
                 let mut face = Vec::new();

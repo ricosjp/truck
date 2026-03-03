@@ -122,6 +122,8 @@ fn contact_points(
         n0.dot(p0.to_vec()) - sign * radius,
         n1.dot(p1.to_vec()) - sign * radius,
     );
+    // SAFETY: the matrix columns are the edge curve tangent and two plane normals,
+    // which are linearly independent when the surfaces are not coplanar.
     let center = Point3::from_vec(mat.invert().unwrap() * vec);
     let q0 = center + sign * radius * n0;
     let q1 = center + sign * radius * n1;
@@ -141,6 +143,8 @@ fn next_point(
     let vv = vder.dot(vder);
     let mat = Matrix2::new(uu, uv, uv, vv);
     let vec = Vector2::new(uder.dot(d), vder.dot(d));
+    // SAFETY: the matrix is the first fundamental form of a regular surface,
+    // which is positive definite and therefore invertible.
     let del = mat.invert().unwrap() * vec;
     let (u, v) = (u + del.x, v + del.y);
     (surface.evaluate(u, v), (u, v))

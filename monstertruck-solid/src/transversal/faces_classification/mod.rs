@@ -26,6 +26,7 @@ impl<P, C, S> FacesClassification<P, C, S> {
     pub fn and_or_unknown(&self) -> [Shell<P, C, S>; 3] {
         let [mut and, mut or, mut unknown] = <[Shell<P, C, S>; 3]>::default();
         for face in &self.shell {
+            // SAFETY: `push()` inserts every face id into `status`.
             match self.status.get(&face.id()).unwrap() {
                 ShapesOpStatus::And => and.push(face.clone()),
                 ShapesOpStatus::Or => or.push(face.clone()),
@@ -48,6 +49,7 @@ impl<P, C, S> FacesClassification<P, C, S> {
                 .any(|edge| edge.id() == boundary[0][0].id())
             {
                 comp.iter().for_each(|face| {
+                    // SAFETY: face originated from `self.shell` via `and_or_unknown()`.
                     *self.status.get_mut(&face.id()).unwrap() = ShapesOpStatus::And;
                 })
             } else if or_boundary
@@ -56,6 +58,7 @@ impl<P, C, S> FacesClassification<P, C, S> {
                 .any(|edge| edge.id() == boundary[0][0].id())
             {
                 comp.iter().for_each(|face| {
+                    // SAFETY: face originated from `self.shell` via `and_or_unknown()`.
                     *self.status.get_mut(&face.id()).unwrap() = ShapesOpStatus::Or;
                 })
             }

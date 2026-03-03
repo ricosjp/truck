@@ -56,11 +56,11 @@ fn main() -> anyhow::Result<()> {
     let mut body = cube;
     for &c in &subtract {
         body = difference(&body, &sphere(c, r), tol)
-            .ok_or_else(|| anyhow::anyhow!("difference failed at {c:?}"))?;
+            .map_err(|e| anyhow::anyhow!("difference failed at {c:?}: {e}"))?;
     }
     for &c in &unite {
         body = or(&body, &sphere(c, r), tol)
-            .ok_or_else(|| anyhow::anyhow!("union failed at {c:?}"))?;
+            .map_err(|e| anyhow::anyhow!("union failed at {c:?}: {e}"))?;
     }
 
     // Fillet all edges.

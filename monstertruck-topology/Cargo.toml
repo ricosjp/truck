@@ -26,3 +26,4 @@ monstertruck-core = { workspace = true }
 monstertruck-traits = { workspace = true }
 
 [dev-dependencies]
+anyhow = { workspace = true }

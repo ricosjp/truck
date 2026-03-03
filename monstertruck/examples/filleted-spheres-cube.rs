@@ -51,21 +51,18 @@ fn main() -> Result<()> {
     let mut body = cube;
     for &center in &subtract {
         body = difference(&body, &sphere(center, r), tol)
-            .ok_or_else(|| anyhow::anyhow!("difference failed at {center:?}"))?;
+            .map_err(|error| anyhow::anyhow!("difference failed at {center:?}: {error}"))?;
     }
 
     // Apply unions.
     for &center in &unite {
         body = or(&body, &sphere(center, r), tol)
-            .ok_or_else(|| anyhow::anyhow!("union failed at {center:?}"))?;
+            .map_err(|error| anyhow::anyhow!("union failed at {center:?}: {error}"))?;
     }
 
     // Fillet all edges.
     let mut shell = body.into_boundaries().pop().unwrap();
-    let edges: Vec<_> = shell
-        .iter()
-        .flat_map(|face| face.edge_iter())
-        .collect();
+    let edges: Vec<_> = shell.iter().flat_map(|face| face.edge_iter()).collect();
     let opts = FilletOptions::constant(0.05);
     fillet_edges(&mut shell, &edges, Some(&opts))?;
 

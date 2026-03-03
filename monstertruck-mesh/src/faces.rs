@@ -417,6 +417,7 @@ impl<V: Copy> Iterator for TriangleIterator<'_, V> {
                     .map(AsRef::as_ref)
                     .or_else(|| other_faces.next().map(AsRef::as_ref));
             }
+            // SAFETY: set from quad_faces or other_faces above; len > 0 guarantees remaining faces.
             let face = current_face.unwrap();
             let res = [
                 face[0],
@@ -424,6 +425,7 @@ impl<V: Copy> Iterator for TriangleIterator<'_, V> {
                 face[*current_vertex + 2],
             ];
             *current_vertex += 1;
+            // SAFETY: current_face was verified as Some on the preceding line.
             if current_face.unwrap().len() == *current_vertex + 2 {
                 *current_face = None;
                 *current_vertex = 0;

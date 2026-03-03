@@ -45,6 +45,7 @@ impl<K: Copy + Eq + Hash, V> SliceHashMap<K, V> {
             let output = self.vec.swap_remove(idx);
             if idx < self.vec.len() {
                 let key = self.vec[idx].0;
+                // SAFETY: key was just read from vec[idx] after swap_remove, so it must exist in map.
                 *self.map.get_mut(&key).unwrap() = idx;
             }
             output.1

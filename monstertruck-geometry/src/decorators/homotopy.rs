@@ -112,6 +112,7 @@ where
         let (mut div, _) = self.curve0.parameter_division(urange, tol);
         let (div0, _) = self.curve1.parameter_division(urange, tol);
         div.extend(div0);
+        // SAFETY: division parameters are finite `f64` values, so `partial_cmp` always returns `Some`.
         div.sort_by(|x, y| x.partial_cmp(y).unwrap());
         div.dedup();
         (div, vec![vrange.0, vrange.1])
@@ -209,6 +210,7 @@ where
     let (t00, t01) = (range0.start_bound(), range0.end_bound());
     let (t10, t11) = (range1.start_bound(), range1.end_bound());
     let t0 = match (bound2opt(t00), bound2opt(t10)) {
+        // SAFETY: parameter range bounds are finite `f64` values, so `partial_cmp` always returns `Some`.
         (Some(x), Some(y)) => match x.partial_cmp(y).unwrap() {
             Ordering::Greater => t00,
             Ordering::Less => t10,
@@ -221,6 +223,7 @@ where
         (None, _) => t10,
     };
     let t1 = match (bound2opt(t01), bound2opt(t11)) {
+        // SAFETY: parameter range bounds are finite `f64` values, so `partial_cmp` always returns `Some`.
         (Some(x), Some(y)) => match x.partial_cmp(y).unwrap() {
             Ordering::Less => t01,
             Ordering::Greater => t11,

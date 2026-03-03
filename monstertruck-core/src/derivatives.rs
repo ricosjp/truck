@@ -41,10 +41,13 @@ impl<V> CurveDerivatives<V> {
     /// Returns CurveDerivatives of derivative.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::derivatives::*;
-    /// let derivs = CurveDerivatives::try_from([0.0, 1.0, 2.0]).unwrap();
+    /// let derivs = CurveDerivatives::try_from([0.0, 1.0, 2.0]).map_err(anyhow::Error::msg)?;
     /// let deriv_derivs = derivs.derivative();
     /// assert_eq!(&*deriv_derivs, &[1.0, 2.0]);
+    /// # Ok(())
+    /// # }
     /// ```
     #[inline]
     pub fn derivative(&self) -> Self
@@ -67,6 +70,7 @@ impl<V> CurveDerivatives<V> {
     /// Returns the multi-orders derivations of the rational curve.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::{cgmath64::*, assert_near2};
     /// // calculate the derivation at t = 1.5
     /// let t = 1.5;
@@ -78,7 +82,7 @@ impl<V> CurveDerivatives<V> {
     ///     Vector4::new(2.0, 6.0 * t, 12.0 * t * t, 0.0), // 2nd-order
     ///     Vector4::new(0.0, 6.0, 24.0 * t, 0.0), // 3rd-order
     /// ];
-    /// let derivs = CurveDerivatives::try_from(raw_derivs).unwrap();
+    /// let derivs = CurveDerivatives::try_from(raw_derivs).map_err(anyhow::Error::msg)?;
     /// let rat_derivs = derivs.rational_derivatives();
     ///
     /// // the projected curve: \bar{c}(t) = (t, t^2, t^3)
@@ -88,8 +92,10 @@ impl<V> CurveDerivatives<V> {
     ///     Vector3::new(0.0, 2.0, 6.0 * t), // 2nd-order
     ///     Vector3::new(0.0, 0.0, 6.0), // 3rd-order
     /// ];
-    /// let ans = CurveDerivatives::try_from(raw_ans).unwrap();
+    /// let ans = CurveDerivatives::try_from(raw_ans).map_err(anyhow::Error::msg)?;
     /// assert_near2!(rat_derivs, ans);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn rational_derivatives(&self) -> CurveDerivatives<<V::Point as EuclideanSpace>::Diff>
     where V: Homogeneous {
@@ -99,6 +105,7 @@ impl<V> CurveDerivatives<V> {
             let mut c = 1;
             let sum = (1..i).fold(evals[0] * self[i].weight(), |sum, j| {
                 c = c * (i - j + 1) / j;
+                // SAFETY: `c` is a small binomial coefficient that fits in any numeric type.
                 sum + evals[j] * (self[i - j].weight() * from(c).unwrap())
             });
             evals[i] = (self[i].truncate() - sum) / self[0].weight();
@@ -119,6 +126,7 @@ impl<V> CurveDerivatives<V> {
     /// Returns the multi-orders derivations of the magnitude of the curve of vector.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::{assert_near, cgmath64::*};
     ///
     /// let t = 0.3;
@@ -130,13 +138,15 @@ impl<V> CurveDerivatives<V> {
     ///     Vector2::new(0.0, -2.0),
     ///     Vector2::new(0.0, 0.0),
     /// ];
-    /// let derivs = CurveDerivatives::try_from(raw_derivs).unwrap();
+    /// let derivs = CurveDerivatives::try_from(raw_derivs).map_err(anyhow::Error::msg)?;
     /// let abs_derivs = derivs.absolute_derivatives();
     ///
     /// assert_near!(abs_derivs[0], 1.0 + t * t);
     /// assert_near!(abs_derivs[1], 2.0 * t);
     /// assert_near!(abs_derivs[2], 2.0);
     /// assert_near!(abs_derivs[3], 0.0);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn absolute_derivatives(&self) -> CurveDerivatives<V::Scalar>
     where
@@ -149,6 +159,7 @@ impl<V> CurveDerivatives<V> {
             let sum = (0..m).fold(V::Scalar::zero(), |mut sum, i| {
                 let x = self[i + 1].dot(self[m - 1 - i]);
                 let y = evals[i + 1] * evals[m - 1 - i];
+                // SAFETY: `c` is a small binomial coefficient that fits in any numeric type.
                 let c_float = <V::Scalar as NumCast>::from(c).unwrap();
                 sum += (x - y) * c_float;
                 c = c * (m - 1 - i) / (i + 1);
@@ -174,6 +185,7 @@ impl<V> CurveDerivatives<V> {
     /// Returns the `order`-order derivation of multiple function.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::{cgmath64::*, assert_near2};
     ///
     /// let t = 1.5;
@@ -184,7 +196,7 @@ impl<V> CurveDerivatives<V> {
     ///     (-f64::sin(t), f64::cos(t)).into(),
     ///     (-f64::cos(t), -f64::sin(t)).into(),
     /// ];
-    /// let derivs0 = CurveDerivatives::try_from(raw_derivs0).unwrap();
+    /// let derivs0 = CurveDerivatives::try_from(raw_derivs0).map_err(anyhow::Error::msg)?;
     ///
     /// // curve1(t) = cos(t) * (cos(t), sin(t))
     /// let raw_derivs1: [Vector2; 3] = [
@@ -192,13 +204,15 @@ impl<V> CurveDerivatives<V> {
     ///     (-f64::sin(2.0 * t), f64::cos(2.0 * t)).into(),
     ///     (-2.0 * f64::cos(2.0 * t), -2.0 * f64::sin(2.0 * t)).into(),
     /// ];
-    /// let derivs1 = CurveDerivatives::try_from(raw_derivs1).unwrap();
+    /// let derivs1 = CurveDerivatives::try_from(raw_derivs1).map_err(anyhow::Error::msg)?;
     ///
     /// // curve0(t).dot(curve1(t)) = cos(t)
     /// let res = derivs0.combinatorial_derivative(&derivs1, Vector2::dot, 2);
     /// let ans = -f64::cos(t);
     ///
     /// assert_near2!(res, ans);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn combinatorial_derivative<W, U, B>(
         &self,
@@ -240,6 +254,7 @@ impl<V> CurveDerivatives<V> {
     /// Returns the ders of multiple function.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::{cgmath64::*, assert_near2};
     ///
     /// let t = 1.5;
@@ -250,7 +265,7 @@ impl<V> CurveDerivatives<V> {
     ///     (-f64::sin(t), f64::cos(t)).into(),
     ///     (-f64::cos(t), -f64::sin(t)).into(),
     /// ];
-    /// let derivs0 = CurveDerivatives::try_from(raw_derivs0).unwrap();
+    /// let derivs0 = CurveDerivatives::try_from(raw_derivs0).map_err(anyhow::Error::msg)?;
     ///
     /// // curve1(t) = cos(t) * (cos(t), sin(t))
     /// let raw_derivs1: [Vector2; 3] = [
@@ -258,14 +273,16 @@ impl<V> CurveDerivatives<V> {
     ///     (-f64::sin(2.0 * t), f64::cos(2.0 * t)).into(),
     ///     (-2.0 * f64::cos(2.0 * t), -2.0 * f64::sin(2.0 * t)).into(),
     /// ];
-    /// let derivs1 = CurveDerivatives::try_from(raw_derivs1).unwrap();
+    /// let derivs1 = CurveDerivatives::try_from(raw_derivs1).map_err(anyhow::Error::msg)?;
     ///
     /// // curve0(t).dot(curve1(t)) = cos(t)
     /// let res = derivs0.combinatorial_derivatives(&derivs1, Vector2::dot);
     /// let raw_ans: [f64; 3] = [f64::cos(t), -f64::sin(t), -f64::cos(t)];
-    /// let ans = CurveDerivatives::try_from(raw_ans).unwrap();
+    /// let ans = CurveDerivatives::try_from(raw_ans).map_err(anyhow::Error::msg)?;
     ///
     /// assert_near2!(res, ans);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn combinatorial_derivatives<W, U, B>(
         &self,
@@ -303,14 +320,17 @@ impl<V> CurveDerivatives<V> {
     /// Returns the result of element-wise operation.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::cgmath64::*;
-    /// let derivs0 = CurveDerivatives::try_from([0.0, 1.0, 2.0, 100.0]).unwrap();
-    /// let derivs1 = CurveDerivatives::try_from([4.0, 5.0, 6.0]).unwrap();
+    /// let derivs0 = CurveDerivatives::try_from([0.0, 1.0, 2.0, 100.0]).map_err(anyhow::Error::msg)?;
+    /// let derivs1 = CurveDerivatives::try_from([4.0, 5.0, 6.0]).map_err(anyhow::Error::msg)?;
     /// let res = derivs0.element_wise_derivatives(&derivs1, |x, y| x + y);
     ///
     /// // the order will arrange to lower one
-    /// let ans = CurveDerivatives::try_from([4.0, 6.0, 8.0]).unwrap();
+    /// let ans = CurveDerivatives::try_from([4.0, 6.0, 8.0]).map_err(anyhow::Error::msg)?;
     /// assert_eq!(res, ans);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn element_wise_derivatives<W, U, B>(
         &self,
@@ -348,16 +368,20 @@ impl<V> CurveDerivatives<V> {
     /// Converts to an array
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::cgmath64::*;
-    /// let derivs = CurveDerivatives::try_from([0.0, 1.0, 2.0]).unwrap();
+    /// let derivs = CurveDerivatives::try_from([0.0, 1.0, 2.0]).map_err(anyhow::Error::msg)?;
     /// let arr = derivs.to_array::<2>();
     /// assert_eq!(arr, [0.0, 1.0]);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn to_array<const LEN: usize>(&self) -> [V; LEN]
     where V: Copy {
         if self.max_order > LEN {
             panic!("length of the returned array is longer than given CurveDerivatives");
         }
+        // SAFETY: The slice `&self[..LEN]` has exactly `LEN` elements.
         <[V; LEN]>::try_from(&self[..LEN]).unwrap()
     }
 }
@@ -538,6 +562,7 @@ impl<V> SurfaceDerivatives<V> {
     /// Returns SurfaceDerivatives of u-derivative.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::derivatives::*;
     /// let derivs = SurfaceDerivatives::try_from(
     ///     [
@@ -546,8 +571,7 @@ impl<V> SurfaceDerivatives<V> {
     ///         &[5.0],
     ///     ]
     ///     .as_slice()
-    /// )
-    /// .unwrap();
+    /// ).map_err(anyhow::Error::msg)?;
     /// let deriv_derivs = derivs.derivative_u();
     /// let ans_derivs = SurfaceDerivatives::try_from(
     ///     [
@@ -555,9 +579,10 @@ impl<V> SurfaceDerivatives<V> {
     ///         &[5.0],
     ///     ]
     ///     .as_slice()
-    /// )
-    /// .unwrap();
+    /// ).map_err(anyhow::Error::msg)?;
     /// assert_eq!(deriv_derivs, ans_derivs);
+    /// # Ok(())
+    /// # }
     /// ```
     #[inline]
     pub fn derivative_u(&self) -> Self
@@ -580,6 +605,7 @@ impl<V> SurfaceDerivatives<V> {
     /// Returns SurfaceDerivatives of v-derivative.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::derivatives::*;
     /// let derivs = SurfaceDerivatives::try_from(
     ///     [
@@ -588,8 +614,7 @@ impl<V> SurfaceDerivatives<V> {
     ///         &[5.0],
     ///     ]
     ///     .as_slice()
-    /// )
-    /// .unwrap();
+    /// ).map_err(anyhow::Error::msg)?;
     /// let deriv_derivs = derivs.derivative_v();
     /// let ans_derivs = SurfaceDerivatives::try_from(
     ///     [
@@ -597,9 +622,10 @@ impl<V> SurfaceDerivatives<V> {
     ///         &[4.0],
     ///     ]
     ///     .as_slice()
-    /// )
-    /// .unwrap();
+    /// ).map_err(anyhow::Error::msg)?;
     /// assert_eq!(deriv_derivs, ans_derivs);
+    /// # Ok(())
+    /// # }
     /// ```
     #[inline]
     pub fn derivative_v(&self) -> Self
@@ -624,6 +650,7 @@ impl<V> SurfaceDerivatives<V> {
     /// Returns the multi-orders derivations of the rational surface.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::cgmath64::*;
     /// // calculate the derivation at (u, v) = (1.0, 2.0).
     /// let (u, v) = (1.0, 2.0);
@@ -648,7 +675,7 @@ impl<V> SurfaceDerivatives<V> {
     ///         (6.0 * u * v * v, 2.0 * v * v * v, 0.0, 0.0).into(),
     ///     ],
     /// ];
-    /// let mut derivs = SurfaceDerivatives::try_from(raw_derivs).unwrap();
+    /// let mut derivs = SurfaceDerivatives::try_from(raw_derivs).map_err(anyhow::Error::msg)?;
     /// let rat_derivs = derivs.rational_derivatives();
     ///
     /// // the projected surface: \bar{s}(u, v) = (u^2 v^2, u v^3, v)
@@ -672,9 +699,11 @@ impl<V> SurfaceDerivatives<V> {
     ///         (2.0 * v * v, 0.0, 0.0).into(),
     ///     ],
     /// ];
-    /// let mut ans_derivs = SurfaceDerivatives::try_from(raw_ans).unwrap();
+    /// let mut ans_derivs = SurfaceDerivatives::try_from(raw_ans).map_err(anyhow::Error::msg)?;
     ///
     /// assert_eq!(rat_derivs, ans_derivs);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn rational_derivatives(&self) -> SurfaceDerivatives<<V::Point as EuclideanSpace>::Diff>
     where V: Homogeneous {
@@ -689,6 +718,7 @@ impl<V> SurfaceDerivatives<V> {
                     let mut c1 = 1;
                     let (evals, ders) = (evals[i].as_mut(), &self[m - i]);
                     for j in 0..=n {
+                        // SAFETY: `c0` and `c1` are small binomial coefficients.
                         let (c0_s, c1_s) = (from(c0).unwrap(), from(c1).unwrap());
                         sum = sum + evals[j] * (ders[n - j].weight() * c0_s * c1_s);
                         c1 = c1 * (n - j) / (j + 1);
@@ -715,6 +745,7 @@ impl<V> SurfaceDerivatives<V> {
     /// Returns the derivation of composite curve.
     /// # Example
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::cgmath64::*;
     ///
     /// let t = 2.0;
@@ -726,7 +757,7 @@ impl<V> SurfaceDerivatives<V> {
     ///     (1.0, 2.0 * t).into(),
     ///     (0.0, 2.0).into(),
     /// ];
-    /// let cderivs = CurveDerivatives::try_from(raw_cderivs).unwrap();
+    /// let cderivs = CurveDerivatives::try_from(raw_cderivs).map_err(anyhow::Error::msg)?;
     ///
     /// let Vector2 { x: u, y: v } = cderivs[0];
     /// let raw_derivs: &[&[Vector1]] = &[
@@ -734,11 +765,13 @@ impl<V> SurfaceDerivatives<V> {
     ///     &[(3.0 * u * u,).into(), (0.0,).into()],
     ///     &[(6.0 * u,).into()],
     /// ];
-    /// let sderivs = SurfaceDerivatives::try_from(raw_derivs).unwrap();
+    /// let sderivs = SurfaceDerivatives::try_from(raw_derivs).map_err(anyhow::Error::msg)?;
     ///
     /// let deriv = sderivs.composite_derivative(&cderivs, 1);
     /// let ans = Vector1::new(3.0 * t * t + 2.0 * t);
     /// assert_eq!(deriv, ans);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn composite_derivative(
         &self,
@@ -755,9 +788,11 @@ impl<V> SurfaceDerivatives<V> {
             );
         }
         (1..=order).fold(V::zero(), |sum, len| {
+            // SAFETY: `len` ranges 1..=order and order <= MAX (32), so `try_new` always succeeds.
             let iter = CompositionIter::<32>::try_new(order, len).unwrap();
             iter.fold(sum, |sum, idx| {
                 let idx = &idx[..len];
+                // SAFETY: Multiplicity is a multinomial coefficient that fits in any float type.
                 let mult = <V::Scalar as NumCast>::from(multiplicity(idx)).unwrap();
                 sum + tensor(self, curve_ders, idx) * mult
             })
@@ -781,6 +816,7 @@ impl<V> SurfaceDerivatives<V> {
     /// Returns the derivation of composite curve.
     /// # Example
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::cgmath64::*;
     ///
     /// let t = 2.0;
@@ -792,7 +828,7 @@ impl<V> SurfaceDerivatives<V> {
     ///     (1.0, 2.0 * t).into(),
     ///     (0.0, 2.0).into(),
     /// ];
-    /// let cderivs = CurveDerivatives::try_from(raw_cderivs).unwrap();
+    /// let cderivs = CurveDerivatives::try_from(raw_cderivs).map_err(anyhow::Error::msg)?;
     ///
     /// let Vector2 { x: u, y: v } = cderivs[0];
     /// let raw_derivs: &[&[Vector1]] = &[
@@ -800,7 +836,7 @@ impl<V> SurfaceDerivatives<V> {
     ///     &[(3.0 * u * u,).into(), (0.0,).into()],
     ///     &[(6.0 * u,).into()],
     /// ];
-    /// let sderivs = SurfaceDerivatives::try_from(raw_derivs).unwrap();
+    /// let sderivs = SurfaceDerivatives::try_from(raw_derivs).map_err(anyhow::Error::msg)?;
     /// let derivs = sderivs.composite_derivatives(&cderivs);
     ///
     /// let raw_ans: &[Vector1] = &[
@@ -808,8 +844,10 @@ impl<V> SurfaceDerivatives<V> {
     ///     (3.0 * t * t + 2.0 * t,).into(),
     ///     (6.0 * t + 2.0,).into(),
     /// ];
-    /// let ans = CurveDerivatives::try_from(raw_ans).unwrap();
+    /// let ans = CurveDerivatives::try_from(raw_ans).map_err(anyhow::Error::msg)?;
     /// assert_eq!(derivs, ans);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn composite_derivatives(
         &self,
@@ -843,6 +881,7 @@ impl<V> SurfaceDerivatives<V> {
     /// Returns the result of element-wise operation.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_core::derivatives::*;
     /// let derivs0 = SurfaceDerivatives::try_from(
     ///     [
@@ -851,8 +890,7 @@ impl<V> SurfaceDerivatives<V> {
     ///         &[5.0],
     ///     ]
     ///     .as_slice()
-    /// )
-    /// .unwrap();
+    /// ).map_err(anyhow::Error::msg)?;
     /// let derivs1 = SurfaceDerivatives::try_from(
     ///     [
     ///         [3.0, 4.0, 5.0].as_slice(),
@@ -860,8 +898,7 @@ impl<V> SurfaceDerivatives<V> {
     ///         &[8.0],
     ///     ]
     ///     .as_slice()
-    /// )
-    /// .unwrap();
+    /// ).map_err(anyhow::Error::msg)?;
     /// let ans_derivs = SurfaceDerivatives::try_from(
     ///     [
     ///         [3.0, 5.0, 7.0].as_slice(),
@@ -869,9 +906,10 @@ impl<V> SurfaceDerivatives<V> {
     ///         &[13.0],
     ///     ]
     ///     .as_slice()
-    /// )
-    /// .unwrap();
+    /// ).map_err(anyhow::Error::msg)?;
     /// assert_eq!(derivs0.element_wise_derivatives(&derivs1, |x, y| x + y), ans_derivs);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn element_wise_derivatives<W, B, U>(
         &self,

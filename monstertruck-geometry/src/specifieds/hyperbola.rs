@@ -71,6 +71,7 @@ impl SearchNearestParameter<D1> for UnitHyperbola<Point2> {
                 true => Some(z.re),
                 false => None,
             })
+            // SAFETY: distances are non-negative finite `f64`, so `partial_cmp` always returns `Some`.
             .min_by(|s, t| {
                 p.distance2(self.subs(*s))
                     .partial_cmp(&p.distance2(self.subs(*t)))

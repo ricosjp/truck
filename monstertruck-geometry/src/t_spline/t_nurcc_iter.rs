@@ -67,6 +67,7 @@ impl<P> Iterator for TnurccAcwPointIter<P> {
             let end = edge.read().point_end(Arc::clone(&self.point));
 
             end?;
+            // SAFETY: we just checked that `end` is `Some` via `?`.
             let end = end.unwrap();
 
             // Get the next ACW edge for point
@@ -98,6 +99,7 @@ impl<P> Iterator for TnurccAcwFaceIter<P> {
             let side = edge.read().face_side(Arc::clone(&self.face));
 
             side?;
+            // SAFETY: we just checked that `side` is `Some` via `?`.
             let side = side.unwrap();
 
             // Get the next ACW edge for point

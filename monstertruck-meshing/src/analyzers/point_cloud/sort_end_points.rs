@@ -103,6 +103,7 @@ pub fn pointcloud_in_polygon_neighborhood(
                 true
             }
             EndPointType::Back => {
+                // SAFETY: every Back endpoint has a matching Front that pushed this index.
                 let i = current
                     .iter()
                     .enumerate()

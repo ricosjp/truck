@@ -32,19 +32,22 @@ pub fn fillet(
         let surface0 = face0.oriented_surface();
         let surface1 = face1.oriented_surface();
         let curve = filleted_edge.oriented_curve();
-        let make = |radius: &dyn Fn(f64) -> f64| match &options.profile {
+        let make_with_extend = |radius: &dyn Fn(f64) -> f64, extend: bool| match &options.profile {
             FilletProfile::Round => {
-                rolling_ball_fillet_surface(&surface0, &surface1, &curve, division, radius, true)
+                rolling_ball_fillet_surface(&surface0, &surface1, &curve, division, radius, extend)
             }
             FilletProfile::Chamfer => {
-                chamfer_fillet_surface(&surface0, &surface1, &curve, division, radius, true)
+                chamfer_fillet_surface(&surface0, &surface1, &curve, division, radius, extend)
             }
             FilletProfile::Ridge => {
-                ridge_fillet_surface(&surface0, &surface1, &curve, division, radius, true)
+                ridge_fillet_surface(&surface0, &surface1, &curve, division, radius, extend)
             }
             FilletProfile::Custom(profile) => custom_fillet_surface(
-                &surface0, &surface1, &curve, division, radius, true, profile,
+                &surface0, &surface1, &curve, division, radius, extend, profile,
             ),
+        };
+        let make = |radius: &dyn Fn(f64) -> f64| {
+            make_with_extend(radius, true).or_else(|| make_with_extend(radius, false))
         };
         match &options.radius {
             RadiusSpec::Constant(r) => {

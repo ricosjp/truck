@@ -481,6 +481,7 @@ where
         hint: H,
         trials: usize,
     ) -> Option<f64> {
+        // SAFETY: the transform is guaranteed invertible by the `Processor` contract.
         let inv = self.transform.inverse_transform().unwrap();
         let t = self
             .entity
@@ -502,6 +503,7 @@ where
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
+        // SAFETY: the transform is guaranteed invertible by the `Processor` contract.
         let inv = self.transform.inverse_transform().unwrap();
         let (u, v) = self
             .entity
@@ -527,6 +529,7 @@ where
         hint: H,
         trials: usize,
     ) -> Option<f64> {
+        // SAFETY: the transform is guaranteed invertible by the `Processor` contract.
         let inv = self.transform.inverse_transform().unwrap();
         let hint =
             self.entity
@@ -550,6 +553,7 @@ where
         hint: H,
         trials: usize,
     ) -> Option<(f64, f64)> {
+        // SAFETY: the transform is guaranteed invertible by the `Processor` contract.
         let inv = self.transform.inverse_transform().unwrap();
         let hint =
             self.entity

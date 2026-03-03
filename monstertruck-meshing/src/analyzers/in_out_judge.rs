@@ -21,6 +21,7 @@ impl Triangle {
         if mat.determinant().so_small() {
             false
         } else {
+            // SAFETY: the determinant was checked to be non-small above, so the matrix is invertible.
             let inv = mat.invert().unwrap();
             let uvt = inv * (self[0] - ray.origin);
             uvt[0] > 0.0 && uvt[1] > 0.0 && uvt[0] + uvt[1] < 1.0 && uvt[2] > 0.0

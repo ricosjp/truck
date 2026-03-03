@@ -101,15 +101,17 @@ where
     /// - the uv coordinate on `self.surface1()`
     #[inline(always)]
     pub fn search_triple(&self, t: f64, trials: usize) -> Option<(Point3, Point2, Point2)> {
+        let point = self.leader.subs(t);
         double_projection(
             self.surface0(),
             None,
             self.surface1(),
             None,
-            self.leader.subs(t),
+            point,
             self.leader.der(t),
             trials,
         )
+        .or_else(|| self.search_nearest_point(point, None, None, trials))
     }
     /// Search triple value of the point nearest to `point`.
     /// - the coordinate on 3D space
@@ -190,6 +192,8 @@ fn curve_der_n(
     let sub = leaders.element_wise_ders(cders, |x, y| x - y);
     let suml = leaders.der().combinatorial_der(&sub, Vector3::dot, n);
     let b = Vector3::new(s0normal.dot(sum0), s1normal.dot(sum1), suml);
+    // SAFETY: the matrix columns are two surface normals and the leader curve tangent,
+    // which are linearly independent at a transversal intersection point.
     mat.invert().unwrap() * b
 }
 
@@ -202,6 +206,8 @@ fn uv_der_n(
 ) -> Vector2 {
     let mat = Matrix3::from_cols(uder, vder, normal);
     let b = cder_n - sum;
+    // SAFETY: the matrix columns are the surface partial derivatives and normal,
+    // which are linearly independent at a regular surface point.
     let uv_der_n = mat.invert().unwrap() * b;
     debug_assert!(uv_der_n.z.abs() < 1.0e-4, "{}", uv_der_n.z.abs());
     Vector2::new(uv_der_n.x, uv_der_n.y)
@@ -237,7 +243,11 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
-    fn evaluate(&self, t: f64) -> Point3 { self.search_triple(t, 100).unwrap().0 }
+    fn evaluate(&self, t: f64) -> Point3 {
+        self.search_triple(t, 100)
+            .map(|triple| triple.0)
+            .unwrap_or_else(|| self.leader.subs(t))
+    }
     fn derivative(&self, t: f64) -> Vector3 {
         let IntersectionCurve {
             surface0,
@@ -245,7 +255,10 @@ where
             leader,
         } = self;
         let [l, l_der, l_der2] = leader.ders(2, t).to_array::<3>();
-        let (c, uv0, uv1) = self.search_triple(t, 100).unwrap();
+        let (c, uv0, uv1) = match self.search_triple(t, 100) {
+            Some(triple) => triple,
+            None => return leader.der(t),
+        };
         let (n0, n1) = (surface0.normal(uv0.x, uv0.y), surface1.normal(uv1.x, uv1.y));
         let n = n0.cross(n1);
         let k = (l_der.magnitude2() - (c - l).dot(l_der2)) / n.dot(l_der);
@@ -263,7 +276,15 @@ where
         self.derivatives(n, t)[n]
     }
     fn derivatives(&self, n: usize, t: f64) -> CurveDers<Vector3> {
-        let (c, uv0, uv1) = self.search_triple(t, 100).unwrap();
+        let (c, uv0, uv1) = match self.search_triple(t, 100) {
+            Some(triple) => triple,
+            None => {
+                let leader_ders = self.leader.ders(n, t);
+                let mut cders = CurveDers::new(n);
+                (0..=n).for_each(|i| cders[i] = leader_ders[i]);
+                return cders;
+            }
+        };
         let mut uv0ders = CurveDers::new(n);
         uv0ders[0] = uv0.to_vec();
         let mut uv1ders = CurveDers::new(n);

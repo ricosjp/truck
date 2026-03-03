@@ -1,6 +1,6 @@
 [package]
 name = "monstertruck"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 description = "A Rust CAD kernel – B-rep modeling, NURBS, meshing, and GPU rendering."
 license = "Apache-2.0"
@@ -10,12 +10,40 @@ readme = "README.md"
 keywords = ["cad", "brep", "nurbs", "mesh", "geometry"]
 categories = ["graphics", "mathematics", "science"]
 
-# NOTE: 0.0.1 is a name-squat release. Full feature-gated deps come in 0.1.0.
+[features]
+default = ["modeling", "meshing"]
+full = ["modeling", "meshing", "solid", "assembly", "step", "render", "derive"]
+
+traits = ["monstertruck-traits"]
+derive = ["monstertruck-derive"]
+geometry = ["traits", "monstertruck-geometry"]
+topology = ["monstertruck-topology"]
+mesh = ["traits", "monstertruck-mesh"]
+modeling = ["geometry", "topology", "monstertruck-modeling"]
+meshing = ["mesh", "modeling", "monstertruck-meshing"]
+solid = ["meshing", "monstertruck-solid"]
+assembly = ["monstertruck-assembly"]
+step = ["modeling", "monstertruck-step"]
+gpu = ["monstertruck-gpu"]
+render = ["gpu", "mesh", "meshing", "monstertruck-render"]
+
 [dependencies]
 monstertruck-core = { workspace = true }
+monstertruck-assembly = { workspace = true, optional = true }
+monstertruck-derive = { workspace = true, optional = true }
+monstertruck-geometry = { workspace = true, optional = true }
+monstertruck-gpu = { workspace = true, optional = true }
+monstertruck-mesh = { workspace = true, optional = true }
+monstertruck-meshing = { workspace = true, optional = true }
+monstertruck-modeling = { workspace = true, optional = true }
+monstertruck-render = { workspace = true, optional = true }
+monstertruck-solid = { workspace = true, optional = true }
+monstertruck-step = { workspace = true, optional = true }
+monstertruck-topology = { workspace = true, optional = true }
+monstertruck-traits = { workspace = true, optional = true }
 
 [dev-dependencies]
-anyhow = "1"
+anyhow = { workspace = true }
 monstertruck-modeling = { workspace = true, features = ["fillet"] }
 monstertruck-solid = { workspace = true }
 monstertruck-step = { workspace = true }

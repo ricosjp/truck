@@ -226,6 +226,7 @@ where P: Debug
     /// Panics if construction fails.
     #[allow(clippy::type_complexity)]
     pub fn new(points: Vec<P>, faces: Vec<[(usize, Vec<(usize, f64)>); 4]>) -> Self {
+        // SAFETY: panicking convenience wrapper; callers must ensure valid inputs.
         Tnurcc::try_new(points, faces).unwrap()
     }
 

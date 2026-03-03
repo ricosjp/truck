@@ -465,6 +465,7 @@ impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V> + Tolerance> Nur
     /// ```
     #[inline(always)]
     pub fn splitted_boundary(&self) -> [NurbsCurve<V>; 4] {
+        // SAFETY: `splitted_boundary` returns exactly 4 elements, matching `[NurbsCurve; 4]`.
         TryFrom::try_from(
             self.0
                 .splitted_boundary()

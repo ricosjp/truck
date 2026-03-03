@@ -178,6 +178,7 @@ impl<P, C, S> Shell<P, C, S> {
             .collect();
         let mut res = Vec::new();
         while !vemap.is_empty() {
+            // SAFETY: vemap is non-empty (loop guard) and its keys come from self's vertices.
             let edge = self.vertex_iter().find_map(|v| vemap.get(&v.id())).unwrap();
             if let Some(mut cursor) = vemap.remove(&edge.front().id()) {
                 let mut wire = Wire::from(vec![cursor.clone()]);
@@ -404,8 +405,10 @@ impl<P, C, S> Shell<P, C, S> {
         // Connecting another boundary of the same face with an edge
         for face in self {
             for wire in face.boundaries.windows(2) {
+                // SAFETY: face boundaries are always non-empty, so front_vertex succeeds.
                 let v0 = wire[0].front_vertex().unwrap();
                 let v1 = wire[1].front_vertex().unwrap();
+                // SAFETY: vertex_adjacency populates all vertices from the shell.
                 adjacency.get_mut(&v0.id()).unwrap().push(v1.id());
                 adjacency.get_mut(&v1.id()).unwrap().push(v0.id());
             }
@@ -717,6 +720,7 @@ impl<P, C, S> Shell<P, C, S> {
                 if edges.is_none() {
                     edges = Some(edge.absolute_clone().cut(vertex)?);
                 }
+                // SAFETY: edges was set to Some on line 718 if it was None.
                 let edges = edges.as_ref().unwrap();
                 let new_wire = match edge.orientation() {
                     true => Wire::from(vec![edges.0.clone(), edges.1.clone()]),
@@ -758,11 +762,13 @@ impl<P, C, S> Shell<P, C, S> {
         if vec.len() > 2 || vec.is_empty() {
             None
         } else if vec.len() == 1 {
+            // SAFETY: vec.len() == 1, so pop succeeds.
             let (wire, idx) = vec.pop().unwrap();
             let edge = wire[idx].concat(&wire[(idx + 1) % wire.len()]).ok()?;
             wire.swap_subwire_into_edges(idx, edge.clone());
             Some(edge)
         } else {
+            // SAFETY: vec.len() == 2 (not 0, not 1, not >2), so both pops succeed.
             let (wire0, idx0) = vec.pop().unwrap();
             let (wire1, idx1) = vec.pop().unwrap();
             if !wire0[idx0].is_same(&wire1[(idx1 + 1) % wire1.len()])

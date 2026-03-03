@@ -29,5 +29,6 @@ monstertruck-solid = { workspace = true, optional = true }
 monstertruck-topology = { workspace = true }
 
 [dev-dependencies]
+anyhow = { workspace = true }
 proptest = { workspace = true }
 serde_json = { workspace = true }

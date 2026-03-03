@@ -21,3 +21,6 @@ monstertruck-derive = { workspace = true, optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }

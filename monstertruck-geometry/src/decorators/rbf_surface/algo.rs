@@ -337,6 +337,8 @@ impl SurfaceInfo {
         let uv = sders[1][0].dot(sders[0][1]) + sders[1][1].dot(cp);
         let vv = sders[0][1].magnitude2() + sders[0][2].dot(cp);
         let mat = Matrix2::new(uu, uv, uv, vv);
+        // SAFETY: the matrix is the first fundamental form plus curvature terms of a
+        // regular surface, which is positive definite and therefore invertible.
         uvders[n] = -mat.invert().unwrap() * Vector2::new(lhs_u, lhs_v);
         tders[n] = sders.composite_der(uvders, n);
         uderders[n] = sders.uder().composite_der(uvders, n);
@@ -370,6 +372,8 @@ fn der_routine(
         rders[n] - der_ders.combinatorial_der(n0ders, DOT, n - 1),
         rders[n] - der_ders.combinatorial_der(n1ders, DOT, n - 1),
     );
+    // SAFETY: the matrix columns are the edge curve tangent and two surface normals,
+    // which are linearly independent at a valid fillet configuration.
     ders[n] = mat.invert().unwrap() * b;
 
     s0info.routine(ders, n);

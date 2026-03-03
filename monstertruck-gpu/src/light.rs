@@ -4,7 +4,9 @@ impl Light {
     #[inline(always)]
     pub(super) fn light_info(&self) -> LightInfo {
         LightInfo {
+            // SAFETY: f64-to-f32 cast is always valid for finite light position values.
             light_position: self.position.to_homogeneous().cast().unwrap().into(),
+            // SAFETY: f64-to-f32 cast is always valid for finite light color values.
             light_color: self.color.cast().unwrap().extend(1.0).into(),
             light_type: [self.light_type.into(), 0, 0, 0],
         }

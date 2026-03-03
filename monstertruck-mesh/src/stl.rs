@@ -232,7 +232,9 @@ impl Iterator for PolygonMeshStlFaceIterator<'_> {
         self.faces.next().map(|face| {
             let p = array![i => self.positions[face[i].pos]; 3];
             let n = (p[1] - p[0]).cross(p[2] - p[0]).normalize();
+            // SAFETY: cast from f64 to f32 only fails for NaN, which valid geometry never produces.
             let normal = n.cast().unwrap().into();
+            // SAFETY: cast from f64 to f32 only fails for NaN, which valid geometry never produces.
             let vertices = array![i => p[i].cast().unwrap().into(); 3];
             StlFace { normal, vertices }
         })

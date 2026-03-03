@@ -160,6 +160,7 @@ macro_rules! impl_shape {
             }
             /// write shape to json
             pub fn to_json(&self) -> Vec<u8> {
+                // SAFETY: serialization of valid shape data to JSON should not fail.
                 serde_json::to_vec_pretty(&self.0)
                     .map_err(|e| gloo::console::error!(format!("{e}")))
                     .unwrap()

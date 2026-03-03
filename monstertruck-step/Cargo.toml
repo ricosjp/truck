@@ -30,6 +30,7 @@ monstertruck-mesh = { workspace = true }
 monstertruck-topology = { workspace = true }
 
 [dev-dependencies]
+anyhow = { workspace = true }
 clap = { workspace = true }
 espr-derive = { workspace = true }
 itertools = { workspace = true }

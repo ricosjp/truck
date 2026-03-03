@@ -54,6 +54,7 @@ the front of the second knot vector: {1}")]
     /// `<KnotVector as From<Vec<f64>>>::from()`.
     /// # Examples
     /// ```
+    /// # fn main() -> anyhow::Result<()> {
     /// use monstertruck_geometry::prelude::*;
     /// use monstertruck_geometry::errors::Error;
     /// use std::convert::*;
@@ -61,8 +62,10 @@ the front of the second knot vector: {1}")]
     /// assert!(matches!(KnotVector::try_from(vec![1.0, 3.0, 0.0, 2.0]), Err(Error::NotSortedVector)));
     /// assert_eq!(
     ///     <KnotVector as From<Vec<f64>>>::from(vec![1.0, 3.0, 0.0, 2.0]),
-    ///     KnotVector::try_from(vec![0.0, 1.0, 2.0, 3.0]).unwrap(),
+    ///     KnotVector::try_from(vec![0.0, 1.0, 2.0, 3.0])?,
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     #[error("This knot vector is not sorted.")]
     NotSortedVector,

@@ -193,6 +193,7 @@ where
     fn derivative_vv(&self, u: f64, v: f64) -> Self::Vector { self.derivative_mn(0, 2, u, v) }
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         use std::ops::Bound::*;
+        // SAFETY: knot vector is always non-empty by construction.
         let (a, b) = (self.knot_vec[0], *self.knot_vec.last().unwrap());
         ((Included(0.0), Included(1.0)), (Included(a), Included(b)))
     }
@@ -253,6 +254,8 @@ where
                 ccs[1..n].windows(2).map(move |v| (v[0].0 + v[1].0) / 2.0)
             });
             vec.extend([v1, v1, v1]);
+            // SAFETY: the vector is built in sorted order (ascending `v` values with
+            // repeated boundary knots), so `try_from` cannot fail.
             let knot_vec = KnotVector::try_from(vec).unwrap();
 
             let make_uv0 = move |&(v, cc): &(f64, ContactCircle)| (v, cc.contact_point0().uv);
@@ -279,6 +282,9 @@ where
                 let n0 = fillet_surface.surface0.normal(uv0.x, uv0.y);
                 let handle0 = cder0.cross(n0);
                 let mat0 = Matrix3::from_cols(handle0, cder0, n0);
+                // SAFETY: `mat0` columns are cross-product of curve tangent and normal,
+                // the curve tangent, and the surface normal -- linearly independent at
+                // non-degenerate contact points.
                 let vec0 = mat0.invert().unwrap() * der0;
                 raw_tangent_vecs0.push((v, vec0.truncate()));
 
@@ -288,6 +294,7 @@ where
                 let n1 = fillet_surface.surface1.normal(uv1.x, uv1.y);
                 let handle1 = cder1.cross(n1);
                 let mat1 = Matrix3::from_cols(handle1, cder1, n1);
+                // SAFETY: same reasoning as `mat0` above.
                 let vec1 = mat1.invert().unwrap() * der1;
                 raw_tangent_vecs1.push((v, vec1.truncate()));
             }
@@ -312,6 +319,8 @@ where
                 .windows(2)
                 .filter_map(|v| {
                     let v = (v[0].0 + v[1].0) / 2.0;
+                    // SAFETY: `v` is the midpoint of two consecutive valid contact
+                    // circle parameters, so `contact_circle` succeeds.
                     let cc = fillet_surface.contact_circle(v).unwrap();
                     let is_far = |t: f64| approx.subs(t, v).distance2(cc.subs(t)) < tol * tol;
                     match [0.0, 0.5, 1.0].into_iter().all(is_far) {
@@ -333,6 +342,7 @@ where
                 });
             }
             ccs.extend(added_ccs);
+            // SAFETY: parameters are finite `f64` values, so `partial_cmp` always returns `Some`.
             ccs.sort_by(|(x, _), (y, _)| x.partial_cmp(y).unwrap());
         }
 

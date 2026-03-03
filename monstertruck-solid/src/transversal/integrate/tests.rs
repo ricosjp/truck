@@ -15,7 +15,7 @@ fn adjacent_cubes_or() {
 
     let result = crate::or(&cube, &cube2, 0.05);
     assert!(
-        result.is_some(),
+        result.is_ok(),
         "Boolean OR of adjacent cubes should succeed"
     );
     let solid = result.unwrap();

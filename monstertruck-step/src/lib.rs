@@ -22,6 +22,7 @@
 /// STEP input module
 /// # Example
 /// ```
+/// # fn main() -> anyhow::Result<()> {
 /// use monstertruck_step::r#in::{*, step_geometry::*};
 /// use ruststep::tables::EntityTable;
 /// // read file
@@ -30,15 +31,17 @@
 ///     "/../resources/step/occt-cube.step",
 /// ));
 /// // parse step file
-/// let exchange = ruststep::parser::parse(&step_string).unwrap();
+/// let exchange = ruststep::parser::parse(&step_string)?;
 /// // convert the parsing results to a Rust struct
 /// let table = Table::from_data_section(&exchange.data[0]);
 /// // get `CartesianPoint` registered in #102
-/// let step_point = EntityTable::<CartesianPointHolder>::get_owned(&table, 102).unwrap();
+/// let step_point = EntityTable::<CartesianPointHolder>::get_owned(&table, 102)?;
 /// // convert `CartesianPoint` in STEP to `Point3` in cgmath
 /// let cgmath_point = Point3::from(&step_point);
 /// // check parse result
 /// assert_eq!(cgmath_point, Point3::new(0.0, 10.0, 0.0));
+/// # Ok(())
+/// # }
 /// ```
 #[cfg(feature = "in")]
 pub mod r#in;

@@ -23,6 +23,7 @@ members = [
 [workspace.dependencies]
 
 # External dependencies
+anyhow = "1"
 array-macro = "2"
 async-trait = "0.1"
 bytemuck = { version = "1", features = ["derive"] }
@@ -59,7 +60,7 @@ serde_json = "1"
 smallvec = "1"
 spade = "2"
 syn = { version = "2", features = ["derive", "printing"] }
-thiserror = "2"
+thiserror = { version = "2", default-features = false }
 vtkio = "0.6"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"

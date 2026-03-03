@@ -1230,7 +1230,7 @@ impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BsplineCurveWithKnots> for Bs
             .iter()
             .map(|n| *n as usize)
             .collect();
-        let knots = KnotVector::from_single_multi(knots, multi).unwrap();
+        let knots = KnotVector::from_single_multi(knots, multi)?;
         let ctrpts = curve.control_points_list.iter().map(Into::into).collect();
         Ok(Self::try_new(knots, ctrpts)?)
     }
@@ -1988,14 +1988,14 @@ impl TryFrom<&BsplineSurfaceWithKnots> for BsplineSurface<Point3> {
             .iter()
             .map(|n| *n as usize)
             .collect();
-        let uknots = KnotVector::from_single_multi(uknots, umulti).unwrap();
+        let uknots = KnotVector::from_single_multi(uknots, umulti)?;
         let vknots = surface.v_knots.to_vec();
         let vmulti = surface
             .v_multiplicities
             .iter()
             .map(|n| *n as usize)
             .collect();
-        let vknots = KnotVector::from_single_multi(vknots, vmulti).unwrap();
+        let vknots = KnotVector::from_single_multi(vknots, vmulti)?;
         let ctrls = surface
             .control_points_list
             .iter()
@@ -2984,7 +2984,10 @@ impl TryFrom<&ItemDefinedTransformation> for Matrix3 {
     fn try_from(value: &ItemDefinedTransformation) -> Result<Self, Self::Error> {
         let mat1: Self = (&value.transform_item_1).try_into()?;
         let mat2: Self = (&value.transform_item_2).try_into()?;
-        Ok(mat2 * mat1.invert().unwrap())
+        let inv = mat1
+            .invert()
+            .ok_or("failed to invert transform_item_1 Matrix3")?;
+        Ok(mat2 * inv)
     }
 }
 
@@ -2993,7 +2996,10 @@ impl TryFrom<&ItemDefinedTransformation> for Matrix4 {
     fn try_from(value: &ItemDefinedTransformation) -> Result<Self, Self::Error> {
         let mat1: Self = (&value.transform_item_1).try_into()?;
         let mat2: Self = (&value.transform_item_2).try_into()?;
-        Ok(mat2 * mat1.invert().unwrap())
+        let inv = mat1
+            .invert()
+            .ok_or("failed to invert transform_item_1 Matrix4")?;
+        Ok(mat2 * inv)
     }
 }
 

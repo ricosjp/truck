@@ -57,6 +57,7 @@ async fn init_default_device(
     let device_handler = DeviceHandler::new(adapter, device, queue);
     let window_handler = window.map(|window| WindowHandler {
         window,
+        // SAFETY: surface is Some because window was Some when creating the surface above.
         surface: Arc::new(surface.unwrap()),
     });
     (device_handler, window_handler)
@@ -772,11 +773,13 @@ impl Scene {
         queue.submit(Some(encoder.finish()));
         let buffer_slice = buffer.slice(..);
         let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
+        // SAFETY: the oneshot channel receiver is alive and has not been sent to yet.
         buffer_slice.map_async(MapMode::Read, move |v| sender.send(v).unwrap());
         let poll_type = PollType::Wait {
             submission_index: None,
             timeout: None,
         };
+        // SAFETY: poll with Wait should not fail on a valid device.
         device.poll(poll_type).unwrap();
         match receiver.receive().await {
             Some(Ok(_)) => buffer_slice.get_mapped_range().iter().copied().collect(),
@@ -791,6 +794,7 @@ impl WindowScene {
     pub async fn from_window(window: Arc<Window>, scene_desc: &WindowSceneDescriptor) -> Self {
         let size = window.inner_size();
         let got = init_default_device(Some(window)).await;
+        // SAFETY: got.1 is Some because init_default_device was called with Some(window).
         let (device_handler, window_handler) = (got.0, got.1.unwrap());
         let (device, surface) = (&device_handler.device, &window_handler.surface);
         let render_texture = RenderTextureConfig {

@@ -53,6 +53,7 @@ impl<V: Copy + Hash + Debug + Eq, A: Attributes<V>> PolygonMesh<V, A> {
             |x| x,
             |vertex| {
                 let idx = vec.len();
+                // SAFETY: vertices come from the mesh's own face iterator, validated at construction.
                 vec.push(contraction(self.attributes.get(vertex).unwrap()));
                 idx
             },
