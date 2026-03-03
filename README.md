@@ -8,11 +8,17 @@
 
 The underlying philosophy of this kernel rests on three foundational pillars:
 
-- **Modern Tooling** We are building the next generation of CAD utilizing modern, cutting-edge tools: Rust and WebGPU. By leveraging advanced, crate-level optimizations in both languages, we maximize performance across both the CPU and the GPU.
+- **Modern Tooling**
 
-- **Classical Techniques, Reborn** We are breaking away from fragile, legacy C++ codebases by fully re-implementing classic Boundary Representation (B-rep) and NURBS from the ground up. Rust's strict memory safety completely eliminates the CPU-level core dumps that plague older CAD software, while Cargo's robust ecosystem provides a seamless foundation for continuous integration.
+  We are building a next-generation CAD kernel in Rust with first-class WebGPU support.
 
-- **The Ship of Theseus Architecture** Learning from the pitfalls of monolithic CAD architectures, we abandoned the idea of a single, massive application. Instead, we modularized the kernel into a collection of small, highly optimized, and interchangeable crates – much like the Ship of Theseus. Knowing that feature creep and expansions are inevitable, we manage complexity by keeping our modules strictly focused and self-contained.
+- **Classical Techniques, Reborn**
+
+  This a Rust-native implementation of classic Boundary Representation (B-rep) and NURBS from the ground up.
+
+- **Ship of Theseus-like Architecture**
+
+  Instead of repeating the mistakes of monolithic CAD kernel architectures, we abandoned the idea of a single, massive library or app. Instead, we modularized the kernel into a collection of small, highly optimized, and interchangeable crates – much like [the ship of Theseus](https://en.wikipedia.org/wiki/Ship_of_Theseus).
 
 ## Why Was This Forked?
 
