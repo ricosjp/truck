@@ -61,6 +61,7 @@ smallvec = "1"
 spade = "2"
 syn = { version = "2", features = ["derive", "printing"] }
 thiserror = { version = "2", default-features = false }
+ttf-parser = "0.25"
 vtkio = "0.6"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"

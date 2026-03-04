@@ -108,11 +108,19 @@ mod mapped;
 mod multi_sweep;
 /// primitive shapes
 pub mod primitive;
+/// Planar profile normalization and solid construction from profiles.
+pub mod profile;
 mod sweep;
 mod topo_impls;
 
 #[cfg(feature = "fillet")]
 mod fillet_impl;
+
+/// Font outline ingestion and conversion to wires.
+///
+/// Requires the `font` feature flag. Re-exports from [`ttf_parser`].
+#[cfg(feature = "font")]
+pub mod text;
 
 /// Fillet operations for shell edges.
 ///

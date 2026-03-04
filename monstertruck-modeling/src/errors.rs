@@ -1,19 +1,28 @@
 use thiserror::Error;
 
-/// Modeling errors
+/// Modeling errors.
 #[derive(Debug, PartialEq, Eq, Error)]
 pub enum Error {
-    /// wrapper of topological error
+    /// Wrapper of topological error.
     #[error(transparent)]
     FromTopology(#[from] monstertruck_topology::errors::Error),
-    /// tried to attach a plane to a wire that was not on one plane.
+    /// Tried to attach a plane to a wire that was not on one plane.
     /// cf. [`builder::try_attach_plane`](../builder/fn.try_attach_plane.html)
     #[error("cannot attach a plane to a wire that is not on one plane.")]
     WireNotInOnePlane,
-    /// tried to create homotopy for two wires with different numbers of edges.
+    /// Tried to create homotopy for two wires with different numbers of edges.
     /// cf. [`builder::try_wire_homotopy`](../builder/fn.try_wire_homotopy.html)
     #[error("The wires must contain the same number of edges to create a homotopy.")]
     NotSameNumberOfEdges,
+    /// One or more wires are not closed.
+    #[error("all wires must be closed for profile construction.")]
+    OpenWire,
+    /// Ambiguous nesting: a loop is not clearly inside or outside another.
+    #[error("ambiguous nesting between loops; loops may overlap or touch.")]
+    AmbiguousNesting,
+    /// No outer loop found among the provided wires.
+    #[error("no outer loop found; at least one wire must have positive signed area.")]
+    NoOuterLoop,
 }
 
 #[test]
@@ -31,6 +40,9 @@ fn print_messages() {
     )
     .unwrap();
     writeln!(&mut std::io::stderr(), "{}\n", Error::WireNotInOnePlane).unwrap();
+    writeln!(&mut std::io::stderr(), "{}\n", Error::OpenWire).unwrap();
+    writeln!(&mut std::io::stderr(), "{}\n", Error::AmbiguousNesting).unwrap();
+    writeln!(&mut std::io::stderr(), "{}\n", Error::NoOuterLoop).unwrap();
     writeln!(
         &mut std::io::stderr(),
         "*******************************************************"

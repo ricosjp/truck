@@ -153,6 +153,18 @@ pub type BSplineSurface<P> = BsplineSurface<P>;
 #[deprecated(note = "renamed to KnotVector for clarity")]
 pub type KnotVec = KnotVector;
 
+/// Basis conversion utilities for importing non-B-spline representations.
+pub mod basis;
+
+/// Compatibility normalization for collections of curves and surfaces.
+pub mod compat;
+
+/// Fairing and reparameterization utilities for curves.
+pub mod fair;
+
+/// Curve and surface offset operations.
+pub mod offset;
+
 mod bspline_curve;
 mod bspline_surface;
 mod knot_vector;

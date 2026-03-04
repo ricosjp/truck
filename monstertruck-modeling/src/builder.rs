@@ -288,6 +288,75 @@ where
     Ok(shell)
 }
 
+/// Skins (lofts) a sequence of wires into a shell by connecting adjacent pairs
+/// with homotopy faces.
+///
+/// Each adjacent pair of wires must have the same number of edges. The result
+/// is a shell with `(N-1) * edges_per_wire` faces, where N is the number of
+/// input wires. Shared edges between adjacent strips are automatically reused.
+///
+/// # Errors
+///
+/// - [`Error::NotSameNumberOfEdges`] if any adjacent pair has different edge counts.
+/// - Returns an error if fewer than 2 wires are provided.
+///
+/// # Examples
+///
+/// ```
+/// use monstertruck_modeling::*;
+///
+/// // Three parallel line segments skinned into two quad faces.
+/// let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+/// let v1 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let v2 = builder::vertex(Point3::new(0.0, 1.0, 0.0));
+/// let v3 = builder::vertex(Point3::new(1.0, 1.0, 0.0));
+/// let v4 = builder::vertex(Point3::new(0.0, 2.0, 0.0));
+/// let v5 = builder::vertex(Point3::new(1.0, 2.0, 0.0));
+/// let w0: Wire = vec![builder::line(&v0, &v1)].into();
+/// let w1: Wire = vec![builder::line(&v2, &v3)].into();
+/// let w2: Wire = vec![builder::line(&v4, &v5)].into();
+/// let shell: Shell = builder::try_skin_wires(&[w0, w1, w2]).unwrap();
+/// assert_eq!(shell.len(), 2);
+/// ```
+pub fn try_skin_wires<C, S>(wires: &[Wire<C>]) -> Result<Shell<C, S>>
+where
+    C: Invertible,
+    Line<Point3>: ToSameGeometry<C>,
+    HomotopySurface<C, C>: ToSameGeometry<S>, {
+    if wires.len() < 2 {
+        return Err(Error::NotSameNumberOfEdges);
+    }
+    // Vertex-edge map shared across all strips so adjacent strips reuse edges.
+    let mut vemap = monstertruck_core::entry_map::FxEntryMap::new(
+        |(v0, v1): (&Vertex, &Vertex)| (v0.id(), v1.id()),
+        |(v0, v1)| line(v0, v1),
+    );
+    let mut shell = Shell::new();
+    for pair in wires.windows(2) {
+        let (w0, w1) = (&pair[0], &pair[1]);
+        if w0.len() != w1.len() {
+            return Err(Error::NotSameNumberOfEdges);
+        }
+        let strip: Shell<_, _> = w0
+            .edge_iter()
+            .zip(w1.edge_iter())
+            .map(|(edge0, edge1)| {
+                let (va, vb) = (edge0.front(), edge1.front());
+                let edge2 = vemap.entry_or_insert((va, vb)).inverse();
+                let (va, vb) = (edge0.back(), edge1.back());
+                let edge3 = vemap.entry_or_insert((va, vb)).clone();
+                let wire = wire![edge0.clone(), edge3, edge1.inverse(), edge2];
+                let curve0 = edge0.oriented_curve();
+                let curve1 = edge1.oriented_curve();
+                let homotopy = HomotopySurface::new(curve0, curve1);
+                Face::new(vec![wire], homotopy.to_same_geometry())
+            })
+            .collect();
+        shell.extend(strip);
+    }
+    Ok(shell)
+}
+
 /// Try attatiching a plane whose boundary is `wire`.
 /// # Examples
 /// ```
@@ -635,11 +704,19 @@ fn whole_revolve<T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>
     )
 }
 
-/// Creates a cone by R-sweeping.
+/// Revolves a wire around an axis, automatically collapsing degenerate edges
+/// where wire endpoints lie on the rotation axis.
+///
+/// Unlike [`revolve`] (which produces zero-length edges at on-axis points),
+/// this function detects vertices on the axis and produces clean 3-sided
+/// faces instead of degenerate 4-sided ones.
+///
 /// # Examples
+///
 /// ```
 /// use monstertruck_modeling::*;
 /// use std::f64::consts::PI;
+///
 /// let v0 = builder::vertex(Point3::new(0.0, 1.0, 0.0));
 /// let v1 = builder::vertex(Point3::new(0.0, 0.0, 1.0));
 /// let v2 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
@@ -647,39 +724,46 @@ fn whole_revolve<T: ClosedSweep<Matrix4, ArcConnector, RevoluteConnector, Swept>
 ///     builder::line(&v0, &v1),
 ///     builder::line(&v1, &v2),
 /// ].into();
-/// let cone = builder::cone(&wire, Vector3::unit_y(), Rad(2.0 * PI), 4);
-/// let irregular: Shell = builder::revolve(&wire, Point3::origin(), Vector3::unit_y(), Rad(2.0 * PI), 4);
-///
-/// // the degenerate edge of cone is removed!
-/// assert_eq!(cone[0].boundaries()[0].len(), 3);
-/// assert_eq!(irregular[0].boundaries()[0].len(), 4);
-/// # assert_eq!(cone[1].boundaries()[0].len(), 3);
-/// # assert_eq!(irregular[1].boundaries()[0].len(), 4);
-/// # assert_eq!(cone[2].boundaries()[0].len(), 3);
-/// # assert_eq!(irregular[2].boundaries()[0].len(), 4);
-/// # assert_eq!(cone[3].boundaries()[0].len(), 3);
-/// # assert_eq!(irregular[3].boundaries()[0].len(), 4);
-///
-/// // this cone is closed
-/// Solid::new(vec![cone]);
+/// let shell = builder::revolve_wire(
+///     &wire,
+///     Point3::origin(),
+///     Vector3::unit_y(),
+///     Rad(2.0 * PI),
+///     4,
+/// );
+/// // Degenerate edges are removed — faces have 3 edges, not 4.
+/// assert_eq!(shell[0].boundaries()[0].len(), 3);
+/// // The result is a valid closed shell.
+/// Solid::new(vec![shell]);
 /// ```
-pub fn cone<C, S, R>(wire: &Wire<C>, axis: Vector3, angle: R, division: usize) -> Shell<C, S>
+pub fn revolve_wire<C, S, R>(
+    wire: &Wire<C>,
+    origin: Point3,
+    axis: Vector3,
+    angle: R,
+    division: usize,
+) -> Shell<C, S>
 where
     C: ParametricCurve3D + BoundedCurve + Cut + Invertible + Transformed<Matrix4>,
     S: Invertible,
     R: Into<Rad<f64>>,
     Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>: ToSameGeometry<C>,
-    RevolutedCurve<C>: ToSameGeometry<S>, {
+    RevolutedCurve<C>: ToSameGeometry<S>,
+{
     let angle = angle.into();
     let closed = angle.0.abs() >= 2.0 * PI.0;
     let mut wire = wire.clone();
     if wire.is_empty() {
         return Shell::new();
     }
-    let pt0 = wire.front_vertex().unwrap().point();
-    let pt1 = wire.back_vertex().unwrap().point();
-    let pt1_on_axis = (pt1 - pt0).cross(axis).so_small();
-    if wire.len() == 1 && pt1_on_axis {
+
+    let on_axis = |pt: Point3| (pt - origin).cross(axis).so_small();
+    let front_on_axis = on_axis(wire.front_vertex().unwrap().point());
+    let back_on_axis = on_axis(wire.back_vertex().unwrap().point());
+
+    // If the wire is a single edge with the back vertex on-axis,
+    // split it at the midpoint so the revolve can produce proper faces.
+    if wire.len() == 1 && back_on_axis {
         let edge = wire.pop_back().unwrap();
         let v0 = edge.front().clone();
         let v2 = edge.back().clone();
@@ -691,27 +775,34 @@ where
         wire.push_back(Edge::debug_new(&v0, &v1, curve));
         wire.push_back(Edge::debug_new(&v1, &v2, curve1));
     }
-    let mut shell = revolve(&wire, pt0, axis, angle, division);
-    let mut edge = shell[0].boundaries()[0][0].clone();
-    for i in 0..shell.len() / wire.len() {
-        let idx = i * wire.len();
-        let face = shell[idx].clone();
-        let surface = face.oriented_surface();
-        let old_wire = face.into_boundaries().pop().unwrap();
-        let mut new_wire = Wire::new();
-        new_wire.push_back(edge.clone());
-        new_wire.push_back(old_wire[1].clone());
-        let new_edge = if closed && i + 1 == shell.len() / wire.len() {
-            shell[0].boundaries()[0][0].inverse()
-        } else {
-            let curve = old_wire[2].oriented_curve();
-            Edge::debug_new(old_wire[2].front(), new_wire[0].front(), curve)
-        };
-        new_wire.push_back(new_edge.clone());
-        shell[idx] = Face::debug_new(vec![new_wire], surface);
-        edge = new_edge.inverse();
+
+    let mut shell = revolve(&wire, origin, axis, angle, division);
+
+    // Collapse degenerate edges at the front of the wire (on-axis).
+    if front_on_axis {
+        let mut edge = shell[0].boundaries()[0][0].clone();
+        for i in 0..shell.len() / wire.len() {
+            let idx = i * wire.len();
+            let face = shell[idx].clone();
+            let surface = face.oriented_surface();
+            let old_wire = face.into_boundaries().pop().unwrap();
+            let mut new_wire = Wire::new();
+            new_wire.push_back(edge.clone());
+            new_wire.push_back(old_wire[1].clone());
+            let new_edge = if closed && i + 1 == shell.len() / wire.len() {
+                shell[0].boundaries()[0][0].inverse()
+            } else {
+                let curve = old_wire[2].oriented_curve();
+                Edge::debug_new(old_wire[2].front(), new_wire[0].front(), curve)
+            };
+            new_wire.push_back(new_edge.clone());
+            shell[idx] = Face::debug_new(vec![new_wire], surface);
+            edge = new_edge.inverse();
+        }
     }
-    if pt1_on_axis {
+
+    // Collapse degenerate edges at the back of the wire (on-axis).
+    if back_on_axis {
         let mut edge = shell[wire.len() - 1].boundaries()[0][0].clone();
         for i in 0..shell.len() / wire.len() {
             let idx = (i + 1) * wire.len() - 1;
@@ -733,6 +824,20 @@ where
         }
     }
     shell
+}
+
+/// Use [`revolve_wire`] instead, which takes an explicit `origin` parameter
+/// and handles on-axis degenerate edges automatically.
+#[deprecated(note = "Use revolve_wire instead, which takes an explicit origin parameter.")]
+pub fn cone<C, S, R>(wire: &Wire<C>, axis: Vector3, angle: R, division: usize) -> Shell<C, S>
+where
+    C: ParametricCurve3D + BoundedCurve + Cut + Invertible + Transformed<Matrix4>,
+    S: Invertible,
+    R: Into<Rad<f64>>,
+    Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>: ToSameGeometry<C>,
+    RevolutedCurve<C>: ToSameGeometry<S>, {
+    let origin = wire.front_vertex().map_or(Point3::origin(), |v| v.point());
+    revolve_wire(wire, origin, axis, angle, division)
 }
 
 #[cfg(test)]

@@ -14,6 +14,7 @@ categories = ["graphics"]
 [features]
 default = []
 fillet = ["monstertruck-solid"]
+font = ["dep:rayon", "dep:ttf-parser"]
 
 [dependencies]
 derive_more = { workspace = true }
@@ -27,6 +28,8 @@ monstertruck-traits = { workspace = true, features = ["derive"] }
 monstertruck-mesh = { workspace = true }
 monstertruck-solid = { workspace = true, optional = true }
 monstertruck-topology = { workspace = true }
+rayon = { workspace = true, optional = true }
+ttf-parser = { workspace = true, optional = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
