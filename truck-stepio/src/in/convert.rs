@@ -1,4 +1,5 @@
 use super::*;
+use crate::common::PartAttrs;
 
 impl Table {
     fn place_holder_edge_any_to_index_and_edge_curve(
@@ -278,13 +279,6 @@ impl Table {
 pub enum NodeMatrix {
     Identity,
     Transform(Box<ItemDefinedTransformation>),
-}
-
-#[derive(Clone, Debug)]
-pub struct PartAttrs {
-    pub id: String,
-    pub name: String,
-    pub description: String,
 }
 
 pub type ProductEntity = NodeEntity<Vec<u64>, PartAttrs>;

@@ -473,7 +473,7 @@ where
             PreStepModel::Solid(x) => x.idx,
         }));
         f.write_fmt(format_args!(
-            "#10 = ADVANCED_BREP_SHAPE_REPRESENTATION('', {models_slice}, #11);\n"
+            "#10 = SHAPE_REPRESENTATION('', {models_slice}, #11);\n"
         ))?;
         f.pad("#11 = (
     GEOMETRIC_REPRESENTATION_CONTEXT(3) 

@@ -383,6 +383,7 @@ impl<T> CompleteStepDisplay<T> {
     }
 }
 
+mod assy;
 mod geometry;
 mod topology;
 pub use geometry::VectorAsDirection;
