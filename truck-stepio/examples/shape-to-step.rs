@@ -8,7 +8,7 @@
 
 use clap::Parser;
 use truck_modeling::*;
-use truck_stepio::out;
+use truck_stepio::out::{self, StepDesign};
 use truck_topology::compress::CompressedSolid;
 
 /// convert from truck shape json to step file.
@@ -30,12 +30,13 @@ fn main() {
     let shape_file = std::fs::read(input_shape_file).unwrap();
     let compressed: CompressedSolid<Point3, Curve, Surface> =
         serde_json::from_reader(shape_file.as_slice()).unwrap();
-    let step_string = out::CompleteStepDisplay::new(
-        out::StepModel::from(&compressed),
+    let repr = StepDesign::<_, Matrix4>::from_model(out::StepModel::from(&compressed));
+    let step_string = out::StepDisplay::new(
         out::StepHeaderDescriptor {
             organization_system: "shape-to-step".to_owned(),
             ..Default::default()
         },
+        repr,
     )
     .to_string();
     let mut step_file = std::fs::File::create(output_step_file).unwrap();

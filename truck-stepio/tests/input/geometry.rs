@@ -50,12 +50,18 @@ fn exec_cartesian_point(coord: [f64; 3]) {
     let pt = Point2::new(coord[0], coord[1]);
     exec_test_near::<CartesianPointHolder, Point2>(
         pt,
-        &format!("DATA;{}ENDSEC;", truck_stepio::out::StepDisplay::new(pt, 1)),
+        &format!(
+            "DATA;{}ENDSEC;",
+            truck_stepio::out::StepDataDisplay::new(pt, 1)
+        ),
     );
     let pt = Point3::from(coord);
     exec_test_near::<CartesianPointHolder, Point3>(
         pt,
-        &format!("DATA;{}ENDSEC;", truck_stepio::out::StepDisplay::new(pt, 1)),
+        &format!(
+            "DATA;{}ENDSEC;",
+            truck_stepio::out::StepDataDisplay::new(pt, 1)
+        ),
     );
 }
 
@@ -100,12 +106,12 @@ fn exec_vector(elem: [f64; 3]) {
     let vec = Vector2::new(elem[0], elem[1]);
     exec_test_near::<VectorHolder, Vector2>(
         vec,
-        &format!("DATA;{}ENDSEC;", StepDisplay::new(vec, 1)),
+        &format!("DATA;{}ENDSEC;", StepDataDisplay::new(vec, 1)),
     );
     let vec = Vector3::from(elem);
     exec_test_near::<VectorHolder, Vector3>(
         vec,
-        &format!("DATA;{}ENDSEC;", StepDisplay::new(vec, 1)),
+        &format!("DATA;{}ENDSEC;", StepDataDisplay::new(vec, 1)),
     );
 }
 
@@ -122,7 +128,7 @@ fn exec_placement(org_coord: [f64; 3]) {
         org,
         &format!(
             "DATA;#1 = PLACEMENT('', #2);{}ENDSEC;",
-            StepDisplay::new(org, 2)
+            StepDataDisplay::new(org, 2)
         ),
     );
     let org = Point3::from(org_coord);
@@ -130,7 +136,7 @@ fn exec_placement(org_coord: [f64; 3]) {
         org,
         &format!(
             "DATA;#1 = PLACEMENT('', #2);{}ENDSEC;",
-            StepDisplay::new(org, 2)
+            StepDataDisplay::new(org, 2)
         ),
     );
 }
@@ -148,8 +154,8 @@ fn exec_axis1_placement(org_coord: [f64; 3], dir_array: [f64; 2]) {
     let dir = Vector2::new(f64::cos(theta), f64::sin(theta));
     let step_str = format!(
         "DATA;#1 = AXIS1_PLACEMENT('', #2, #3);{}{}ENDSEC;",
-        StepDisplay::new(p, 2),
-        StepDisplay::new(VectorAsDirection(dir), 3)
+        StepDataDisplay::new(p, 2),
+        StepDataDisplay::new(VectorAsDirection(dir), 3)
     );
     let placement = step_to_entity::<Axis1PlacementHolder>(&step_str);
     assert_near!(p, Point2::from(&placement.location));
@@ -159,8 +165,8 @@ fn exec_axis1_placement(org_coord: [f64; 3], dir_array: [f64; 2]) {
     let dir = dir_from_array(dir_array);
     let step_str = format!(
         "DATA;#1 = AXIS1_PLACEMENT('', #2, #3);{}{}ENDSEC;",
-        StepDisplay::new(p, 2),
-        StepDisplay::new(VectorAsDirection(dir), 3)
+        StepDataDisplay::new(p, 2),
+        StepDataDisplay::new(VectorAsDirection(dir), 3)
     );
     let placement = step_to_entity::<Axis1PlacementHolder>(&step_str);
     assert_near!(p, Point3::from(&placement.location));
@@ -182,8 +188,8 @@ fn exec_axis2_placement2d(org_coord: [f64; 2], theta: f64) {
     let dir = Vector2::new(f64::cos(theta), f64::sin(theta));
     let step_str = format!(
         "DATA;#1 = AXIS2_PLACEMENT_2D('', #2, #3);{}{}ENDSEC;",
-        StepDisplay::new(origin, 2),
-        StepDisplay::new(VectorAsDirection(dir), 3),
+        StepDataDisplay::new(origin, 2),
+        StepDataDisplay::new(VectorAsDirection(dir), 3),
     );
     let placement = step_to_entity::<Axis2Placement2dHolder>(&step_str);
     let res: Matrix3 = (&placement).into();
@@ -214,9 +220,9 @@ fn exec_axis2_placement3d(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_arra
     let x = y.cross(z).normalize();
     let step_str = format!(
         "DATA;#1 = AXIS2_PLACEMENT_3D('', #2, #3, #4);{}{}{}ENDSEC;",
-        StepDisplay::new(p, 2),
-        StepDisplay::new(VectorAsDirection(z), 3),
-        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 4),
+        StepDataDisplay::new(p, 2),
+        StepDataDisplay::new(VectorAsDirection(z), 3),
+        StepDataDisplay::new(VectorAsDirection(ref_dir.normalize()), 4),
     );
     let placement = step_to_entity::<Axis2Placement3dHolder>(&step_str);
     let res: Matrix4 = (&placement).into();
@@ -246,8 +252,8 @@ fn exec_line(org_coord: [f64; 3], vec_elem: [f64; 3]) {
     let q = p + v;
     let step_str = format!(
         "DATA;#1 = LINE('', #2, #3);{}{}ENDSEC;",
-        StepDisplay::new(p, 2),
-        StepDisplay::new(v, 3),
+        StepDataDisplay::new(p, 2),
+        StepDataDisplay::new(v, 3),
     );
     let line = step_to_entity::<LineHolder>(&step_str);
     let res: truck::Line<Point3> = (&line).into();
@@ -275,7 +281,7 @@ fn exec_polyline(length: usize, coords: Vec<[f64; 3]>) {
     let point_displays = p
         .iter()
         .enumerate()
-        .map(|(idx, p)| StepDisplay::new(p, 2 + idx).to_string())
+        .map(|(idx, p)| StepDataDisplay::new(p, 2 + idx).to_string())
         .collect::<Vec<_>>()
         .concat();
     let index_slice = (0..length).map(|idx| 2 + idx);
@@ -328,7 +334,7 @@ fn exec_b_spline_curve_with_knots(
         .map(Point3::from)
         .collect::<Vec<_>>();
     let bsp = BSplineCurve::new(knots, cps);
-    let step_str = format!("DATA;{}ENDSEC;", StepDisplay::new(&bsp, 1));
+    let step_str = format!("DATA;{}ENDSEC;", StepDataDisplay::new(&bsp, 1));
     let bsp_step = step_to_entity::<BSplineCurveWithKnotsHolder>(&step_str);
     let res: BSplineCurve<Point3> = (&bsp_step).try_into().unwrap();
     assert_eq!(res.knot_vec().len(), bsp.knot_vec().len());
@@ -362,7 +368,7 @@ fn step_bsp_curve_ctrls(points: &[Point3]) -> (String, String) {
         points
             .iter()
             .enumerate()
-            .map(|(i, p)| StepDisplay::new(*p, i + 2).to_string())
+            .map(|(i, p)| StepDataDisplay::new(*p, i + 2).to_string())
             .collect::<Vec<_>>()
             .concat(),
     )
@@ -511,7 +517,7 @@ fn exec_nurbs_curve_b_spline_with_knots(
     weights.truncate(cps.len());
     let bsp = BSplineCurve::new(knots, cps);
     let nurbs = NurbsCurve::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
-    let step_str = format!("DATA;{}ENDSEC;", StepDisplay::new(&nurbs, 1));
+    let step_str = format!("DATA;{}ENDSEC;", StepDataDisplay::new(&nurbs, 1));
     let nurbs_step = step_to_entity::<RationalBSplineCurveHolder>(&step_str);
     let res: NurbsCurve<Vector4> = (&nurbs_step).try_into().unwrap();
     assert_eq!(res.knot_vec().len(), nurbs.knot_vec().len());
@@ -718,9 +724,9 @@ fn exec_circle(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2]
     let x = y.cross(z).normalize();
     let step_str = format!(
         "DATA; #1 = CIRCLE('', #2, {radius}); #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5); {}{}{}ENDSEC;",
-        StepDisplay::new(origin, 3),
-        StepDisplay::new(VectorAsDirection(z), 4),
-        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+        StepDataDisplay::new(origin, 3),
+        StepDataDisplay::new(VectorAsDirection(z), 4),
+        StepDataDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_circle = step_to_entity::<CircleHolder>(&step_str);
     let ellipse: step_geometry::Ellipse<Point3, Matrix4> = (&step_circle).try_into().unwrap();
@@ -768,9 +774,9 @@ fn exec_ellipse(
         "DATA; #1 = ELLIPSE('', #2, {}, {}); #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5); {}{}{}ENDSEC;",
         FloatDisplay(radius[0]),
         FloatDisplay(radius[1]),
-        StepDisplay::new(origin, 3),
-        StepDisplay::new(VectorAsDirection(z), 4),
-        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+        StepDataDisplay::new(origin, 3),
+        StepDataDisplay::new(VectorAsDirection(z), 4),
+        StepDataDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_ellipse = step_to_entity::<EllipseHolder>(&step_str);
     let ellipse: step_geometry::Ellipse<Point3, Matrix4> = (&step_ellipse).try_into().unwrap();
@@ -818,9 +824,9 @@ fn exec_hyperbola(
         "DATA; #1 = HYPERBOLA('', #2, {}, {}); #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5); {}{}{}ENDSEC;",
         FloatDisplay(radius[0]),
         FloatDisplay(radius[1]),
-        StepDisplay::new(origin, 3),
-        StepDisplay::new(VectorAsDirection(z), 4),
-        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+        StepDataDisplay::new(origin, 3),
+        StepDataDisplay::new(VectorAsDirection(z), 4),
+        StepDataDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_hyperbola = step_to_entity::<HyperbolaHolder>(&step_str);
     let hyperbola: step_geometry::Hyperbola<Point3, Matrix4> =
@@ -868,9 +874,9 @@ fn exec_parabola(
     let step_str = format!(
         "DATA; #1 = PARABOLA('', #2, {}); #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5); {}{}{}ENDSEC;",
         FloatDisplay(focal_dist),
-        StepDisplay::new(origin, 3),
-        StepDisplay::new(VectorAsDirection(z), 4),
-        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+        StepDataDisplay::new(origin, 3),
+        StepDataDisplay::new(VectorAsDirection(z), 4),
+        StepDataDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_parabola = step_to_entity::<ParabolaHolder>(&step_str);
     let parabola: step_geometry::Parabola<Point3, Matrix4> = (&step_parabola).try_into().unwrap();
@@ -914,9 +920,9 @@ fn exec_plane(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2])
 #1 = PLANE('', #2);
 #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
 {}{}{}ENDSEC;",
-        StepDisplay::new(origin, 3),
-        StepDisplay::new(VectorAsDirection(z), 4),
-        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+        StepDataDisplay::new(origin, 3),
+        StepDataDisplay::new(VectorAsDirection(z), 4),
+        StepDataDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_plane = step_to_entity::<PlaneHolder>(&step_str);
     let plane = truck::Plane::from(&step_plane);
@@ -956,9 +962,9 @@ fn exec_spherical_surface(
 #1 = SPHERICAL_SURFACE('', #2, {radius});
 #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
 {}{}{}ENDSEC;",
-        StepDisplay::new(p, 3),
-        StepDisplay::new(VectorAsDirection(z), 4),
-        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+        StepDataDisplay::new(p, 3),
+        StepDataDisplay::new(VectorAsDirection(z), 4),
+        StepDataDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_sphere = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str);
     let sphere: step_geometry::ElementarySurface = (&step_sphere).into();
@@ -1015,15 +1021,15 @@ fn exec_cylindrical_surface(
 #1 = CYLINDRICAL_SURFACE('', #2, {radius});
 #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
 {}{}{}ENDSEC;",
-        StepDisplay::new(p, 3),
-        StepDisplay::new(VectorAsDirection(z), 4),
-        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+        StepDataDisplay::new(p, 3),
+        StepDataDisplay::new(VectorAsDirection(z), 4),
+        StepDataDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_cylinder0 = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str0);
     let cylinder0: step_geometry::ElementarySurface = (&step_cylinder0).into();
 
     // It has its own output, so test it accordingly.
-    let step_str1 = format!("DATA;\n{}ENDSEC;", StepDisplay::new(&cylinder0, 1));
+    let step_str1 = format!("DATA;\n{}ENDSEC;", StepDataDisplay::new(&cylinder0, 1));
     let step_cylinder1 = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str1);
     let cylinder1: step_geometry::ElementarySurface = (&step_cylinder1).into();
 
@@ -1081,9 +1087,9 @@ fn exec_toroidal_surface(
 #1 = TOROIDAL_SURFACE('', #2, {major_radius}, {minor_radius});
 #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
 {}{}{}ENDSEC;",
-        StepDisplay::new(p, 3),
-        StepDisplay::new(VectorAsDirection(z), 4),
-        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+        StepDataDisplay::new(p, 3),
+        StepDataDisplay::new(VectorAsDirection(z), 4),
+        StepDataDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_toroidal = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str);
     let toroidal: step_geometry::ElementarySurface = (&step_toroidal).into();
@@ -1141,15 +1147,15 @@ fn exec_conical_surface(
 #1 = CONICAL_SURFACE('', #2, {radius}, {semi_angle});
 #2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);
 {}{}{}ENDSEC;",
-        StepDisplay::new(p, 3),
-        StepDisplay::new(VectorAsDirection(z), 4),
-        StepDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+        StepDataDisplay::new(p, 3),
+        StepDataDisplay::new(VectorAsDirection(z), 4),
+        StepDataDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
     );
     let step_conical = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str);
     let conical: step_geometry::ElementarySurface = (&step_conical).into();
 
     // It has its own output, so test it accordingly.
-    let step_str1 = format!("DATA;\n{}ENDSEC;", StepDisplay::new(conical, 1));
+    let step_str1 = format!("DATA;\n{}ENDSEC;", StepDataDisplay::new(conical, 1));
     let step_cylinder1 = step_to_entity::<ElementarySurfaceAnyHolder>(&step_str1);
     let conical1: step_geometry::ElementarySurface = (&step_cylinder1).into();
 
@@ -1284,7 +1290,7 @@ fn exec_b_spline_surface_with_knots(
         ctrlpt_coords,
     );
     let bsp = BSplineSurface::new((uknots, vknots), cps);
-    let step_str = format!("DATA;{}ENDSEC;", StepDisplay::new(&bsp, 1));
+    let step_str = format!("DATA;{}ENDSEC;", StepDataDisplay::new(&bsp, 1));
     let bsp_step = step_to_entity::<BSplineSurfaceWithKnotsHolder>(&step_str);
     let res: BSplineSurface<Point3> = (&bsp_step).try_into().unwrap();
     compare_bsp_surfaces(&res, &bsp);
@@ -1333,7 +1339,7 @@ fn step_bsp_surface_ctrls(points: &[Vec<Point3>]) -> (String, String) {
         .flatten()
         .enumerate()
         .fold(String::new(), |string, (i, p)| {
-            let display: StepDisplay<Point3> = StepDisplay::new(*p, 2 + i);
+            let display: StepDataDisplay<Point3> = StepDataDisplay::new(*p, 2 + i);
             string + &display.to_string()
         });
     (step_cps_indices, step_cps)
@@ -1484,7 +1490,7 @@ fn exec_nurbs_surface_b_spline_surface_with_knots(
         .for_each(|(vec, vec0)| vec.truncate(vec0.len()));
     let bsp = BSplineSurface::new((uknots, vknots), cps);
     let ans = NurbsSurface::<Vector4>::try_from_bspline_and_weights(bsp, weights).unwrap();
-    let step_str = format!("DATA;{}ENDSEC;", StepDisplay::new(&ans, 1));
+    let step_str = format!("DATA;{}ENDSEC;", StepDataDisplay::new(&ans, 1));
     let bsp_step = step_to_entity::<RationalBSplineSurfaceHolder>(&step_str);
     let res: NurbsSurface<Vector4> = (&bsp_step).try_into().unwrap();
     compare_nurbs_surfaces(&res, &ans);
@@ -1697,8 +1703,8 @@ fn exec_surface_of_linear_extrusion(
     let axis = Vector3::from(axis_elem);
     let step_str = format!(
         "DATA;#1 = SURFACE_OF_LINEAR_EXTRUSION('', #4, #2);{}{}ENDSEC;",
-        StepDisplay::new(axis, 2),
-        StepDisplay::new(&line, 4),
+        StepDataDisplay::new(axis, 2),
+        StepDataDisplay::new(&line, 4),
     );
     let step_surface = step_to_entity::<SurfaceOfLinearExtrusionHolder>(&step_str);
     let surface: StepExtrudedCurve = (&step_surface).try_into().unwrap();
@@ -1738,9 +1744,9 @@ fn exec_surface_of_revolution(
 #1 = SURFACE_OF_REVOLUTION('', #5, #2);
 #2 = AXIS1_PLACEMENT('', #3, #4);
 {}{}{}ENDSEC;",
-        StepDisplay::new(origin, 3),
-        StepDisplay::new(VectorAsDirection(dir), 4),
-        StepDisplay::new(&line, 5),
+        StepDataDisplay::new(origin, 3),
+        StepDataDisplay::new(VectorAsDirection(dir), 4),
+        StepDataDisplay::new(&line, 5),
     );
     let step_surface = step_to_entity::<SurfaceOfRevolutionHolder>(&step_str);
     let surface: StepRevolutedCurve = (&step_surface).try_into().unwrap();

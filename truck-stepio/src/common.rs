@@ -1,5 +1,5 @@
 /// Attribute of STEP part
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PartAttrs {
     /// id of part
     pub id: String,

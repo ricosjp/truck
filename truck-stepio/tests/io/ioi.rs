@@ -25,8 +25,8 @@ fn ioi() {
         let table = Table::from_step(&step_string).unwrap();
         table.shell.values().cloned().for_each(|step_shell| {
             let cshell = table.to_compressed_shell(&step_shell).unwrap();
-            let step_string =
-                CompleteStepDisplay::new(StepModel::from(&cshell), Default::default()).to_string();
+            let design = StepDesign::<_, Matrix4>::from_model(StepModel::from(&cshell));
+            let step_string = StepDisplay::new(Default::default(), design).to_string();
             println!("{step_string}");
             let table = Table::from_step(&step_string).unwrap();
             table.shell.values().cloned().for_each(|step_shell| {

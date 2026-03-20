@@ -167,11 +167,11 @@ macro_rules! impl_shape {
             /// write shape to STEP
             pub fn to_step(&self, header: StepHeaderDescriptor) -> String {
                 use truck_stepio::out;
+                use truck_modeling::base::Matrix4;
                 let compressed = self.0.compress();
-                out::CompleteStepDisplay::new(
-                    out::StepModel::from(&compressed),
-                    header.into(),
-                ).to_string()
+                let model = out::StepModel::from(&compressed);
+                let design = out::StepDesign::<_, Matrix4>::from_model(model);
+                out::StepDisplay::new(header.into(), design).to_string()
             }
         }
     };

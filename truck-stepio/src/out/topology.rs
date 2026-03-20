@@ -1,15 +1,21 @@
 use super::{Result, *};
+use truck_topology::compress::*;
 
 #[derive(Clone, Debug)]
-pub(super) struct StepShell<'a, P, C, S> {
-    entity: &'a CompressedShell<P, C, S>,
-    idx: usize,
+struct StepShellIndices {
     face_indices: Vec<usize>,
     ep_edges: usize,
     ep_vertices: usize,
     surface_indices: Vec<usize>,
     curve_indices: Vec<usize>,
     ep_points: usize,
+}
+
+#[doc(hidden)]
+#[derive(Clone, Debug)]
+pub struct StepShell<'a, P, C, S> {
+    entity: &'a CompressedShell<P, C, S>,
+    indices: StepShellIndices,
     is_open: bool,
 }
 
@@ -19,11 +25,11 @@ where
     C: StepLength,
     S: StepLength,
 {
-    fn new(shell: &'a CompressedShell<P, C, S>, idx: usize, is_open: bool) -> Self {
+    fn new(shell: &'a CompressedShell<P, C, S>, is_open: bool) -> Self {
         let faces = &shell.faces;
         let edges = &shell.edges;
         let vertices = &shell.vertices;
-        let mut cursor = idx + 1;
+        let mut cursor = 1;
         let face_indices = faces
             .iter()
             .map(|f| {
@@ -57,36 +63,59 @@ where
         let ep_points = cursor;
         StepShell {
             entity: shell,
-            idx,
-            face_indices,
-            ep_edges,
-            ep_vertices,
-            surface_indices,
-            curve_indices,
-            ep_points,
+            indices: StepShellIndices {
+                face_indices,
+                ep_edges,
+                ep_vertices,
+                surface_indices,
+                curve_indices,
+                ep_points,
+            },
             is_open,
         }
     }
 }
 
-impl<P, C, S> Display for StepShell<'_, P, C, S>
-where
-    P: DisplayByStep + Copy,
-    C: DisplayByStep + StepCurve,
-    S: DisplayByStep + StepSurface,
-{
-    fn fmt(&self, formatter: &mut Formatter<'_>) -> Result {
-        let StepShell {
-            entity,
-            idx,
+impl StepShellIndices {
+    fn shift(mut self, idx: usize) -> Self {
+        let StepShellIndices {
             face_indices,
             ep_edges,
             ep_vertices,
             surface_indices,
             curve_indices,
             ep_points,
+        } = &mut self;
+        face_indices.iter_mut().for_each(|i| *i += idx);
+        *ep_edges += idx;
+        *ep_vertices += idx;
+        surface_indices.iter_mut().for_each(|i| *i += idx);
+        curve_indices.iter_mut().for_each(|i| *i += idx);
+        *ep_points += idx;
+        self
+    }
+}
+
+impl<P, C, S> DisplayByStep for StepShell<'_, P, C, S>
+where
+    P: DisplayByStep + Copy,
+    C: DisplayByStep + StepCurve,
+    S: DisplayByStep + StepSurface,
+{
+    fn fmt(&self, idx: usize, formatter: &mut Formatter<'_>) -> Result {
+        let StepShell {
+            entity,
+            indices,
             is_open,
         } = self;
+        let StepShellIndices {
+            face_indices,
+            ep_edges,
+            ep_vertices,
+            surface_indices,
+            curve_indices,
+            ep_points,
+        } = indices.clone().shift(idx);
         let faces = &entity.faces;
         let edges = &entity.edges;
         let vertices = &entity.vertices;
@@ -96,7 +125,7 @@ where
         };
         formatter.write_fmt(format_args!(
             "#{idx} = {shell_kind}('', {face_indices});\n",
-            face_indices = IndexSliceDisplay(self.face_indices.clone()),
+            face_indices = IndexSliceDisplay(face_indices.iter().copied()),
         ))?;
         faces.iter().enumerate().try_for_each(|(i, f)| {
             let idx = face_indices[i];
@@ -116,7 +145,7 @@ where
             formatter.write_fmt(format_args!(
                 "#{idx} = FACE_SURFACE('', {face_bound}, #{face_geometry}, {same_sense});\n",
                 same_sense = BooleanDisplay(f.orientation == f.surface.same_sense()),
-                face_bound = IndexSliceDisplay(face_bounds.clone()),
+                face_bound = IndexSliceDisplay(face_bounds.iter().copied()),
             ))?;
             cursor = idx + 1;
             if f.boundaries.is_empty() {
@@ -171,28 +200,24 @@ where
             ))
         })?;
         faces.iter().zip(surface_indices).try_for_each(|(f, idx)| {
-            Display::fmt(&StepDisplay::new(&f.surface, *idx), formatter)
+            Display::fmt(&StepDataDisplay::new(&f.surface, idx), formatter)
         })?;
-        edges
-            .iter()
-            .zip(curve_indices)
-            .try_for_each(|(e, idx)| Display::fmt(&StepDisplay::new(&e.curve, *idx), formatter))?;
-        vertices
-            .iter()
-            .enumerate()
-            .try_for_each(|(i, v)| Display::fmt(&StepDisplay::new(*v, ep_points + i), formatter))
+        edges.iter().zip(curve_indices).try_for_each(|(e, idx)| {
+            Display::fmt(&StepDataDisplay::new(&e.curve, idx), formatter)
+        })?;
+        vertices.iter().enumerate().try_for_each(|(i, v)| {
+            Display::fmt(&StepDataDisplay::new(*v, ep_points + i), formatter)
+        })
     }
 }
 
 impl<P, C, S> StepLength for StepShell<'_, P, C, S> {
-    fn step_length(&self) -> usize {
-        1 + self.ep_points + self.entity.vertices.len() - self.face_indices[0]
-    }
+    fn step_length(&self) -> usize { self.indices.ep_points + self.entity.vertices.len() }
 }
 
+#[doc(hidden)]
 #[derive(Clone, Debug)]
-pub(super) struct StepSolid<'a, P, C, S> {
-    idx: usize,
+pub struct StepSolid<'a, P, C, S> {
     boundaries: Vec<StepShell<'a, P, C, S>>,
 }
 
@@ -202,29 +227,24 @@ where
     C: StepLength,
     S: StepLength,
 {
-    fn new(solid: &'a CompressedSolid<P, C, S>, idx: usize) -> Self {
-        let mut cursor = idx + 1;
+    fn new(solid: &'a CompressedSolid<P, C, S>) -> Self {
         let boundaries = solid
             .boundaries
             .iter()
-            .map(|shell| {
-                let res = StepShell::new(shell, cursor, false);
-                cursor += 1 + res.step_length();
-                res
-            })
+            .map(|shell| StepShell::new(shell, false))
             .collect::<Vec<_>>();
-        StepSolid { idx, boundaries }
+        StepSolid { boundaries }
     }
 }
 
-impl<P, C, S> Display for StepSolid<'_, P, C, S>
+impl<P, C, S> DisplayByStep for StepSolid<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
     C: DisplayByStep + StepLength + StepCurve,
     S: DisplayByStep + StepLength + StepSurface,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        let StepSolid { idx, boundaries } = self;
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let StepSolid { boundaries } = self;
         match boundaries.len() {
             0 => {
                 f.pad("empty solid!")?;
@@ -236,27 +256,38 @@ where
                 f.write_fmt(format_args!(
                     "#{idx} = MANIFOLD_SOLID_BREP('', #{shell_idx});\n"
                 ))?;
-                Display::fmt(step_shell, f)
+                DisplayByStep::fmt(step_shell, shell_idx, f)
             }
             _ => {
-                let first_shell_idx = boundaries[0].face_indices[0] - 1;
+                let first_shell_idx = idx + 1;
+                let mut cursor = first_shell_idx;
+                let other_shells_indices = boundaries[..boundaries.len() - 1]
+                    .iter()
+                    .enumerate()
+                    .map(|(i, step_shell)| {
+                        let oriented_shell_length = match i {
+                            0 => 0,
+                            _ => 1,
+                        };
+                        cursor += step_shell.step_length() + oriented_shell_length;
+                        cursor
+                    })
+                    .collect::<Vec<usize>>();
                 f.write_fmt(format_args!(
-                    "#{idx} = BREP_WITH_VOIDS('', #{first_shell_idx}, {other_shells});\n",
-                    other_shells = IndexSliceDisplay(
-                        boundaries[1..]
-                            .iter()
-                            .map(|step_shell| step_shell.face_indices[0] - 2)
-                    ),
+                    "#{idx} = BREP_WITH_VOIDS('', #{first_shell_idx}, {});\n",
+                    IndexSliceDisplay(other_shells_indices.iter().copied()),
                 ))?;
-                Display::fmt(&boundaries[0], f)?;
-                boundaries[1..].iter().try_for_each(|step_shell| {
-                    let oriented_shell_idx = step_shell.face_indices[0] - 2;
-                    let shell_idx = step_shell.face_indices[0] - 1;
-                    f.write_fmt(format_args!(
-                    "#{oriented_shell_idx} = ORIENTED_CLOSED_SHELL('', *, #{shell_idx}, .T.);\n",
-                ))?;
-                    Display::fmt(step_shell, f)
-                })
+                DisplayByStep::fmt(&boundaries[0], first_shell_idx, f)?;
+                boundaries[1..]
+                    .iter()
+                    .zip(&other_shells_indices)
+                    .try_for_each(|(step_shell, oriented_shell_idx)| {
+                        let shell_idx = oriented_shell_idx + 1;
+                        f.write_fmt(format_args!(
+                            "#{oriented_shell_idx} = ORIENTED_CLOSED_SHELL('', *, #{shell_idx}, .T.);\n",
+                        ))?;
+                        DisplayByStep::fmt(step_shell, shell_idx, f)
+                    })
             }
         }
     }
@@ -273,71 +304,15 @@ impl<P, C, S> StepLength for StepSolid<'_, P, C, S> {
     }
 }
 
-#[derive(Clone, Debug)]
-pub(super) enum PreStepModel<'a, P, C, S> {
-    /// shell based surface model
-    Shell(StepShell<'a, P, C, S>),
-    /// solid model
-    Solid(StepSolid<'a, P, C, S>),
-}
-
-impl<'a, P, C, S> From<&'a CompressedShell<P, C, S>> for PreStepModel<'a, P, C, S>
-where
-    P: Copy,
-    C: StepLength,
-    S: StepLength,
-{
-    fn from(shell: &'a CompressedShell<P, C, S>) -> Self {
-        Self::Shell(StepShell::new(shell, 17, true))
-    }
-}
-
-impl<'a, P, C, S> From<&'a CompressedSolid<P, C, S>> for PreStepModel<'a, P, C, S>
-where
-    P: Copy,
-    C: StepLength,
-    S: StepLength,
-{
-    fn from(solid: &'a CompressedSolid<P, C, S>) -> Self { Self::Solid(StepSolid::new(solid, 16)) }
-}
-
-impl<P, C, S> Display for PreStepModel<'_, P, C, S>
-where
-    P: DisplayByStep + Copy,
-    C: DisplayByStep + StepLength + StepCurve,
-    S: DisplayByStep + StepLength + StepSurface,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        match self {
-            Self::Shell(x) => {
-                f.write_fmt(format_args!(
-                    "#{idx} = SHELL_BASED_SURFACE_MODEL('', (#{shell_idx}));\n",
-                    idx = x.idx - 1,
-                    shell_idx = x.idx
-                ))?;
-                Display::fmt(&x, f)
-            }
-            Self::Solid(x) => Display::fmt(x, f),
-        }
-    }
-}
-
-impl<P, C, S> StepLength for PreStepModel<'_, P, C, S> {
-    fn step_length(&self) -> usize {
-        match self {
-            Self::Shell(x) => 1 + x.step_length(),
-            Self::Solid(x) => x.step_length(),
-        }
-    }
-}
-
 impl<'a, P, C, S> From<&'a CompressedShell<P, C, S>> for StepModel<'a, P, C, S>
 where
     P: Copy,
     C: StepLength,
     S: StepLength,
 {
-    fn from(shell: &'a CompressedShell<P, C, S>) -> Self { Self(shell.into()) }
+    fn from(shell: &'a CompressedShell<P, C, S>) -> Self {
+        Self::Shells(vec![StepShell::new(shell, true)])
+    }
 }
 
 impl<'a, P, C, S> From<&'a CompressedSolid<P, C, S>> for StepModel<'a, P, C, S>
@@ -346,9 +321,66 @@ where
     C: StepLength,
     S: StepLength,
 {
-    fn from(solid: &'a CompressedSolid<P, C, S>) -> Self { Self(solid.into()) }
+    fn from(solid: &'a CompressedSolid<P, C, S>) -> Self { Self::Solid(StepSolid::new(solid)) }
 }
 
+impl<'a, P, C, S> FromIterator<&'a CompressedShell<P, C, S>> for StepModel<'a, P, C, S>
+where
+    P: Copy,
+    C: StepLength,
+    S: StepLength,
+{
+    fn from_iter<T: IntoIterator<Item = &'a CompressedShell<P, C, S>>>(iter: T) -> Self {
+        Self::Shells(
+            iter.into_iter()
+                .map(|shell| StepShell::new(shell, true))
+                .collect(),
+        )
+    }
+}
+
+impl<P, C, S> DisplayByStep for StepModel<'_, P, C, S>
+where
+    P: DisplayByStep + Copy,
+    C: DisplayByStep + StepLength + StepCurve,
+    S: DisplayByStep + StepLength + StepSurface,
+{
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        match self {
+            Self::Shells(shells) => {
+                let mut cursor = idx + 1;
+                let shell_indices = shells
+                    .iter()
+                    .map(|shell| {
+                        let res = cursor;
+                        cursor += shell.step_length();
+                        res
+                    })
+                    .collect::<Vec<_>>();
+                f.write_fmt(format_args!(
+                    "#{idx} = SHELL_BASED_SURFACE_MODEL('', {});\n",
+                    IndexSliceDisplay(shell_indices.iter().copied()),
+                ))?;
+                shells
+                    .iter()
+                    .zip(shell_indices)
+                    .try_for_each(|(shell, idx)| DisplayByStep::fmt(shell, idx, f))
+            }
+            Self::Solid(x) => DisplayByStep::fmt(x, idx, f),
+        }
+    }
+}
+
+impl<P, C, S> StepLength for StepModel<'_, P, C, S> {
+    fn step_length(&self) -> usize {
+        match self {
+            Self::Shells(x) => 1 + x.iter().map(|x| x.step_length()).sum::<usize>(),
+            Self::Solid(x) => x.step_length(),
+        }
+    }
+}
+
+/*
 impl<P, C, S> Display for StepModel<'_, P, C, S>
 where
     P: DisplayByStep + Copy,
@@ -476,7 +508,7 @@ where
             "#10 = SHAPE_REPRESENTATION('', {models_slice}, #11);\n"
         ))?;
         f.pad("#11 = (
-    GEOMETRIC_REPRESENTATION_CONTEXT(3) 
+    GEOMETRIC_REPRESENTATION_CONTEXT(3)
     GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#15))
     GLOBAL_UNIT_ASSIGNED_CONTEXT((#12, #13, #14))
     REPRESENTATION_CONTEXT('Context #1', '3D Context with UNIT and UNCERTAINTY')
@@ -491,3 +523,4 @@ where
             .try_for_each(|model| Display::fmt(model, f))
     }
 }
+    */
