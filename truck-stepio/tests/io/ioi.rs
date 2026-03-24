@@ -4,7 +4,7 @@ use truck_topology::shell::ShellCondition;
 
 const STEP_DIRECTORY: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/step/");
 
-const STEP_FILES: &[&str] = &[
+const STEP_SHAPE_FILES: &[&str] = &[
     "occt-cone.step",
     "occt-cube.step",
     "occt-cylinder.step",
@@ -16,16 +16,18 @@ const STEP_FILES: &[&str] = &[
     "abc-0035.step",
 ];
 
+const STEP_ASSY_FILE: &str = "occt-assy.step";
+
 #[test]
 fn ioi() {
-    STEP_FILES.iter().for_each(|file_name| {
+    STEP_SHAPE_FILES.iter().for_each(|file_name| {
         println!("{file_name}");
         let input = [STEP_DIRECTORY, file_name].concat();
         let step_string = std::fs::read_to_string(input).unwrap();
         let table = Table::from_step(&step_string).unwrap();
         table.shell.values().cloned().for_each(|step_shell| {
             let cshell = table.to_compressed_shell(&step_shell).unwrap();
-            let design = StepDesign::<_, Matrix4>::from_model(StepModel::from(&cshell));
+            let design = StepDesign::from_model(StepModel::from(&cshell));
             let step_string = StepDisplay::new(Default::default(), design).to_string();
             println!("{step_string}");
             let table = Table::from_step(&step_string).unwrap();
@@ -45,4 +47,47 @@ fn ioi() {
             })
         });
     });
+}
+
+#[test]
+fn assy_ioi() {
+    use truck_assembly::assy::{NodeEntity, EdgeEntity};
+    use convert::ProductShape;
+    
+    let input = [STEP_DIRECTORY, STEP_ASSY_FILE].concat();
+    let step_string = std::fs::read_to_string(input).unwrap();
+    let table = Table::from_step(&step_string).unwrap();
+    let step_assy = table.step_assy().unwrap();
+    let assy = step_assy.map(
+        |NodeEntity {
+            shape,
+            attrs,
+        }| {
+            let shape = shape.iter().find_map(|shape| {
+                match shape {
+                    ProductShape::Solid(solid) => Some(StepModel::from(solid)),
+                    _ => None,
+                }
+            });
+            NodeEntity {
+                shape,
+                attrs: attrs.clone(),
+            }
+        },
+        |EdgeEntity {
+            matrix,
+            attrs,
+        }| {
+            let matrix = Matrix4::try_from(matrix).unwrap();
+            println!("{matrix:?}");
+            EdgeEntity {
+                matrix: Matrix4::try_from(matrix).unwrap(),
+                attrs: attrs.clone(),
+            }
+        },
+    );
+    let design = StepDesign::new(assy);
+    let step_string = StepDisplay::new(Default::default(), design).to_string();
+
+    std::fs::write("re-assy.stp", &step_string).unwrap();
 }

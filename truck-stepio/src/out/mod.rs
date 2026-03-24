@@ -158,6 +158,12 @@ impl<T: DisplayByStep> DisplayByStep for Box<T> {
     }
 }
 
+impl DisplayByStep for Box<dyn DisplayByStep> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        DisplayByStep::fmt(self.as_ref(), idx, f)
+    }
+}
+
 /// Display struct for outputting some objects to STEP file format.
 #[derive(Clone, Debug)]
 pub struct StepDataDisplay<T> {
@@ -344,20 +350,12 @@ pub enum StepModel<'a, P, C, S> {
     Solid(topology::StepSolid<'a, P, C, S>),
 }
 
-/// Assembly node for output step
-#[derive(Clone, Debug)]
-pub enum StepNodeShape<Model, Matrix = Matrix4> {
-    /// leaf node for represent model
-    Model(Model),
-    /// Empty node for assembly
-    Axis(Matrix),
-}
-
 /// All step data for represent mechanical design
 #[derive(Clone, Debug)]
-pub struct StepDesign<Model, Matrix = Matrix4> {
-    assy: Assembly<StepNodeShape<Model, Matrix>, PartAttrs, Matrix, PartAttrs>,
+pub struct StepDesign<Model, Models, Matrix = Matrix4> {
+    assy: Assembly<Models, PartAttrs, Matrix, PartAttrs>,
     app_ctx: String,
+    _model_ty: std::marker::PhantomData<Model>,
 }
 
 /// Display struct for outputting STEP file format with header.

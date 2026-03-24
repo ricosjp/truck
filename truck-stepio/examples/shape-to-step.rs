@@ -30,7 +30,7 @@ fn main() {
     let shape_file = std::fs::read(input_shape_file).unwrap();
     let compressed: CompressedSolid<Point3, Curve, Surface> =
         serde_json::from_reader(shape_file.as_slice()).unwrap();
-    let repr = StepDesign::<_, Matrix4>::from_model(out::StepModel::from(&compressed));
+    let repr = StepDesign::from_model(out::StepModel::from(&compressed));
     let step_string = out::StepDisplay::new(
         out::StepHeaderDescriptor {
             organization_system: "shape-to-step".to_owned(),
