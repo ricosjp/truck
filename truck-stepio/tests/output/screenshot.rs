@@ -327,21 +327,51 @@ fn koch() {
     let nodes = assy.create_nodes([
         NodeEntity {
             shape: Some(model),
-            attrs: PartAttrs::default(),
+            attrs: PartAttrs {
+                id: "node-0".to_string(),
+                name: "base node".to_string(),
+                description: "node with model".to_string(),
+            },
         },
-        Default::default(),
-        Default::default(),
-        Default::default(),
+        NodeEntity {
+            shape: None,
+            attrs: PartAttrs {
+                id: "node-1".to_string(),
+                name: "Step 1".to_string(),
+                description: "Step 1".to_string(),
+            },
+        },
+        NodeEntity {
+            shape: None,
+            attrs: PartAttrs {
+                id: "node-2".to_string(),
+                name: "Step 2".to_string(),
+                description: "Step 2".to_string(),
+            },
+        },
+        NodeEntity {
+            shape: None,
+            attrs: PartAttrs {
+                id: "node-3".to_string(),
+                name: "Step 3".to_string(),
+                description: "Step 3".to_string(),
+            },
+        },
     ]);
 
     let mut a = 1.0;
     for i in 0..3 {
+        let next = i + 1;
         assy.create_edge(
-            nodes[i + 1],
+            nodes[next],
             nodes[i],
             EdgeEntity {
                 matrix: Matrix4::identity(),
-                attrs: Default::default(),
+                attrs: PartAttrs {
+                    id: format!("edge-{next}-{i}-0"),
+                    name: format!("Assy Step {next}-0"),
+                    description: format!("0-edge from node-{next} to node-{i}"),
+                },
             },
         );
         assy.create_edge(
@@ -350,7 +380,11 @@ fn koch() {
             EdgeEntity {
                 matrix: Matrix4::from_translation(Vector3::new(a, 0.0, 0.0))
                     * Matrix4::from_angle_z(Rad(PI / 3.0)),
-                attrs: Default::default(),
+                attrs: PartAttrs {
+                    id: format!("edge-{next}-{i}-1"),
+                    name: format!("Assy Step {next}-1"),
+                    description: format!("1-edge from node-{next} to node-{i}"),
+                },
             },
         );
         assy.create_edge(
@@ -362,7 +396,11 @@ fn koch() {
                     a * f64::sqrt(3.0) / 2.0,
                     0.0,
                 )) * Matrix4::from_angle_z(Rad(-PI / 3.0)),
-                attrs: Default::default(),
+                attrs: PartAttrs {
+                    id: format!("edge-{next}-{i}-2"),
+                    name: format!("Assy Step {next}-2"),
+                    description: format!("2-edge from node-{next} to node-{i}"),
+                },
             },
         );
         assy.create_edge(
@@ -370,7 +408,11 @@ fn koch() {
             nodes[i],
             EdgeEntity {
                 matrix: Matrix4::from_translation(Vector3::new(a * 2.0, 0.0, 0.0)),
-                attrs: Default::default(),
+                attrs: PartAttrs {
+                    id: format!("edge-{next}-{i}-3"),
+                    name: format!("Assy Step {next}-3"),
+                    description: format!("3-edge node from node-{next} to node-{i}"),
+                },
             },
         );
         a *= 3.0;
@@ -408,7 +450,7 @@ DATA;
 #12 = PRODUCT_DEFINITION_SHAPE('', '', #13);
 #13 = PRODUCT_DEFINITION('design', '', #14, #16);
 #14 = PRODUCT_DEFINITION_FORMATION('', '', #15);
-#15 = PRODUCT('', '', '', (#17));
+#15 = PRODUCT('node-0', 'base node', 'node with model', (#17));
 #16 = DESIGN_CONTEXT('', #1, 'design');
 #17 = MECHANICAL_CONTEXT('', #1, 'mechanical');
 #18 = SHAPE_REPRESENTATION('', (#7, #19), #2);
@@ -566,7 +608,7 @@ DATA;
 #170 = PRODUCT_DEFINITION_SHAPE('', '', #171);
 #171 = PRODUCT_DEFINITION('design', '', #172, #174);
 #172 = PRODUCT_DEFINITION_FORMATION('', '', #173);
-#173 = PRODUCT('', '', '', (#175));
+#173 = PRODUCT('node-1', 'Step 1', 'Step 1', (#175));
 #174 = DESIGN_CONTEXT('', #1, 'design');
 #175 = MECHANICAL_CONTEXT('', #1, 'mechanical');
 #176 = SHAPE_REPRESENTATION('', (#7, #177, #181, #185, #189), #2);
@@ -590,7 +632,7 @@ DATA;
 #194 = PRODUCT_DEFINITION_SHAPE('', '', #195);
 #195 = PRODUCT_DEFINITION('design', '', #196, #198);
 #196 = PRODUCT_DEFINITION_FORMATION('', '', #197);
-#197 = PRODUCT('', '', '', (#199));
+#197 = PRODUCT('node-2', 'Step 2', 'Step 2', (#199));
 #198 = DESIGN_CONTEXT('', #1, 'design');
 #199 = MECHANICAL_CONTEXT('', #1, 'mechanical');
 #200 = SHAPE_REPRESENTATION('', (#7, #201, #205, #209, #213), #2);
@@ -614,7 +656,7 @@ DATA;
 #218 = PRODUCT_DEFINITION_SHAPE('', '', #219);
 #219 = PRODUCT_DEFINITION('design', '', #220, #222);
 #220 = PRODUCT_DEFINITION_FORMATION('', '', #221);
-#221 = PRODUCT('', '', '', (#223));
+#221 = PRODUCT('node-3', 'Step 3', 'Step 3', (#223));
 #222 = DESIGN_CONTEXT('', #1, 'design');
 #223 = MECHANICAL_CONTEXT('', #1, 'mechanical');
 #224 = SHAPE_REPRESENTATION('', (#7, #225, #229, #233, #237), #2);
@@ -642,7 +684,7 @@ DATA;
 );
 #243 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #177);
 #244 = PRODUCT_DEFINITION_SHAPE('', '', #245);
-#245 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #171, #13, $);
+#245 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-1-0-0', 'Assy Step 1-0', '0-edge from node-1 to node-0', #171, #13, $);
 #246 = CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#247, #249);
 #247 = (
     REPRESENTATION_RELATIONSHIP('', '', #176, #18)
@@ -651,7 +693,7 @@ DATA;
 );
 #248 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #181);
 #249 = PRODUCT_DEFINITION_SHAPE('', '', #250);
-#250 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #171, #13, $);
+#250 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-1-0-1', 'Assy Step 1-1', '1-edge from node-1 to node-0', #171, #13, $);
 #251 = CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#252, #254);
 #252 = (
     REPRESENTATION_RELATIONSHIP('', '', #176, #18)
@@ -660,7 +702,7 @@ DATA;
 );
 #253 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #185);
 #254 = PRODUCT_DEFINITION_SHAPE('', '', #255);
-#255 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #171, #13, $);
+#255 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-1-0-2', 'Assy Step 1-2', '2-edge from node-1 to node-0', #171, #13, $);
 #256 = CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#257, #259);
 #257 = (
     REPRESENTATION_RELATIONSHIP('', '', #176, #18)
@@ -669,7 +711,7 @@ DATA;
 );
 #258 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #189);
 #259 = PRODUCT_DEFINITION_SHAPE('', '', #260);
-#260 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #171, #13, $);
+#260 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-1-0-3', 'Assy Step 1-3', '3-edge node from node-1 to node-0', #171, #13, $);
 #261 = CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#262, #264);
 #262 = (
     REPRESENTATION_RELATIONSHIP('', '', #200, #176)
@@ -678,7 +720,7 @@ DATA;
 );
 #263 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #201);
 #264 = PRODUCT_DEFINITION_SHAPE('', '', #265);
-#265 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #195, #171, $);
+#265 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-2-1-0', 'Assy Step 2-0', '0-edge from node-2 to node-1', #195, #171, $);
 #266 = CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#267, #269);
 #267 = (
     REPRESENTATION_RELATIONSHIP('', '', #200, #176)
@@ -687,7 +729,7 @@ DATA;
 );
 #268 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #205);
 #269 = PRODUCT_DEFINITION_SHAPE('', '', #270);
-#270 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #195, #171, $);
+#270 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-2-1-1', 'Assy Step 2-1', '1-edge from node-2 to node-1', #195, #171, $);
 #271 = CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#272, #274);
 #272 = (
     REPRESENTATION_RELATIONSHIP('', '', #200, #176)
@@ -696,7 +738,7 @@ DATA;
 );
 #273 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #209);
 #274 = PRODUCT_DEFINITION_SHAPE('', '', #275);
-#275 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #195, #171, $);
+#275 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-2-1-2', 'Assy Step 2-2', '2-edge from node-2 to node-1', #195, #171, $);
 #276 = CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#277, #279);
 #277 = (
     REPRESENTATION_RELATIONSHIP('', '', #200, #176)
@@ -705,7 +747,7 @@ DATA;
 );
 #278 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #213);
 #279 = PRODUCT_DEFINITION_SHAPE('', '', #280);
-#280 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #195, #171, $);
+#280 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-2-1-3', 'Assy Step 2-3', '3-edge node from node-2 to node-1', #195, #171, $);
 #281 = CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#282, #284);
 #282 = (
     REPRESENTATION_RELATIONSHIP('', '', #224, #200)
@@ -714,7 +756,7 @@ DATA;
 );
 #283 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #225);
 #284 = PRODUCT_DEFINITION_SHAPE('', '', #285);
-#285 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #219, #195, $);
+#285 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-3-2-0', 'Assy Step 3-0', '0-edge from node-3 to node-2', #219, #195, $);
 #286 = CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#287, #289);
 #287 = (
     REPRESENTATION_RELATIONSHIP('', '', #224, #200)
@@ -723,7 +765,7 @@ DATA;
 );
 #288 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #229);
 #289 = PRODUCT_DEFINITION_SHAPE('', '', #290);
-#290 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #219, #195, $);
+#290 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-3-2-1', 'Assy Step 3-1', '1-edge from node-3 to node-2', #219, #195, $);
 #291 = CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#292, #294);
 #292 = (
     REPRESENTATION_RELATIONSHIP('', '', #224, #200)
@@ -732,7 +774,7 @@ DATA;
 );
 #293 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #233);
 #294 = PRODUCT_DEFINITION_SHAPE('', '', #295);
-#295 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #219, #195, $);
+#295 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-3-2-2', 'Assy Step 3-2', '2-edge from node-3 to node-2', #219, #195, $);
 #296 = CONTEXT_DEPENDENT_SHAPE_REPRESENTATION(#297, #299);
 #297 = (
     REPRESENTATION_RELATIONSHIP('', '', #224, #200)
@@ -741,7 +783,7 @@ DATA;
 );
 #298 = ITEM_DEFINED_TRANSFORMATION('', '', #7, #237);
 #299 = PRODUCT_DEFINITION_SHAPE('', '', #300);
-#300 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('', '', '', #219, #195, $);
+#300 = NEXT_ASSEMBLY_USAGE_OCCURRENCE('edge-3-2-3', 'Assy Step 3-3', '3-edge node from node-3 to node-2', #219, #195, $);
 ENDSEC;
 END-ISO-10303-21;
 "

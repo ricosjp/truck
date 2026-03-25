@@ -51,33 +51,25 @@ fn ioi() {
 
 #[test]
 fn assy_ioi() {
-    use truck_assembly::assy::{NodeEntity, EdgeEntity};
     use convert::ProductShape;
-    
+    use truck_assembly::assy::{EdgeEntity, NodeEntity};
+
     let input = [STEP_DIRECTORY, STEP_ASSY_FILE].concat();
     let step_string = std::fs::read_to_string(input).unwrap();
     let table = Table::from_step(&step_string).unwrap();
     let step_assy = table.step_assy().unwrap();
     let assy = step_assy.map(
-        |NodeEntity {
-            shape,
-            attrs,
-        }| {
-            let shape = shape.iter().find_map(|shape| {
-                match shape {
-                    ProductShape::Solid(solid) => Some(StepModel::from(solid)),
-                    _ => None,
-                }
+        |NodeEntity { shape, attrs }| {
+            let shape = shape.iter().find_map(|shape| match shape {
+                ProductShape::Solid(solid) => Some(StepModel::from(solid)),
+                _ => None,
             });
             NodeEntity {
                 shape,
                 attrs: attrs.clone(),
             }
         },
-        |EdgeEntity {
-            matrix,
-            attrs,
-        }| {
+        |EdgeEntity { matrix, attrs }| {
             let matrix = Matrix4::try_from(matrix).unwrap();
             println!("{matrix:?}");
             EdgeEntity {

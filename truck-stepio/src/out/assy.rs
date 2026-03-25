@@ -197,8 +197,7 @@ impl ConstStepLength for EdgeDisplay<'_> {
     const LENGTH: usize = 5;
 }
 
-impl StepLength for EdgeDisplay<'_>
-{
+impl StepLength for EdgeDisplay<'_> {
     #[inline]
     fn step_length(&self) -> usize { Self::LENGTH }
 }

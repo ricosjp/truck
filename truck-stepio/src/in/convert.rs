@@ -318,7 +318,7 @@ impl ProductShape {
             table.to_compressed_solid(step_solid).map(Into::into)
         } else if let Some(step_shells) = table.shell_based_surface_model.get(&idx) {
             table.to_compressed_shells(step_shells).map(Into::into)
-        } else if let Some(_) = table.axis2_placement_3d.get(&idx) {
+        } else if table.axis2_placement_3d.contains_key(&idx) {
             let axis = EntityTable::<Axis2Placement3dHolder>::get_owned(table, idx)?;
             Ok(Matrix4::from(&axis).into())
         } else {

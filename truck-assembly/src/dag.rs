@@ -826,10 +826,15 @@ impl<NE, EE> Dag<NE, EE> {
     /// assert_eq!(edges1[0].nodes(), (b[1].index(), b[2].index()));
     /// assert_eq!(*edges1[0].entity(), 9.0);
     /// ```
-    pub fn map<'a, NE2, EE2, NF, EF>(&'a self, mut node_map: NF, mut edge_map: EF) -> Dag<NE2, EE2>
+    pub fn map<'a, NE2, EE2, NF, EF>(
+        &'a self,
+        mut node_map: NF,
+        mut edge_map: EF,
+    ) -> Dag<NE2, EE2>
     where
         NF: FnMut(&'a NE) -> NE2,
-        EF: FnMut(&'a EE) -> EE2, {
+        EF: FnMut(&'a EE) -> EE2,
+    {
         let mut edge_data_map = move |edge_data: &'a EdgeData<EE>| EdgeData {
             to: edge_data.to,
             entity: edge_map(&edge_data.entity),
