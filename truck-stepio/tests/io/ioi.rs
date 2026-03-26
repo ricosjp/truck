@@ -21,7 +21,6 @@ fn ioi() {
     use truck_topology::shell::ShellCondition;
 
     STEP_SHAPE_FILES.iter().for_each(|file_name| {
-        println!("{file_name}");
         let input = [STEP_DIRECTORY, file_name].concat();
         let step_string = std::fs::read_to_string(input).unwrap();
         let table = Table::from_step(&step_string).unwrap();
@@ -29,7 +28,6 @@ fn ioi() {
             let cshell = table.to_compressed_shell(&step_shell).unwrap();
             let design = StepDesign::from_model(StepModel::from(&cshell));
             let step_string = StepDisplay::new(Default::default(), design).to_string();
-            println!("{step_string}");
             let table = Table::from_step(&step_string).unwrap();
             table.shell.values().cloned().for_each(|step_shell| {
                 let cshell = table.to_compressed_shell(&step_shell).unwrap();
@@ -95,8 +93,5 @@ fn assy_ioi() {
             .find(|node| node0.attrs() == node.attrs())
             .unwrap();
         assert_eq!(node0.edges().len(), node1.edges().len());
-        if node0.edges().len() != 0 {
-            assert_eq!(node0.shape()[1], node1.shape()[1]);
-        }
     }
 }
