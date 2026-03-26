@@ -275,13 +275,13 @@ impl Table {
     }
 }
 
-#[derive(Clone, Debug, derive_more::From)]
+#[derive(Clone, Debug, PartialEq, derive_more::From)]
 pub enum NodeMatrix {
     Identity,
     Transform(Box<ItemDefinedTransformation>),
 }
 
-#[derive(Clone, Debug, derive_more::From)]
+#[derive(Clone, Debug, PartialEq, derive_more::From)]
 pub enum ProductShape {
     Shells(Vec<CompressedShell<Point3, Curve3D, Surface>>),
     Solid(CompressedSolid<Point3, Curve3D, Surface>),

@@ -1,7 +1,3 @@
-use truck_meshalgo::prelude::*;
-use truck_stepio::{out::*, r#in::*};
-use truck_topology::shell::ShellCondition;
-
 const STEP_DIRECTORY: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/step/");
 
 const STEP_SHAPE_FILES: &[&str] = &[
@@ -20,6 +16,10 @@ const STEP_ASSY_FILE: &str = "occt-assy.step";
 
 #[test]
 fn ioi() {
+    use truck_meshalgo::prelude::*;
+    use truck_stepio::{out::*, r#in::*};
+    use truck_topology::shell::ShellCondition;
+
     STEP_SHAPE_FILES.iter().for_each(|file_name| {
         println!("{file_name}");
         let input = [STEP_DIRECTORY, file_name].concat();
@@ -42,7 +42,7 @@ fn ioi() {
                 assert_eq!(
                     poly.shell_condition(),
                     ShellCondition::Closed,
-                    "{file_name}"
+                    "mesh is not closed: {file_name}",
                 );
             })
         });
@@ -53,11 +53,16 @@ fn ioi() {
 fn assy_ioi() {
     use convert::ProductShape;
     use truck_assembly::assy::{EdgeEntity, NodeEntity};
+    use truck_stepio::{
+        out::*,
+        r#in::{step_geometry::*, *},
+    };
 
     let input = [STEP_DIRECTORY, STEP_ASSY_FILE].concat();
     let step_string = std::fs::read_to_string(input).unwrap();
     let table = Table::from_step(&step_string).unwrap();
     let step_assy = table.step_assy().unwrap();
+
     let assy = step_assy.map(
         |NodeEntity { shape, attrs }| {
             let shape = shape.iter().find_map(|shape| match shape {
@@ -71,7 +76,6 @@ fn assy_ioi() {
         },
         |EdgeEntity { matrix, attrs }| {
             let matrix = Matrix4::try_from(matrix).unwrap();
-            println!("{matrix:?}");
             EdgeEntity {
                 matrix: Matrix4::try_from(matrix).unwrap(),
                 attrs: attrs.clone(),
@@ -79,7 +83,20 @@ fn assy_ioi() {
         },
     );
     let design = StepDesign::new(assy);
-    let step_string = StepDisplay::new(Default::default(), design).to_string();
+    let re_step_string = StepDisplay::new(Default::default(), design).to_string();
 
-    std::fs::write("re-assy.stp", &step_string).unwrap();
+    let re_table = Table::from_step(&re_step_string).unwrap();
+    let re_step_assy = re_table.step_assy().unwrap();
+
+    assert_eq!(step_assy.len(), re_step_assy.len());
+    for node0 in step_assy.all_nodes() {
+        let node1 = re_step_assy
+            .all_nodes()
+            .find(|node| node0.attrs() == node.attrs())
+            .unwrap();
+        assert_eq!(node0.edges().len(), node1.edges().len());
+        if node0.edges().len() != 0 {
+            assert_eq!(node0.shape()[1], node1.shape()[1]);
+        }
+    }
 }
