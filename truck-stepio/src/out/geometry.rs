@@ -56,13 +56,50 @@ where
         let direction_idx = idx + 1;
         f.write_fmt(format_args!(
             "#{idx} = VECTOR('', #{direction_idx}, {magnitude});\n{direction}",
-            direction = StepDisplay::new(VectorAsDirection(*self / magnitude), direction_idx),
+            direction = StepDataDisplay::new(VectorAsDirection(*self / magnitude), direction_idx),
             magnitude = FloatDisplay(magnitude),
         ))
     }
 }
 impl_const_step_length!(Vector2, 2);
 impl_const_step_length!(Vector3, 2);
+
+/// class for display `Matrix`.
+#[derive(Clone, Debug, Copy)]
+pub struct MatrixAsAxis<M>(pub M);
+
+impl DisplayByStep for MatrixAsAxis<Matrix3> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let location_idx = idx + 1;
+        let ref_direction_idx = idx + 2;
+        let location = self.0[2].to_point();
+        let ref_direction = VectorAsDirection(self.0[0].truncate());
+        f.write_fmt(format_args!(
+            "#{idx} = AXIS2_PLACEMENT_2D('', #{location_idx}, #{ref_direction_idx});\n",
+        ))?;
+        DisplayByStep::fmt(&location, location_idx, f)?;
+        DisplayByStep::fmt(&ref_direction, ref_direction_idx, f)
+    }
+}
+impl_const_step_length!(MatrixAsAxis<Matrix3>, 3);
+
+impl DisplayByStep for MatrixAsAxis<Matrix4> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        let location_idx = idx + 1;
+        let axis_idx = idx + 2;
+        let ref_direction_idx = idx + 3;
+        let location = self.0[3].to_point();
+        let axis = VectorAsDirection(self.0[2].truncate());
+        let ref_direction = VectorAsDirection(self.0[0].truncate());
+        f.write_fmt(format_args!(
+            "#{idx} = AXIS2_PLACEMENT_3D('', #{location_idx}, #{axis_idx}, #{ref_direction_idx});\n",
+        ))?;
+        DisplayByStep::fmt(&location, location_idx, f)?;
+        DisplayByStep::fmt(&axis, axis_idx, f)?;
+        DisplayByStep::fmt(&ref_direction, ref_direction_idx, f)
+    }
+}
+impl_const_step_length!(MatrixAsAxis<Matrix4>, 4);
 
 impl<P> DisplayByStep for Line<P>
 where
@@ -74,8 +111,8 @@ where
         let dir_idx = idx + 1 + P::LENGTH;
         f.write_fmt(format_args!(
             "#{idx} = LINE('', #{pnt_idx}, #{dir_idx});\n{pnt}{dir}",
-            pnt = StepDisplay::new(self.0, pnt_idx),
-            dir = StepDisplay::new(self.1 - self.0, dir_idx),
+            pnt = StepDataDisplay::new(self.0, pnt_idx),
+            dir = StepDataDisplay::new(self.1 - self.0, dir_idx),
         ))
     }
 }
@@ -128,7 +165,7 @@ where P: Copy + ConstStepLength + DisplayByStep
             .control_points()
             .iter()
             .enumerate()
-            .map(|(i, p)| StepDisplay::new(*p, idx + 1 + i * P::LENGTH))
+            .map(|(i, p)| StepDataDisplay::new(*p, idx + 1 + i * P::LENGTH))
             .collect::<Vec<_>>();
         f.write_fmt(format_args!(
             "#{idx} = B_SPLINE_CURVE_WITH_KNOTS('', {degree}, {control_points_list}, .UNSPECIFIED., .U., .U., {knot_multiplicities}, {knots}, .UNSPECIFIED.);\n{control_points_instances}",
@@ -159,7 +196,7 @@ where
             .control_points()
             .iter()
             .enumerate()
-            .map(|(i, v)| StepDisplay::new(v.to_point(), idx + 1 + i * V::Point::LENGTH))
+            .map(|(i, v)| StepDataDisplay::new(v.to_point(), idx + 1 + i * V::Point::LENGTH))
             .collect::<Vec<_>>();
         let weights = self
             .control_points()
@@ -264,8 +301,8 @@ impl DisplayByStep for Processor<TrimmedCurve<UnitHyperbola<Point2>>, Matrix3> {
         let r0 = transform[0].magnitude();
         let r1 = transform[1].magnitude();
         let ref_direction_raw = VectorAsDirection(transform[0].truncate() / r0);
-        let ref_direction = StepDisplay::new(ref_direction_raw, ref_direction_idx);
-        let location = StepDisplay::new(transform[2].to_point(), location_idx);
+        let ref_direction = StepDataDisplay::new(ref_direction_raw, ref_direction_idx);
+        let location = StepDataDisplay::new(transform[2].to_point(), location_idx);
         let (r0, r1) = (FloatDisplay(r0), FloatDisplay(r1));
         f.write_fmt(format_args!(
             "#{idx} = HYPERBOLA('', #{position_idx}, {r0}, {r1});
@@ -283,13 +320,13 @@ impl DisplayByStep for Processor<TrimmedCurve<UnitHyperbola<Point3>>, Matrix4> {
         let location_idx = idx + 2;
         let axis_idx = idx + 3;
         let ref_direction_idx = idx + 4;
-        let location = StepDisplay::new(transform[3].to_point(), location_idx);
+        let location = StepDataDisplay::new(transform[3].to_point(), location_idx);
         let axis_raw = VectorAsDirection(transform[2].truncate().normalize());
-        let axis = StepDisplay::new(axis_raw, axis_idx);
+        let axis = StepDataDisplay::new(axis_raw, axis_idx);
         let r0 = transform[0].magnitude();
         let r1 = transform[1].magnitude();
         let ref_direction_raw = VectorAsDirection(transform[0].truncate() / r0);
-        let ref_direction = StepDisplay::new(ref_direction_raw, ref_direction_idx);
+        let ref_direction = StepDataDisplay::new(ref_direction_raw, ref_direction_idx);
         let (r0, r1) = (FloatDisplay(r0), FloatDisplay(r1));
         f.write_fmt(format_args!(
             "#{idx} = HYPERBOLA('', #{position_idx}, {r0}, {r1});
@@ -310,8 +347,8 @@ impl DisplayByStep for Processor<TrimmedCurve<UnitParabola<Point2>>, Matrix3> {
         let r1 = transform[1].magnitude();
         let focal_dist = FloatDisplay(r1 * r1 / r0);
         let ref_direction_raw = VectorAsDirection(transform[0].truncate() / r0);
-        let ref_direction = StepDisplay::new(ref_direction_raw, ref_direction_idx);
-        let location = StepDisplay::new(transform[2].to_point(), location_idx);
+        let ref_direction = StepDataDisplay::new(ref_direction_raw, ref_direction_idx);
+        let location = StepDataDisplay::new(transform[2].to_point(), location_idx);
         f.write_fmt(format_args!(
             "#{idx} = PARABOLA('', #{position_idx}, {focal_dist});
 #{position_idx} = AXIS2_PLACEMENT_2D('', #{location_idx}, #{ref_direction_idx});
@@ -328,14 +365,14 @@ impl DisplayByStep for Processor<TrimmedCurve<UnitParabola<Point3>>, Matrix4> {
         let location_idx = idx + 2;
         let axis_idx = idx + 3;
         let ref_direction_idx = idx + 4;
-        let location = StepDisplay::new(transform[3].to_point(), location_idx);
+        let location = StepDataDisplay::new(transform[3].to_point(), location_idx);
         let axis_raw = VectorAsDirection(transform[2].truncate().normalize());
-        let axis = StepDisplay::new(axis_raw, axis_idx);
+        let axis = StepDataDisplay::new(axis_raw, axis_idx);
         let r0 = transform[0].magnitude();
         let r1 = transform[1].magnitude();
         let focal_dist = FloatDisplay(r1 * r1 / r0);
         let ref_direction_raw = VectorAsDirection(transform[0].truncate() / r0);
-        let ref_direction = StepDisplay::new(ref_direction_raw, ref_direction_idx);
+        let ref_direction = StepDataDisplay::new(ref_direction_raw, ref_direction_idx);
         f.write_fmt(format_args!(
             "#{idx} = PARABOLA('', #{position_idx}, {focal_dist});
 #{position_idx} = AXIS2_PLACEMENT_3D('', #{location_idx}, #{axis_idx}, #{ref_direction_idx});
@@ -402,8 +439,8 @@ where
         let repr_idx = surface_idx + self.surface().step_length();
         let context_idx = repr_idx + 1;
         let curve_idx = repr_idx + 2;
-        let curve = StepDisplay::new(self.curve(), curve_idx);
-        let surface = StepDisplay::new(self.surface(), surface_idx);
+        let curve = StepDataDisplay::new(self.curve(), curve_idx);
+        let surface = StepDataDisplay::new(self.surface(), surface_idx);
         f.write_fmt(format_args!(
             "#{idx} = PCURVE('', #{surface_idx}, #{repr_idx});
 {surface}#{repr_idx} = DEFINITIONAL_REPRESENTATION('', (#{curve_idx}), #{context_idx});
@@ -468,9 +505,9 @@ impl DisplayByStep for Plane {
             "#{idx} = PLANE('', #{axis2_placement_idx});
 #{axis2_placement_idx} = AXIS2_PLACEMENT_3D('', #{location_idx}, #{z_axis_idx}, #{x_axis_idx});
 {location}{z_axis}{x_axis}",
-            location = StepDisplay::new(self.origin(), location_idx),
-            z_axis = StepDisplay::new(VectorAsDirection(self.normal()), z_axis_idx),
-            x_axis = StepDisplay::new(VectorAsDirection(self.u_axis().normalize()), x_axis_idx)
+            location = StepDataDisplay::new(self.origin(), location_idx),
+            z_axis = StepDataDisplay::new(VectorAsDirection(self.normal()), z_axis_idx),
+            x_axis = StepDataDisplay::new(VectorAsDirection(self.u_axis().normalize()), x_axis_idx)
         ))
     }
 }
@@ -568,7 +605,7 @@ where P: Copy + DisplayByStep
             .iter()
             .flatten()
             .enumerate()
-            .map(|(i, p)| StepDisplay::new(*p, idx + i + 1))
+            .map(|(i, p)| StepDataDisplay::new(*p, idx + i + 1))
             .collect::<Vec<_>>();
         let mut counter = 0;
         let control_points_list = control_points
@@ -612,7 +649,7 @@ where
             .iter()
             .flatten()
             .enumerate()
-            .map(|(i, v)| StepDisplay::new(v.to_point(), idx + i + 1))
+            .map(|(i, v)| StepDataDisplay::new(v.to_point(), idx + i + 1))
             .collect::<Vec<_>>();
         let mut counter = 0;
         let control_points_list = self
@@ -673,8 +710,8 @@ where C: StepLength + DisplayByStep
         let vector = self.extruding_vector();
         f.write_fmt(format_args!(
             "#{idx} = SURFACE_OF_LINEAR_EXTRUSION('', #{curve_idx}, #{vector_idx});\n{}{}",
-            StepDisplay::new(curve, curve_idx),
-            StepDisplay::new(vector, vector_idx),
+            StepDataDisplay::new(curve, curve_idx),
+            StepDataDisplay::new(vector, vector_idx),
         ))
     }
 }
@@ -703,9 +740,9 @@ where C: StepLength + DisplayByStep
         f.write_fmt(format_args!(
             "#{idx} = SURFACE_OF_REVOLUTION('', #{curve_idx}, #{axis_idx});
 {curve}#{axis_idx} = AXIS1_PLACEMENT('', #{location_idx}, #{dir_idx});\n{location}{dir}",
-            curve = StepDisplay::new(curve, curve_idx),
-            location = StepDisplay::new(self.origin(), location_idx),
-            dir = StepDisplay::new(VectorAsDirection(self.axis()), dir_idx),
+            curve = StepDataDisplay::new(curve, curve_idx),
+            location = StepDataDisplay::new(self.origin(), location_idx),
+            dir = StepDataDisplay::new(VectorAsDirection(self.axis()), dir_idx),
         ))
     }
 }

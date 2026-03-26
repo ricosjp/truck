@@ -1,8 +1,6 @@
 use std::fmt::{Debug, Display, Formatter, Result};
-
-use truck_topology::compress::*;
-
-use self::topology::PreStepModel;
+use truck_assembly::assy::Assembly;
+use truck_geometry::prelude::Matrix4;
 
 const ERR: Result = Err(std::fmt::Error);
 
@@ -160,22 +158,28 @@ impl<T: DisplayByStep> DisplayByStep for Box<T> {
     }
 }
 
+impl DisplayByStep for Box<dyn DisplayByStep> {
+    fn fmt(&self, idx: usize, f: &mut Formatter<'_>) -> Result {
+        DisplayByStep::fmt(self.as_ref(), idx, f)
+    }
+}
+
 /// Display struct for outputting some objects to STEP file format.
 #[derive(Clone, Debug)]
-pub struct StepDisplay<T> {
+pub struct StepDataDisplay<T> {
     entity: T,
     idx: usize,
 }
 
-impl<T> Display for SliceDisplay<'_, StepDisplay<T>>
-where StepDisplay<T>: Display
+impl<T> Display for SliceDisplay<'_, StepDataDisplay<T>>
+where StepDataDisplay<T>: Display
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.0.iter().try_for_each(|x| Display::fmt(x, f))
     }
 }
 
-impl<T> StepDisplay<T> {
+impl<T> StepDataDisplay<T> {
     /// constructor
     #[inline]
     pub const fn new(entity: T, idx: usize) -> Self { Self { entity, idx } }
@@ -187,7 +191,7 @@ impl<T> StepDisplay<T> {
     pub const fn index(&self) -> usize { self.idx }
 }
 
-impl<T: DisplayByStep> Display for StepDisplay<T> {
+impl<T: DisplayByStep> Display for StepDataDisplay<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result { DisplayByStep::fmt(&self.entity, self.idx, f) }
 }
 
@@ -339,37 +343,42 @@ ENDSEC;\n",
 
 /// Display model with configurations
 #[derive(Clone, Debug)]
-pub struct StepModel<'a, P, C, S>(PreStepModel<'a, P, C, S>);
+pub enum StepModel<'a, P, C, S> {
+    /// shell based surface model
+    Shells(Vec<topology::StepShell<'a, P, C, S>>),
+    /// solid model
+    Solid(topology::StepSolid<'a, P, C, S>),
+}
 
-/// Display models with configurations
+/// All step data for represent mechanical design
 #[derive(Clone, Debug)]
-pub struct StepModels<'a, P, C, S> {
-    models: Vec<PreStepModel<'a, P, C, S>>,
-    next_idx: usize,
+pub struct StepDesign<Model, Models, Matrix = Matrix4> {
+    assy: Assembly<Models, PartAttrs, Matrix, PartAttrs>,
+    app_ctx: String,
+    _model_ty: std::marker::PhantomData<Model>,
 }
 
 /// Display struct for outputting STEP file format with header.
 #[derive(Clone, Debug)]
-pub struct CompleteStepDisplay<T> {
-    display: T,
+pub struct StepDisplay<T> {
     header: StepHeader,
+    data: T,
 }
 
-impl<T: Display> Display for CompleteStepDisplay<T> {
+impl<T: Display> Display for StepDisplay<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_fmt(format_args!(
             "ISO-10303-21;\n{}DATA;\n{}ENDSEC;\nEND-ISO-10303-21;\n",
-            self.header, self.display,
+            self.header, self.data,
         ))
     }
 }
 
-impl<T> CompleteStepDisplay<T> {
+impl<T> StepDisplay<T> {
     /// constructor
     #[inline]
-    pub fn new(display: T, header: StepHeaderDescriptor) -> Self {
-        CompleteStepDisplay {
-            display,
+    pub fn new(header: StepHeaderDescriptor, data: T) -> Self {
+        StepDisplay {
             header: StepHeader {
                 file_name: header.file_name,
                 time_stamp: header.time_stamp,
@@ -377,12 +386,17 @@ impl<T> CompleteStepDisplay<T> {
                 organization: header.organization,
                 origination_system: header.organization_system,
                 authorization: header.authorization,
-                schema: "ISO-10303-042".to_string(),
+                schema: "ISO-10303-203".to_string(),
             },
+            data,
         }
     }
 }
 
+mod assy;
 mod geometry;
 mod topology;
+pub use geometry::MatrixAsAxis;
 pub use geometry::VectorAsDirection;
+
+use crate::common::PartAttrs;
