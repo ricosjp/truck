@@ -16,9 +16,9 @@ fn oitest<Truck, StepHolder>(t: Truck)
 where
     StepHolder: Holder<Table = Table>,
     Truck: for<'a> From<&'a StepHolder::Owned> + Debug + PartialEq,
-    for<'a> StepDisplay<&'a Truck>: Display,
+    for<'a> StepDataDisplay<&'a Truck>: Display,
     Table: EntityTable<StepHolder>, {
-    let step_display = StepDisplay::new(&t, 1);
+    let step_display = StepDataDisplay::new(&t, 1);
     let step = format!("DATA;\n{step_display}ENDSEC;");
     println!("{step}");
     itest::<Truck, StepHolder>(t, &step);
@@ -29,9 +29,9 @@ where
     StepHolder: Holder<Table = Table>,
     Truck: for<'a> TryFrom<&'a StepHolder::Owned> + Debug + PartialEq,
     for<'a> <Truck as TryFrom<&'a StepHolder::Owned>>::Error: Debug,
-    for<'a> StepDisplay<&'a Truck>: Display,
+    for<'a> StepDataDisplay<&'a Truck>: Display,
     Table: EntityTable<StepHolder>, {
-    let step_display = StepDisplay::new(&t, 1);
+    let step_display = StepDataDisplay::new(&t, 1);
     let step = format!("DATA;\n{step_display}ENDSEC;");
     println!("{step}");
     itest_tryfrom::<Truck, StepHolder>(t, &step);

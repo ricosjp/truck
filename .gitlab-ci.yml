@@ -37,8 +37,6 @@ gpu-test:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
         - cargo make ci-gpu-test
-    tags:
-        - gpu
     artifacts:
         paths:
             - images
@@ -109,7 +107,8 @@ pages:
     image: rust:latest
     stage: pages
     script:
-        - cargo doc --no-deps
+        - rustup install 1.90
+        - rustup run 1.90 cargo doc --no-deps
         - mv target/doc public/doc
     artifacts:
         paths:

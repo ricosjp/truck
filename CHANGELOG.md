@@ -4,6 +4,24 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Write assembly to step file.
+- In the README, we clarified that the subtitle is the origin of the name “truck,” and changed all instances of the term in the main text to `truck`.
+- Get more precise part attributions from `Product` and `NextAssemblyUsageOccurrence`.
+- Add the variable `division` to `truck_modeling::builder::rsweep`.
+- Renew DAG structure.
+- Fix spell and replace `Fn` to `FnMut`.
+- Read assembly from step file.
+- Implement assembly structure handler `truck-assembly`.
+- Downgrade `cargo` for `cargo doc`. cf: https://github.com/rust-lang/rust/issues/148431
+- Update docker container and `Makefile.toml` for `gpu-test`.
+- Update docker container `gpu-test`
+- Fix step output of `CylindricalSurface`.
+- Remove `Arc` from the members of `DeviceHandler`.
+- Implement `border_wires` for `Face`.
+- Implement `From` and `ToSameGeometry` from `ExtrudeCurve<Line<Point3>, Vector3>` to `Plane`.
+- Fix comparative phrasing.
+- Fix `SceneInfo` in `polygon.wgsl`.
+- Upgrade wgpu v26.
 - Approximation of `RbfSurface` by `ApproxFilletSurface`.
 - Align mesh aspects of general surfaces tessellation.
 - Refactoring: `intersection_curve` and `Homogeneous`.
@@ -45,7 +63,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Latest `cargo upgrade`
 
-2025-08-12
+2026-03-13
 
 ## v0.6
 

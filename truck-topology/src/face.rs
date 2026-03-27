@@ -1,5 +1,5 @@
 use crate::{errors::Error, wire::EdgeIter, *};
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 impl<P, C, S> Face<P, C, S> {
     /// Creates a new face by a wire.
@@ -676,7 +676,7 @@ impl<P, C, S> Face<P, C, S> {
     /// # Examples
     /// ```
     /// use truck_topology::*;
-    /// let v = Vertex::news(&[(); 4]);
+    /// let v = Vertex::news([(); 4]);
     /// let shared_edge = Edge::new(&v[0], &v[1], ());
     /// let another_edge = Edge::new(&v[0], &v[1], ());
     /// let inversed_edge = shared_edge.inverse();
@@ -692,13 +692,92 @@ impl<P, C, S> Face<P, C, S> {
     /// assert!(face[0].border_on(&face[3]));
     /// ```
     pub fn border_on(&self, other: &Face<P, C, S>) -> bool {
-        let mut hashmap = HashMap::default();
         let edge_iter = self.boundary_iters().into_iter().flatten();
-        edge_iter.for_each(|edge| {
-            hashmap.insert(edge.id(), edge);
-        });
+        let hashset: HashSet<_> = edge_iter.map(|edge| edge.id()).collect();
         let mut edge_iter = other.boundary_iters().into_iter().flatten();
-        edge_iter.any(|edge| hashmap.insert(edge.id(), edge).is_some())
+        edge_iter.any(|edge| hashset.contains(&edge.id()))
+    }
+
+    /// Returns the border between two faces `self` and `other`.
+    /// # Examples
+    /// ```
+    /// use truck_topology::*;
+    /// let v = Vertex::news([(); 5]);
+    /// let shared_edge = [
+    ///     Edge::new(&v[0], &v[1], ()),
+    ///     Edge::new(&v[2], &v[3], ()),
+    ///     Edge::new(&v[3], &v[4], ()),
+    /// ];
+    ///
+    /// let boundary0 = wire![
+    ///     shared_edge[0].clone(),
+    ///     Edge::new(&v[1], &v[2], ()),
+    ///     shared_edge[1].clone(),
+    ///     shared_edge[2].clone(),
+    ///     Edge::new(&v[4], &v[0], ()),
+    /// ];
+    /// let face0 = Face::new(vec![boundary0], ());
+    ///
+    /// let boundary1 = wire![
+    ///     shared_edge[1].inverse(),
+    ///     Edge::new(&v[2], &v[1], ()),
+    ///     shared_edge[0].inverse(),
+    ///     Edge::new(&v[0], &v[4], ()),
+    ///     shared_edge[2].inverse(),
+    /// ];
+    /// let face1 = Face::new(vec![boundary1], ());
+    ///
+    /// let borders0 = face0.border_wires(&face1);
+    /// assert_eq!(
+    ///     borders0,
+    ///     vec![
+    ///         wire![shared_edge[0].clone()],
+    ///         wire![shared_edge[1].clone(), shared_edge[2].clone()],
+    ///     ],
+    /// );
+    ///
+    /// let borders1 = face1.border_wires(&face0);
+    /// assert_eq!(
+    ///     borders1,
+    ///     vec![
+    ///         wire![shared_edge[0].inverse()],
+    ///         wire![shared_edge[2].inverse(), shared_edge[1].inverse()],
+    ///     ],
+    /// );
+    /// ```
+    pub fn border_wires(&self, other: &Face<P, C, S>) -> Vec<Wire<P, C>> {
+        let edge_iter = other.boundary_iters().into_iter().flatten();
+        let hashset: HashSet<_> = edge_iter.map(|edge| edge.id()).collect();
+        let closure = move |boundary: BoundaryIter<'_, P, C>| {
+            let mut conti = false;
+            let mut border_wires = Vec::<Wire<P, C>>::new();
+            for edge in boundary {
+                if hashset.contains(&edge.id()) {
+                    if conti {
+                        let wire = border_wires.last_mut().unwrap();
+                        wire.push_back(edge);
+                    } else {
+                        border_wires.push(wire![edge]);
+                        conti = true;
+                    }
+                } else {
+                    conti = false;
+                }
+            }
+            if conti && border_wires.len() > 1 {
+                let first = border_wires.first().unwrap().front_vertex().unwrap();
+                let back = border_wires.last().unwrap().back_vertex().unwrap();
+                if first == back {
+                    let first = border_wires.remove(0);
+                    border_wires.last_mut().unwrap().extend(first);
+                }
+            }
+            border_wires
+        };
+        self.boundary_iters()
+            .into_iter()
+            .flat_map(closure)
+            .collect()
     }
 
     /// Cuts a face with only one boundary by an edge.
