@@ -398,6 +398,9 @@ where
     })
 }
 
+// The following is a prototype implementation for multiple fillets.
+
+/*
 #[derive(Clone, Debug, PartialEq)]
 struct EdgesConnectingToVertex<P, C> {
     side0: Option<Edge<P, C>>,
@@ -558,3 +561,4 @@ mod extend_intersection_curve;
 
 #[cfg(test)]
 mod tests;
+*/
