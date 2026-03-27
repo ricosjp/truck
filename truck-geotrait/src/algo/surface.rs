@@ -154,16 +154,11 @@ impl SspVector for Vector3 {
         S: ParametricSurface<Point = Self::Point, Vector = Self>,
     {
         let diff = surface.subs(u, v) - point;
-        let uder = surface.uder(u, v);
-        let vder = surface.vder(u, v);
+        let (uder, vder) = (surface.uder(u, v), surface.vder(u, v));
+        let (uu, uv, vv) = (uder.dot(uder), uder.dot(vder), vder.dot(vder));
         CalcOutput {
             value: Vector2::new(uder.dot(diff), vder.dot(diff)),
-            derivation: Matrix2::new(
-                uder.dot(uder),
-                uder.dot(vder),
-                uder.dot(vder),
-                vder.dot(vder),
-            ),
+            derivation: Matrix2::new(uu, uv, uv, vv),
         }
     }
 }
