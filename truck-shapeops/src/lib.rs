@@ -1,7 +1,7 @@
 //! Crate for operation shapes. Provides boolean operations to Solid, and shape healing for importing shapes from other CAD systems.
-//! 
+//!
 //! # Current Status
-//! 
+//!
 //! ## Boolean Operation
 //!
 //! Boolean operations are currently supported only for shapes where faces intersect transversally.
@@ -9,7 +9,7 @@
 //! Furthermore, performance optimization using BSP (Binary Space Partitioning) or similar methods remains a future task.
 //!
 //! ## Fillet
-//! 
+//!
 //! Fillets can be applied to a single edge whose end vertices are each adjacent to exactly three faces.
 //! Continuous edges are currently unsupported.
 
