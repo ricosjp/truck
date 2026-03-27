@@ -138,11 +138,13 @@ fn create_simple_fillet() {
     let res = simple_fillet(&face0, &face1, shared_edge_id, 0.3, 0.001).unwrap();
 
     let shell: Shell = [res.face0, res.face1, res.fillet].into();
-    let pshell = shell.triangulation(0.005);
-    //assert!(pshell.iter().all(|face| face.surface().is_some()));
-    let poly = pshell.to_polygon();
+    let _pshell = shell.triangulation(0.005);
+
+    /*
+    let poly = _pshell.to_polygon();
     let file = std::fs::File::create("fillet-shell.obj").unwrap();
     obj::write(&poly, file).unwrap();
+    */
 }
 
 #[test]
@@ -241,9 +243,12 @@ fn create_fillet_with_side() {
 
     let shell: Shell = vec![face0, face1, fillet, side1.unwrap()].into();
 
-    let poly = shell.triangulation(0.005).to_polygon();
+    let _poly = shell.triangulation(0.005).to_polygon();
+
+    /*
     let file = std::fs::File::create("fillet-with-side.obj").unwrap();
-    obj::write(&poly, file).unwrap();
+    obj::write(&_poly, file).unwrap();
+    */
 }
 
 #[test]
@@ -284,6 +289,7 @@ fn complex_surface() {
         line(3, 7),
         line(1, 5),
         line(4, 6),
+        line(4, 5),
         line(6, 7),
         line(5, 7),
     ];
@@ -343,7 +349,7 @@ fn complex_surface() {
     );
     let surface1: Surface = NurbsSurface::from(bsp_surface1).into();
 
-    let shell = shell![
+    let mut shell = shell![
         Face::new(
             vec![wire![
                 edge[1].clone(),
@@ -357,18 +363,18 @@ fn complex_surface() {
         Face::new(
             vec![wire![
                 edge[5].clone(),
-                edge[9].clone(),
+                edge[10].clone(),
                 edge[6].inverse(),
                 edge[3].inverse(),
             ]],
             surface1,
         ),
         plane(3, 7, 5, 1),
+        plane(4, 5, 7, 6),
+        plane(0, 1, 5, 4),
     ];
 
-    let poly = shell.triangulation(0.005).to_polygon();
-    let file = std::fs::File::create("edged-long-shell.obj").unwrap();
-    obj::write(&poly, file).unwrap();
+    assert_eq!(shell.shell_condition(), ShellCondition::Closed);
 
     let FilletWithSide {
         simple_fillet:
@@ -390,9 +396,16 @@ fn complex_surface() {
     )
     .unwrap();
 
-    let shell = shell![face0, face1, fillet, side0.unwrap(), side1.unwrap()];
+    shell[0] = face0;
+    shell[2] = face1;
+    shell[1] = side0.unwrap();
+    shell[3] = side1.unwrap();
+    shell.push(fillet);
 
-    let poly = shell.triangulation(0.005).to_polygon();
-    let file = std::fs::File::create("filleted-long-shell.obj").unwrap();
-    obj::write(&poly, file).unwrap();
+    assert_eq!(shell.shell_condition(), ShellCondition::Closed);
+
+    let mut poly = shell.triangulation(0.005).to_polygon();
+    poly.put_together_same_attrs(1e-4);
+
+    assert_eq!(poly.shell_condition(), ShellCondition::Closed);
 }
