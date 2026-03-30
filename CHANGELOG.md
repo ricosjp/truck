@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix syntax error when reading binary STL > 8192b.
 - Fillet for a single edge.
 - Write assembly to step file.
 - In the README, we clarified that the subtitle is the origin of the name “truck,” and changed all instances of the term in the main text to `truck`.
