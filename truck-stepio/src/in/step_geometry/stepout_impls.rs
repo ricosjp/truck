@@ -32,11 +32,11 @@ impl out::DisplayByStep for ElementarySurface {
                 let p = trans.transform_point(revo.entity_curve().0);
                 let axis = trans.transform_vector(revo.axis());
 
-                let location = out::StepDisplay::new(o, location_idx);
+                let location = out::StepDataDisplay::new(o, location_idx);
                 let direction_axis = out::VectorAsDirection(axis);
-                let axis = out::StepDisplay::new(direction_axis, axis_idx);
+                let axis = out::StepDataDisplay::new(direction_axis, axis_idx);
                 let raw_ref_direction = out::VectorAsDirection((p - o).normalize());
-                let ref_direction = out::StepDisplay::new(raw_ref_direction, ref_direction_idx);
+                let ref_direction = out::StepDataDisplay::new(raw_ref_direction, ref_direction_idx);
                 let radius = (p - o).magnitude();
 
                 f.write_fmt(format_args!(
@@ -60,11 +60,11 @@ impl out::DisplayByStep for ElementarySurface {
                 let axis_idx = idx + 3;
                 let ref_direction_idx = idx + 4;
 
-                let location = out::StepDisplay::new(transform[3].to_point(), location_idx);
+                let location = out::StepDataDisplay::new(transform[3].to_point(), location_idx);
                 let raw_axis = out::VectorAsDirection(transform[2].truncate());
-                let axis = out::StepDisplay::new(raw_axis, axis_idx);
+                let axis = out::StepDataDisplay::new(raw_axis, axis_idx);
                 let raw_ref_direction = out::VectorAsDirection(transform[0].truncate());
-                let ref_direction = out::StepDisplay::new(raw_ref_direction, ref_direction_idx);
+                let ref_direction = out::StepDataDisplay::new(raw_ref_direction, ref_direction_idx);
 
                 f.write_fmt(format_args!(
                     "#{idx} = CONICAL_SURFACE('', #{position_idx}, {radius}, {semi_angle});

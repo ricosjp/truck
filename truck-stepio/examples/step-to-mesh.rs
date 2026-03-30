@@ -55,26 +55,14 @@ fn main() {
 fn step_to_mesh<'a>(table: &Table) -> Vec<MeshedCShell> {
     let assy = table.step_assy().unwrap();
 
-    let node_map = |ProductEntity {
-                        shape: indices,
-                        attrs: name,
-                    }: &ProductEntity| {
-        let shape = indices
+    let node_map = |ProductEntity { shape, attrs }: &ProductEntity| {
+        let shape = shape
             .iter()
-            .filter_map(|idx| {
-                let shells = if let Some(step_solid) = table.manifold_solid_brep.get(idx) {
-                    table
-                        .to_compressed_solid(step_solid)
-                        .map_err(|err| eprintln!("failed to convert solid: {err}"))
-                        .ok()?
-                        .boundaries
-                } else if let Some(step_shells) = table.shell_based_surface_model.get(idx) {
-                    table
-                        .to_compressed_shells(step_shells)
-                        .map_err(|err| eprintln!("failed to convert shells: {err}"))
-                        .ok()?
-                } else {
-                    return None;
+            .filter_map(|shape| {
+                let shells = match shape {
+                    ProductShape::Solid(solid) => &solid.boundaries,
+                    ProductShape::Shells(shells) => shells,
+                    _ => return None,
                 };
                 let meshed_shells = shells
                     .into_iter()
@@ -89,7 +77,7 @@ fn step_to_mesh<'a>(table: &Table) -> Vec<MeshedCShell> {
             .collect::<Vec<_>>();
         NodeEntity {
             shape,
-            attrs: name.clone(),
+            attrs: attrs.clone(),
         }
     };
     let edge_map = |EdgeEntity { matrix: trans, .. }: &AssembleEntity| EdgeEntity {

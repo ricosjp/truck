@@ -3,7 +3,7 @@ pub use dag::{Edge, EdgeMut, Node, NodeMut, Path};
 use truck_base::cgmath64::One;
 
 /// Entity of the node
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct NodeEntity<Shape, NodeAttrs> {
     /// shape of node
     pub shape: Shape,
@@ -26,6 +26,19 @@ pub struct EdgeEntity<Matrix, EdgeAttrs> {
 
 impl<Matrix> From<Matrix> for EdgeEntity<Matrix, ()> {
     fn from(matrix: Matrix) -> Self { Self { matrix, attrs: () } }
+}
+
+impl<Matrix, EdgeAttrs> Default for EdgeEntity<Matrix, EdgeAttrs>
+where
+    Matrix: One,
+    EdgeAttrs: Default,
+{
+    fn default() -> Self {
+        Self {
+            matrix: One::one(),
+            attrs: Default::default(),
+        }
+    }
 }
 
 /// Assembly

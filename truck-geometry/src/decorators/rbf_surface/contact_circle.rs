@@ -35,16 +35,21 @@ impl ContactCircle {
     ) -> Option<Self> {
         let (p, der) = point_on_curve;
         let (mut p0, mut p1) = (p, p);
-        let (mut u0, mut v0) = surface0.search_parameter(p0, None, 10)?;
-        let (mut u1, mut v1) = surface1.search_parameter(p1, None, 10)?;
-        let center = (0..100).find_map(|_| {
+        let (mut u0, mut v0) = surface0.search_parameter(p0, None, 100)?;
+        let (mut u1, mut v1) = surface1.search_parameter(p1, None, 100)?;
+        let signed_radius = {
             let (n0, n1) = (surface0.normal(u0, v0), surface1.normal(u1, v1));
-            let (c, q0, q1) = contact_points((p, der), (p0, n0), (p1, n1), radius);
+            let sign = -f64::signum(n0.cross(n1).dot(der));
+            sign * radius
+        };
+        let center = (0..100).find_map(|_i| {
+            let (n0, n1) = (surface0.normal(u0, v0), surface1.normal(u1, v1));
+            let (c, q0, q1) = contact_points((p, der), (p0, n0), (p1, n1), signed_radius);
             if p0.near(&q0) && p1.near(&q1) {
                 Some(c)
             } else {
-                (p0, (u0, v0)) = next_point(surface0, (u0, v0), (p0, q0));
-                (p1, (u1, v1)) = next_point(surface1, (u1, v1), (p1, q1));
+                (p0, (u0, v0)) = next_point(surface0, (u0, v0), (p0, q0), signed_radius);
+                (p1, (u1, v1)) = next_point(surface1, (u1, v1), (p1, q1), signed_radius);
                 None
             }
         })?;
@@ -111,19 +116,18 @@ fn contact_points(
     plane0: (Point3, Vector3),
     // origin and normal
     plane1: (Point3, Vector3),
-    radius: f64,
+    signed_radius: f64,
 ) -> (Point3, Point3, Point3) {
     let ((p, der), (p0, n0), (p1, n1)) = (point_on_curve, plane0, plane1);
-    let sign = f64::signum(n0.cross(n1).dot(der));
     let mat = Matrix3::from_cols(der, n0, n1).transpose();
     let vec = Vector3::new(
         der.dot(p.to_vec()),
-        n0.dot(p0.to_vec()) - sign * radius,
-        n1.dot(p1.to_vec()) - sign * radius,
+        n0.dot(p0.to_vec()) + signed_radius,
+        n1.dot(p1.to_vec()) + signed_radius,
     );
     let center = Point3::from_vec(mat.invert().unwrap() * vec);
-    let q0 = center + sign * radius * n0;
-    let q1 = center + sign * radius * n1;
+    let q0 = center - signed_radius * n0;
+    let q1 = center - signed_radius * n1;
     (center, q0, q1)
 }
 
@@ -131,16 +135,17 @@ fn next_point(
     surface: &impl FilletableSurface,
     (u, v): (f64, f64),
     (p, q): (Point3, Point3),
+    signed_radius: f64,
 ) -> (Point3, (f64, f64)) {
-    let ders = surface.ders(2, u, v);
+    let ders = surface.ders(1, u, v);
     let (uder, vder) = (ders[1][0], ders[0][1]);
-    let d = q - p;
-    let uu = uder.dot(uder);
-    let uv = uder.dot(vder);
-    let vv = vder.dot(vder);
-    let mat = Matrix2::new(uu, uv, uv, vv);
-    let vec = Vector2::new(uder.dot(d), vder.dot(d));
+    let n = uder.cross(vder);
+    let n_uder = signed_radius * surface.normal_uder(u, v);
+    let n_vder = signed_radius * surface.normal_vder(u, v);
+    let mat = Matrix3::from_cols(uder + n_uder, vder + n_vder, n);
+    let vec = q - p;
     let del = mat.invert().unwrap() * vec;
+    debug_assert!(del.z.so_small(), "{del:?}");
     let (u, v) = (u + del.x, v + del.y);
     (surface.subs(u, v), (u, v))
 }
