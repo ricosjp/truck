@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix non intersect bboxes has invalid intersects.
 - Fix syntax error when reading binary STL > 8192b.
 - Fillet for a single edge.
 - Write assembly to step file.
