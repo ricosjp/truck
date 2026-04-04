@@ -26,7 +26,7 @@ truck-stepio = { version = "0.3.0", path = "../truck-stepio", optional = true }
 [dev-dependencies]
 rand = "0.9.2"
 serde_json = "1.0.149"
-truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
+truck-modeling = { path = "../truck-modeling" }
 proptest = "1.10.0"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]

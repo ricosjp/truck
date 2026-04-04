@@ -1,4 +1,5 @@
 use super::*;
+use crate::common::PartAttrs;
 
 impl Table {
     fn place_holder_edge_any_to_index_and_edge_curve(
@@ -274,22 +275,22 @@ impl Table {
     }
 }
 
-#[derive(Clone, Debug, derive_more::From)]
+#[derive(Clone, Debug, PartialEq, derive_more::From)]
 pub enum NodeMatrix {
     Identity,
     Transform(Box<ItemDefinedTransformation>),
 }
 
-#[derive(Clone, Debug)]
-pub struct PartAttrs {
-    pub id: String,
-    pub name: String,
-    pub description: String,
+#[derive(Clone, Debug, PartialEq, derive_more::From)]
+pub enum ProductShape {
+    Shells(Vec<CompressedShell<Point3, Curve3D, Surface>>),
+    Solid(CompressedSolid<Point3, Curve3D, Surface>),
+    Matrix(Matrix4),
 }
 
-pub type ProductEntity = NodeEntity<Vec<u64>, PartAttrs>;
+pub type ProductEntity = NodeEntity<Vec<ProductShape>, PartAttrs>;
 pub type AssembleEntity = EdgeEntity<NodeMatrix, PartAttrs>;
-pub type StepAssembly = Assembly<Vec<u64>, PartAttrs, NodeMatrix, PartAttrs>;
+pub type StepAssembly = Assembly<Vec<ProductShape>, PartAttrs, NodeMatrix, PartAttrs>;
 
 impl TryFrom<&NodeMatrix> for Matrix3 {
     type Error = StepConvertingError;
@@ -307,6 +308,21 @@ impl TryFrom<&NodeMatrix> for Matrix4 {
         match value {
             NodeMatrix::Identity => Ok(Self::identity()),
             NodeMatrix::Transform(trans) => (&**trans).try_into(),
+        }
+    }
+}
+
+impl ProductShape {
+    pub fn try_from_index(idx: u64, table: &Table) -> Result<Self, StepConvertingError> {
+        if let Some(step_solid) = table.manifold_solid_brep.get(&idx) {
+            table.to_compressed_solid(step_solid).map(Into::into)
+        } else if let Some(step_shells) = table.shell_based_surface_model.get(&idx) {
+            table.to_compressed_shells(step_shells).map(Into::into)
+        } else if table.axis2_placement_3d.contains_key(&idx) {
+            let axis = EntityTable::<Axis2Placement3dHolder>::get_owned(table, idx)?;
+            Ok(Matrix4::from(&axis).into())
+        } else {
+            Err("Unknown Shape".into())
         }
     }
 }
@@ -356,7 +372,7 @@ impl Table {
             .iter()
             .map(|place_holder| {
                 if let &PlaceHolder::Ref(Name::Entity(item_idx)) = place_holder {
-                    Some(item_idx)
+                    ProductShape::try_from_index(item_idx, self).ok()
                 } else {
                     None
                 }
@@ -366,7 +382,7 @@ impl Table {
             return Err("failed to reference an element of `shape_representation.items`".into());
         };
 
-        Ok(ProductEntity { shape, attrs })
+        Ok(NodeEntity { shape, attrs })
     }
 
     fn assy_node_entity(

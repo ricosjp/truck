@@ -1,5 +1,5 @@
 use std::f64::consts::PI;
-use truck_geometry::prelude::{rbf_surface::RadiusFunction, *};
+use truck_geometry::prelude::*;
 
 #[test]
 fn approx_fillet_between_two_spheres() {

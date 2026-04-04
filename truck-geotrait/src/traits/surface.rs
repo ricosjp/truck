@@ -127,24 +127,18 @@ pub trait ParametricSurface3D: ParametricSurface<Point = Point3, Vector = Vector
     }
     /// Returns the derivation by `u` of the normal vector at `(u, v)`.
     fn normal_uder(&self, u: f64, v: f64) -> Vector3 {
-        let uder = self.uder(u, v);
-        let vder = self.vder(u, v);
-        let uuder = self.uuder(u, v);
-        let uvder = self.uvder(u, v);
-        let cross = uder.cross(vder);
-        let cross_uder = uuder.cross(vder) + uder.cross(uvder);
+        let ders = self.ders(2, u, v);
+        let cross = ders[1][0].cross(ders[0][1]);
+        let cross_uder = ders[2][0].cross(ders[0][1]) + ders[1][0].cross(ders[1][1]);
         let abs = cross.magnitude();
         let abs_uder = cross.dot(cross_uder) / abs;
         (cross_uder * abs - cross * abs_uder) / (abs * abs)
     }
     /// Returns the derivation by `u` of the normal vector at `(u, v)`.
     fn normal_vder(&self, u: f64, v: f64) -> Vector3 {
-        let uder = self.uder(u, v);
-        let vder = self.vder(u, v);
-        let uvder = self.uvder(u, v);
-        let vvder = self.vvder(u, v);
-        let cross = uder.cross(vder);
-        let cross_vder = uvder.cross(vder) + uder.cross(vvder);
+        let ders = self.ders(2, u, v);
+        let cross = ders[1][0].cross(ders[0][1]);
+        let cross_vder = ders[1][1].cross(ders[0][1]) + ders[1][0].cross(ders[0][2]);
         let abs = cross.magnitude();
         let abs_vder = cross.dot(cross_vder) / abs;
         (cross_vder * abs - cross * abs_vder) / (abs * abs)
