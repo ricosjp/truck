@@ -137,6 +137,12 @@ pub fn tsweep(shape: &AbstractShape, vector: &[f64]) -> AbstractShape {
     derive_all_sweepable!(shape, builder::tsweep, (vector))
 }
 
+/// Alias for [`tsweep`]: extrudes a shape along a vector.
+///
+/// Provided for discoverability — `extrude` is the standard term in most CAD APIs.
+#[wasm_bindgen]
+pub fn extrude(shape: &AbstractShape, vector: &[f64]) -> AbstractShape { tsweep(shape, vector) }
+
 /// Sweeps a vertex, an edge, a wire, a face, or a shell by the rotation.
 #[wasm_bindgen]
 pub fn rsweep(
@@ -148,4 +154,18 @@ pub fn rsweep(
 ) -> AbstractShape {
     intopt!(Point3, origin, Vector3, axis);
     derive_all_sweepable!(shape, builder::rsweep, (origin, axis, Rad(angle), division))
+}
+
+/// Alias for [`rsweep`]: revolves a shape around an axis.
+///
+/// Provided for discoverability — `revolve` is the standard term in most CAD APIs.
+#[wasm_bindgen]
+pub fn revolve(
+    shape: &AbstractShape,
+    origin: &[f64],
+    axis: &[f64],
+    angle: f64,
+    division: usize,
+) -> AbstractShape {
+    rsweep(shape, origin, axis, angle, division)
 }
