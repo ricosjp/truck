@@ -97,12 +97,15 @@ fn exec_polygon_bgtest(
     common::same_buffer(answer, &buffer)
 }
 
-fn exec_polymesh_nontex_bind_group_test(backend: Backends, out_dir: &str) {
+fn exec_polymesh_nontex_bind_group_test(backends: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
-    let instance = wgpu::Instance::new(&InstanceDescriptor {
-        backends: backend,
-        ..Default::default()
+    let instance = wgpu::Instance::new(InstanceDescriptor {
+        backends,
+        flags: InstanceFlags::from_build_config(),
+        memory_budget_thresholds: Default::default(),
+        backend_options: Default::default(),
+        display: None,
     });
     let handler = common::init_device(&instance);
     let mut scene = Scene::new(
@@ -153,12 +156,15 @@ fn polymesh_nontex_bind_group_test() {
     common::os_alt_exec_test(exec_polymesh_nontex_bind_group_test)
 }
 
-fn exec_polymesh_tex_bind_group_test(backend: Backends, out_dir: &str) {
+fn exec_polymesh_tex_bind_group_test(backends: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
-    let instance = wgpu::Instance::new(&InstanceDescriptor {
-        backends: backend,
-        ..Default::default()
+    let instance = wgpu::Instance::new(InstanceDescriptor {
+        backends,
+        flags: InstanceFlags::from_build_config(),
+        memory_budget_thresholds: Default::default(),
+        backend_options: Default::default(),
+        display: None,
     });
     let handler = common::init_device(&instance);
     let mut scene = Scene::new(

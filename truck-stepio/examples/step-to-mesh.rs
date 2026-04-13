@@ -52,7 +52,7 @@ fn main() {
     }
 }
 
-fn step_to_mesh<'a>(table: &Table) -> Vec<MeshedCShell> {
+fn step_to_mesh(table: &Table) -> Vec<MeshedCShell> {
     let assy = table.step_assy().unwrap();
 
     let node_map = |ProductEntity { shape, attrs }: &ProductEntity| {
@@ -65,7 +65,7 @@ fn step_to_mesh<'a>(table: &Table) -> Vec<MeshedCShell> {
                     _ => return None,
                 };
                 let meshed_shells = shells
-                    .into_iter()
+                    .iter()
                     .map(|shell| {
                         let pre = shell.robust_triangulation(0.01).to_polygon();
                         let bdd = pre.bounding_box();
@@ -89,7 +89,6 @@ fn step_to_mesh<'a>(table: &Table) -> Vec<MeshedCShell> {
 
     meshed_assy
         .top_nodes()
-        .into_iter()
         .flat_map(|top| meshed_assy.paths_iter(top.index()))
         .flat_map(|path| {
             let matrix = path.matrix();
@@ -102,9 +101,9 @@ fn step_to_mesh<'a>(table: &Table) -> Vec<MeshedCShell> {
                     edge.curve.transform_by(matrix);
                 });
                 shell.faces.iter_mut().for_each(|face| {
-                    face.surface
-                        .as_mut()
-                        .map(|surface| surface.transform_by(matrix));
+                    if let Some(surface) = face.surface.as_mut() {
+                        surface.transform_by(matrix);
+                    }
                 });
                 shell
             })
