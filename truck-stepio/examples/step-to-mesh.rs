@@ -101,7 +101,7 @@ fn step_to_mesh(table: &Table) -> Vec<MeshedCShell> {
                     edge.curve.transform_by(matrix);
                 });
                 shell.faces.iter_mut().for_each(|face| {
-                    if let Some(surface) =  face.surface.as_mut() {
+                    if let Some(surface) = face.surface.as_mut() {
                         surface.transform_by(matrix);
                     }
                 });

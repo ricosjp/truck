@@ -22,7 +22,10 @@ async fn init_default_device(
         flags: InstanceFlags::from_build_config(),
         memory_budget_thresholds: Default::default(),
         backend_options: Default::default(),
-        display: None,
+        display: window.as_ref().map(|window| {
+            let res: Box<dyn wgt::WgpuHasDisplayHandle> = Box::new(Arc::clone(window));
+            res
+        }),
     });
 
     let surface = window.as_ref().map(|window| {
@@ -851,7 +854,7 @@ impl WindowScene {
                 match surface.get_current_texture() {
                     CurrentSurfaceTexture::Success(got) => got,
                     CurrentSurfaceTexture::Suboptimal(got) => got,
-                    _ => panic!("Failed to acquire next surface texture!"),
+                    _ => return,
                 }
             }
         };
