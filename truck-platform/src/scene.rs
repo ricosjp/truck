@@ -17,15 +17,15 @@ async fn init_default_device(
     let backends = Backends::PRIMARY;
     #[cfg(feature = "webgl")]
     let backends = Backends::all();
+    fn box_display(window: &Arc<Window>) -> Box<dyn wgt::WgpuHasDisplayHandle> {
+        Box::new(Arc::clone(window))
+    }
     let instance = Instance::new(InstanceDescriptor {
         backends,
         flags: InstanceFlags::from_build_config(),
         memory_budget_thresholds: Default::default(),
         backend_options: Default::default(),
-        display: window.as_ref().map(|window| {
-            let res: Box<dyn wgt::WgpuHasDisplayHandle> = Box::new(Arc::clone(window));
-            res
-        }),
+        display: window.as_ref().map(box_display),
     });
 
     let surface = window.as_ref().map(|window| {
