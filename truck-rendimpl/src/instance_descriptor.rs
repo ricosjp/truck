@@ -133,7 +133,7 @@ impl PolygonState {
         let sampler = device.create_sampler(&SamplerDescriptor {
             mag_filter: FilterMode::Linear,
             min_filter: FilterMode::Nearest,
-            mipmap_filter: FilterMode::Nearest,
+            mipmap_filter: MipmapFilterMode::Nearest,
             lod_min_clamp: 0.0,
             lod_max_clamp: 100.0,
             ..Default::default()

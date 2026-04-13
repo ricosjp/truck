@@ -49,9 +49,10 @@ impl MyApp {
         vec2 /= vec2.magnitude();
         let vec3 = Vector4::new(1.5, 0.8, 1.5, 1.0);
         let matrix = Matrix4::from_cols(vec0, vec1, vec2, vec3);
-        let mut camera = Camera::default();
-        camera.matrix = matrix;
-        camera
+        Camera {
+            matrix,
+            ..Default::default()
+        }
     }
     fn init_thread(
         object: Arc<Mutex<StructuredMesh>>,

@@ -5,12 +5,15 @@ use wgpu::*;
 
 const PICTURE_SIZE: (u32, u32) = (256, 256);
 
-fn exec_microfacet_module_test(backend: Backends, out_dir: &str) {
+fn exec_microfacet_module_test(backends: Backends, out_dir: &str) {
     let out_dir = out_dir.to_string();
     std::fs::create_dir_all(&out_dir).unwrap();
-    let instance = Instance::new(&InstanceDescriptor {
-        backends: backend,
-        ..Default::default()
+    let instance = Instance::new(InstanceDescriptor {
+        backends,
+        flags: InstanceFlags::from_build_config(),
+        memory_budget_thresholds: Default::default(),
+        backend_options: Default::default(),
+        display: None,
     });
     let handler = common::init_device(&instance);
     let mut scene = Scene::new(

@@ -322,9 +322,9 @@ fn exec_b_spline_curve_with_knots(
         .iter()
         .take(knot_len)
         .zip(knot_incrs)
-        .flat_map(|(m, x)| {
+        .flat_map(|(&m, x)| {
             s += x;
-            std::iter::repeat(s).take(*m)
+            std::iter::repeat_n(s, m)
         })
         .collect::<Vec<f64>>();
     let knots = KnotVec::from(vec);
@@ -503,9 +503,9 @@ fn exec_nurbs_curve_b_spline_with_knots(
         .iter()
         .take(knot_len)
         .zip(knot_incrs)
-        .flat_map(|(m, x)| {
+        .flat_map(|(&m, x)| {
             s += x;
-            std::iter::repeat(s).take(*m)
+            std::iter::repeat_n(s, m)
         })
         .collect::<Vec<f64>>();
     let knots = KnotVec::from(vec);
@@ -1267,9 +1267,9 @@ fn exec_b_spline_surface_with_knots(
         .iter()
         .take(uknot_len)
         .zip(uknot_incrs)
-        .flat_map(|(m, x)| {
+        .flat_map(|(&m, x)| {
             s += x;
-            std::iter::repeat(s).take(*m)
+            std::iter::repeat_n(s, m)
         })
         .collect::<Vec<f64>>();
     let uknots = KnotVec::from(uvec);
@@ -1278,9 +1278,9 @@ fn exec_b_spline_surface_with_knots(
         .iter()
         .take(vknot_len)
         .zip(vknot_incrs)
-        .flat_map(|(m, x)| {
+        .flat_map(|(&m, x)| {
             s += x;
-            std::iter::repeat(s).take(*m)
+            std::iter::repeat_n(s, m)
         })
         .collect::<Vec<f64>>();
     let vknots = KnotVec::from(vvec);
@@ -1461,9 +1461,9 @@ fn exec_nurbs_surface_b_spline_surface_with_knots(
         .iter()
         .take(uknot_len)
         .zip(uknot_incrs)
-        .flat_map(|(m, x)| {
+        .flat_map(|(&m, x)| {
             s += x;
-            std::iter::repeat(s).take(*m)
+            std::iter::repeat_n(s, m)
         })
         .collect::<Vec<f64>>();
     let uknots = KnotVec::from(uvec);
@@ -1472,9 +1472,9 @@ fn exec_nurbs_surface_b_spline_surface_with_knots(
         .iter()
         .take(vknot_len)
         .zip(vknot_incrs)
-        .flat_map(|(m, x)| {
+        .flat_map(|(&m, x)| {
             s += x;
-            std::iter::repeat(s).take(*m)
+            std::iter::repeat_n(s, m)
         })
         .collect::<Vec<f64>>();
     let vknots = KnotVec::from(vvec);

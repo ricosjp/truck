@@ -105,8 +105,8 @@ impl Rendered for Plane<'_> {
                     },
                     depth_stencil: Some(DepthStencilState {
                         format: TextureFormat::Depth32Float,
-                        depth_write_enabled: true,
-                        depth_compare: wgpu::CompareFunction::Less,
+                        depth_write_enabled: Some(true),
+                        depth_compare: Some(wgpu::CompareFunction::Less),
                         stencil: Default::default(),
                         bias: Default::default(),
                     }),
@@ -116,7 +116,7 @@ impl Rendered for Plane<'_> {
                         alpha_to_coverage_enabled: false,
                     },
                     label: None,
-                    multiview: None,
+                    multiview_mask: None,
                     cache: None,
                 }),
         )

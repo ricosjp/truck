@@ -128,8 +128,8 @@ impl Rendered for WireFrameInstance {
             },
             depth_stencil: Some(DepthStencilState {
                 format: TextureFormat::Depth32Float,
-                depth_write_enabled: true,
-                depth_compare: CompareFunction::Less,
+                depth_write_enabled: Some(true),
+                depth_compare: Some(CompareFunction::Less),
                 stencil: Default::default(),
                 bias: Default::default(),
             }),
@@ -139,7 +139,7 @@ impl Rendered for WireFrameInstance {
                 alpha_to_coverage_enabled: sample_count > 1,
             },
             label: None,
-            multiview: None,
+            multiview_mask: None,
             cache: None,
         });
         Arc::new(pipeline)
