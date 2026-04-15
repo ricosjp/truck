@@ -215,19 +215,3 @@ fn test_invert() {
         assert_near2!(bspcurve0.subs(t), bspcurve1.subs(1.0 - t));
     }
 }
-
-#[test]
-#[ignore]
-fn bsp_bench() {
-    const N: usize = 1000000;
-    let instant = std::time::Instant::now();
-
-    let knot_vec = KnotVec::uniform_knot(3, 10);
-    for i in 0..=N {
-        let t = i as f64 / N as f64;
-        let x = knot_vec.try_bspline_basis_functions(3, 0, t).unwrap();
-        assert_near!(x.iter().sum::<f64>(), 1.0);
-    }
-
-    println!("bsp-bench: {}ms", instant.elapsed().as_millis());
-}
