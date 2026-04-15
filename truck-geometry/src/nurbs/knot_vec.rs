@@ -133,7 +133,9 @@ impl KnotVec {
     /// for i in 0..=N {
     ///     let t = 1.0 / (N as f64) * (i as f64);
     ///     // substitution
-    ///     let res = knot_vec.bspline_basis_functions(degree, 0, t).to_full_array();
+    ///     let res = knot_vec
+    ///         .bspline_basis_functions(degree, 0, t)
+    ///         .to_full_array();
     ///     let ans = [
     ///         1.0 * (1.0 - t) * (1.0 - t) * (1.0 - t),
     ///         3.0 * t * (1.0 - t) * (1.0 - t),
@@ -143,7 +145,9 @@ impl KnotVec {
     ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
     ///
     ///     // 2nd-order derivation
-    ///     let res = knot_vec.bspline_basis_functions(degree, 2, t).to_full_array();
+    ///     let res = knot_vec
+    ///         .bspline_basis_functions(degree, 2, t)
+    ///         .to_full_array();
     ///     let ans = [
     ///         6.0 * (1.0 - t),
     ///         6.0 * (3.0 * t - 2.0),
@@ -178,8 +182,10 @@ impl KnotVec {
     /// let degree = 2;
     /// for i in 0..N {
     ///     let t = 2.0 + 4.0 / (N as f64) * (i as f64);
-    ///     let res = knot_vec.try_bspline_basis_functions(degree, 0, t).unwrap().to_full_array();
-    ///     let sum = res.iter().fold(0.0, |sum, a| sum + a);
+    ///     let res = knot_vec
+    ///         .try_bspline_basis_functions(degree, 0, t)
+    ///         .unwrap();
+    ///     let sum = res.as_slice().iter().fold(0.0, |sum, a| sum + a);
     ///     assert_near2!(sum, 1.0);
     /// }
     /// ```
@@ -194,7 +200,10 @@ impl KnotVec {
     /// for i in 0..=N {
     ///     let t = i as f64 / N as f64;
     ///     // substitution
-    ///     let res = knot_vec.try_bspline_basis_functions(degree, 0, t).unwrap().to_full_array();
+    ///     let res = knot_vec
+    ///         .try_bspline_basis_functions(degree, 0, t)
+    ///         .unwrap()
+    ///         .to_full_array();
     ///     let ans = [
     ///         1.0 * (1.0 - t) * (1.0 - t) * (1.0 - t),
     ///         3.0 * t * (1.0 - t) * (1.0 - t),
@@ -204,7 +213,10 @@ impl KnotVec {
     ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
     ///
     ///     // 2nd-order derivation
-    ///     let res = knot_vec.try_bspline_basis_functions(degree, 2, t).unwrap().to_full_array();
+    ///     let res = knot_vec
+    ///         .try_bspline_basis_functions(degree, 2, t)
+    ///         .unwrap()
+    ///         .to_full_array();
     ///     let ans = [
     ///         6.0 * (1.0 - t),
     ///         6.0 * (3.0 * t - 2.0),
@@ -242,8 +254,10 @@ impl KnotVec {
         };
 
         let global_base = idx.saturating_sub(degree);
-        let repeater = std::iter::repeat_n(0.0, degree + 2);
-        let mut eval = TinyVec::<[f64; 32]>::from_iter(repeater);
+        let mut eval = TinyVec::from([0.0; 32]);
+        if degree > 30 {
+            eval.resize(degree + 2, 0.0);
+        }
         eval[idx - global_base] = 1.0;
 
         for k in 1..=(degree - der_rank) {
@@ -277,7 +291,7 @@ impl KnotVec {
         Ok(BasisWindow::new(global_base, eval, n - degree))
     }
 
-   #[doc(hidden)]
+    #[doc(hidden)]
     pub fn maximum_points(&self, degree: usize) -> Vec<f64> {
         let n = self.len();
         let m = n - degree - 1;
