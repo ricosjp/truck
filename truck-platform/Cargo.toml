@@ -30,7 +30,7 @@ web-sys = "0.3.95"
 
 [dev-dependencies]
 image = "0.25.10"
-rayon = "1.11.0"
+rayon = "1.12.0"
 env_logger = "0.11.10"
 naga = { version = "29.0.1", features = ["wgsl-in"] }
 pollster = "0.4.0"
