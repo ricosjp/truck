@@ -17,9 +17,15 @@ async fn init_default_device(
     let backends = Backends::PRIMARY;
     #[cfg(feature = "webgl")]
     let backends = Backends::all();
-    let instance = Instance::new(&InstanceDescriptor {
+    fn box_display(window: &Arc<Window>) -> Box<dyn wgt::WgpuHasDisplayHandle> {
+        Box::new(Arc::clone(window))
+    }
+    let instance = Instance::new(InstanceDescriptor {
         backends,
-        ..Default::default()
+        flags: InstanceFlags::from_build_config(),
+        memory_budget_thresholds: Default::default(),
+        backend_options: Default::default(),
+        display: window.as_ref().map(box_display),
     });
 
     let surface = window.as_ref().map(|window| {
@@ -636,10 +642,10 @@ impl Scene {
                 let device = handler.device();
                 let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
                     bind_group_layouts: &[
-                        &self.bind_group_layout,
-                        &render_object.bind_group_layout,
+                        Some(&self.bind_group_layout),
+                        Some(&render_object.bind_group_layout),
                     ],
-                    push_constant_ranges: &[],
+                    immediate_size: 0,
                     label: None,
                 });
                 render_object.pipeline =
@@ -836,17 +842,20 @@ impl WindowScene {
         self.size_alignment();
         let surface = self.surface();
         let surface_texture = match surface.get_current_texture() {
-            Ok(got) => got,
-            Err(_) => {
+            CurrentSurfaceTexture::Success(got) => got,
+            CurrentSurfaceTexture::Suboptimal(got) => got,
+            _ => {
                 let config = self
                     .scene
                     .scene_desc
                     .render_texture
                     .compatible_surface_config();
                 surface.configure(self.device(), &config);
-                surface
-                    .get_current_texture()
-                    .expect("Failed to acquire next surface texture!")
+                match surface.get_current_texture() {
+                    CurrentSurfaceTexture::Success(got) => got,
+                    CurrentSurfaceTexture::Suboptimal(got) => got,
+                    _ => return,
+                }
             }
         };
         let view = surface_texture

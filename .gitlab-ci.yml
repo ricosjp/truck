@@ -71,7 +71,7 @@ lint-check:
         GIT_SUBMODULE_STRATEGY: recursive
     script:
         - rustup component add clippy
-        - cargo clippy
+        - cargo clippy --all --tests --examples
         - rustup default nightly
         - rustup component add rustfmt
         - cargo fmt -- --check

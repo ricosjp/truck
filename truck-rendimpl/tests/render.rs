@@ -15,10 +15,13 @@ const CUBE_OBJ: &[u8] = include_bytes!(concat!(
 
 const PICTURE_SIZE: (u32, u32) = (1024, 768);
 
-fn test_scene(backend: Backends) -> Scene {
-    let instance = wgpu::Instance::new(&InstanceDescriptor {
-        backends: backend,
-        ..Default::default()
+fn test_scene(backends: Backends) -> Scene {
+    let instance = wgpu::Instance::new(InstanceDescriptor {
+        backends,
+        flags: InstanceFlags::from_build_config(),
+        memory_budget_thresholds: Default::default(),
+        backend_options: Default::default(),
+        display: None,
     });
     let handler = common::init_device(&instance);
     Scene::new(

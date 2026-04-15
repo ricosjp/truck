@@ -28,6 +28,8 @@ pub trait Bounded:
     fn diagonal(self, other: Self) -> Self::Vector;
     #[doc(hidden)]
     fn mid(self, other: Self) -> Self;
+    #[doc(hidden)]
+    fn dimension(self) -> usize;
 }
 
 macro_rules! pr2 {
@@ -76,6 +78,9 @@ macro_rules! impl_bounded {
             fn diagonal(self, other: Self) -> Self::Vector { self - other }
             fn mid(self, other: Self) -> Self {
                 self + (other - self) / (S::one() + S::one())
+            }
+            fn dimension(self) -> usize {
+                [$($num),*].len()
             }
         }
     };
@@ -135,7 +140,14 @@ impl<V: Bounded> BoundingBox<V> {
     /// assert!(!bdd_box.is_empty());
     /// ```
     #[inline(always)]
-    pub fn is_empty(self) -> bool { self.0[0] > self.1[0] }
+    pub fn is_empty(self) -> bool {
+        for i in 0..self.0.dimension() {
+            if self.0[i] > self.1[i] {
+                return true;
+            }
+        }
+        false
+    }
     /// Returns the reference to the maximum point.
     /// # Examples
     /// ```
