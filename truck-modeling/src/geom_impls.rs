@@ -14,6 +14,25 @@ pub(super) fn circle_arc_by_three_points(
     circle_arc(point0, origin, axis, angle * 2.0)
 }
 
+pub(super) fn circle_arc_by_tangent0(
+    point0: Point3,
+    point1: Point3,
+    tangent0: Vector3,
+) -> Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4> {
+    let chord = point1 - point0;
+    let tangent0 = tangent0.normalize();
+    let axis = tangent0.cross(chord).normalize();
+    let to_origin = axis.cross(tangent0);
+    let radius = chord.dot(chord) / (2.0 * chord.dot(to_origin));
+    let origin = point0 + radius * to_origin;
+    let (vec0, vec1) = (point0 - origin, point1 - origin);
+    let mut angle = f64::atan2(axis.dot(vec0.cross(vec1)), vec0.dot(vec1));
+    if angle <= 0.0 {
+        angle += 2.0 * PI;
+    }
+    circle_arc(point0, origin, axis, Rad(angle))
+}
+
 fn circum_center(pt0: Point3, pt1: Point3, pt2: Point3) -> Point3 {
     let (vec0, vec1) = (pt1 - pt0, pt2 - pt0);
     let (a2, ab, b2) = (vec0.dot(vec0), vec0.dot(vec1), vec1.dot(vec1));
@@ -203,6 +222,34 @@ mod test_geom_impl {
             let angle2 = (p2 - p1).angle(p2 - p0);
             let angle3 = (p3 - p1).angle(p3 - p0);
             prop_assert_near!(angle2, angle3);
+        }
+
+        #[test]
+        fn test_circle_arc_tangent0(
+            p0 in array::uniform3(-10.0f64..10.0),
+            p1 in array::uniform3(-10.0f64..10.0),
+            tangent0 in array::uniform3(-10.0f64..10.0),
+            t in TOLERANCE..(1.0 - TOLERANCE),
+        ) {
+            let p0 = Point3::from(p0);
+            let p1 = Point3::from(p1);
+            let tangent0 = Vector3::from(tangent0);
+            prop_assume!(!(p1 - p0).so_small());
+            prop_assume!(!tangent0.so_small());
+            prop_assume!(!tangent0.cross(p1 - p0).so_small());
+            let curve = circle_arc_by_tangent0(p0, p1, tangent0);
+            let (t0, t1) = curve.range_tuple();
+
+            prop_assert_near!(curve.front(), p0);
+            prop_assert_near!(curve.back(), p1);
+            prop_assert_near!(curve.der(t0).normalize(), tangent0.normalize());
+
+            let p2 = curve.subs((1.0 - t) * t0 + t * t1);
+            let origin = circum_center(p0, p1, p2);
+            let r0 = p0.distance2(origin);
+            let r1 = p1.distance2(origin);
+            let r2 = p2.distance2(origin);
+            prop_assert!(r0.near(&r1) && r1.near(&r2));
         }
 
         #[test]
