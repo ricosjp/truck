@@ -5,6 +5,60 @@ use truck_base::cgmath64::control_point::ControlPoint;
 #[derive(Clone, PartialEq, Debug, Default, Serialize)]
 pub struct KnotVec(Vec<f64>);
 
+#[derive(Clone, Debug, PartialEq)]
+enum AltVec<T> {
+    Inline([T; 32]),
+    Heap(Vec<T>),
+}
+
+impl<T> AsMut<[T]> for AltVec<T> {
+    fn as_mut(&mut self) -> &mut [T] {
+        match self {
+            Self::Inline(x) => x,
+            Self::Heap(x) => x,
+        }
+    }
+}
+
+/// Stores the values of the B-spline basis functions that may be nonzero,
+/// restricted to their active index window.
+/// # Examples
+/// ```
+/// use truck_geometry::prelude::*;
+///
+/// let vec = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+/// let knot_vec = KnotVec::from(vec);
+/// let degree = 2;
+///
+/// // the number of control points of `BSplineCurve`
+/// let num_ctrl_pts = knot_vec.len() - degree - 1;
+///
+/// const N: usize = 80; // number of samples
+/// for i in 0..N {
+///     let t = 8.0 / (N as f64) * (i as f64);
+///
+///     // basis window of knot vector
+///     let basis = knot_vec.bspline_basis_functions(degree, 0, t);
+///
+///     // the index of the first non-zero candidate
+///     assert_eq!(basis.base(), f64::max(0.0, t - 2.0) as usize);
+///     
+///     // The length of this window is typically degree + 1, however
+///     // the range of the window indices does not exceed the one of the control point array indices.
+///     assert!(
+///         basis.as_slice().len() == degree + 1
+///             || basis.base() + basis.as_slice().len() == num_ctrl_pts
+///     );
+/// }
+/// ```
+#[derive(Clone, PartialEq, Debug)]
+pub struct BasisWindow {
+    base: usize,
+    window: AltVec<f64>,
+    len: usize,
+    total_len: usize,
+}
+
 /// B-spline curve
 /// # Examples
 /// ```

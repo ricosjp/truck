@@ -118,7 +118,7 @@ impl KnotVec {
     /// for i in 0..N {
     ///     let t = 2.0 + 4.0 / (N as f64) * (i as f64);
     ///     let res = knot_vec.bspline_basis_functions(degree, 0, t);
-    ///     let sum = res.iter().fold(0.0, |sum, a| sum + a);
+    ///     let sum = res.as_slice().iter().fold(0.0, |sum, a| sum + a);
     ///     assert_near2!(sum, 1.0);
     /// }
     /// ```
@@ -133,7 +133,9 @@ impl KnotVec {
     /// for i in 0..=N {
     ///     let t = 1.0 / (N as f64) * (i as f64);
     ///     // substitution
-    ///     let res = knot_vec.bspline_basis_functions(degree, 0, t);
+    ///     let res = knot_vec
+    ///         .bspline_basis_functions(degree, 0, t)
+    ///         .to_full_array();
     ///     let ans = [
     ///         1.0 * (1.0 - t) * (1.0 - t) * (1.0 - t),
     ///         3.0 * t * (1.0 - t) * (1.0 - t),
@@ -143,7 +145,9 @@ impl KnotVec {
     ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
     ///
     ///     // 2nd-order derivation
-    ///     let res = knot_vec.bspline_basis_functions(degree, 2, t);
+    ///     let res = knot_vec
+    ///         .bspline_basis_functions(degree, 2, t)
+    ///         .to_full_array();
     ///     let ans = [
     ///         6.0 * (1.0 - t),
     ///         6.0 * (3.0 * t - 2.0),
@@ -153,7 +157,7 @@ impl KnotVec {
     ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
     /// }
     /// ```
-    pub fn bspline_basis_functions(&self, degree: usize, der_rank: usize, t: f64) -> Vec<f64> {
+    pub fn bspline_basis_functions(&self, degree: usize, der_rank: usize, t: f64) -> BasisWindow {
         match self.try_bspline_basis_functions(degree, der_rank, t) {
             Ok(got) => got,
             Err(error) => panic!("{}", error),
@@ -178,8 +182,10 @@ impl KnotVec {
     /// let degree = 2;
     /// for i in 0..N {
     ///     let t = 2.0 + 4.0 / (N as f64) * (i as f64);
-    ///     let res = knot_vec.try_bspline_basis_functions(degree, 0, t).unwrap();
-    ///     let sum = res.iter().fold(0.0, |sum, a| sum + a);
+    ///     let res = knot_vec
+    ///         .try_bspline_basis_functions(degree, 0, t)
+    ///         .unwrap();
+    ///     let sum = res.as_slice().iter().fold(0.0, |sum, a| sum + a);
     ///     assert_near2!(sum, 1.0);
     /// }
     /// ```
@@ -194,7 +200,10 @@ impl KnotVec {
     /// for i in 0..=N {
     ///     let t = i as f64 / N as f64;
     ///     // substitution
-    ///     let res = knot_vec.try_bspline_basis_functions(degree, 0, t).unwrap();
+    ///     let res = knot_vec
+    ///         .try_bspline_basis_functions(degree, 0, t)
+    ///         .unwrap()
+    ///         .to_full_array();
     ///     let ans = [
     ///         1.0 * (1.0 - t) * (1.0 - t) * (1.0 - t),
     ///         3.0 * t * (1.0 - t) * (1.0 - t),
@@ -204,7 +213,10 @@ impl KnotVec {
     ///     for i in 0..4 { assert_near2!(res[i], ans[i]); }
     ///
     ///     // 2nd-order derivation
-    ///     let res = knot_vec.try_bspline_basis_functions(degree, 2, t).unwrap();
+    ///     let res = knot_vec
+    ///         .try_bspline_basis_functions(degree, 2, t)
+    ///         .unwrap()
+    ///         .to_full_array();
     ///     let ans = [
     ///         6.0 * (1.0 - t),
     ///         6.0 * (3.0 * t - 2.0),
@@ -219,7 +231,7 @@ impl KnotVec {
         degree: usize,
         der_rank: usize,
         t: f64,
-    ) -> Result<Vec<f64>> {
+    ) -> Result<BasisWindow> {
         let n = self.len() - 1;
         if self[0].near(&self[n]) {
             return Err(Error::ZeroRange);
@@ -227,7 +239,7 @@ impl KnotVec {
             return Err(Error::TooLargeDegree(n + 1, degree));
         }
         if degree < der_rank {
-            return Ok(vec![0.0; n - degree]);
+            return Ok(BasisWindow::empty(n - degree));
         }
 
         let idx = {
@@ -241,28 +253,13 @@ impl KnotVec {
             }
         };
 
-        if n < 32 {
-            let mut eval = [0.0; 32];
-            self.sub_bspline_basis_functions(degree, der_rank, t, idx, &mut eval);
-            Ok(eval[..n - degree].to_vec())
-        } else {
-            let mut eval = vec![0.0; n];
-            self.sub_bspline_basis_functions(degree, der_rank, t, idx, &mut eval);
-            eval.truncate(n - degree);
-            Ok(eval)
-        }
-    }
-
-    fn sub_bspline_basis_functions(
-        &self,
-        degree: usize,
-        der_rank: usize,
-        t: f64,
-        idx: usize,
-        eval: &mut [f64],
-    ) {
-        let n = self.len() - 1;
-        eval[idx] = 1.0;
+        let global_base = idx.saturating_sub(degree);
+        let mut _eval = match degree > 30 {
+            true => AltVec::Heap(vec![0.0; degree + 2]),
+            false => AltVec::Inline([0.0; 32]),
+        };
+        let eval = _eval.as_mut();
+        eval[idx - global_base] = 1.0;
 
         for k in 1..=(degree - der_rank) {
             let base = idx.saturating_sub(k);
@@ -271,7 +268,8 @@ impl KnotVec {
             for i in base..=usize::min(idx, n - k - 1) {
                 let delta = self[i + k + 1] - self[i + 1];
                 let b = inv_or_zero(delta) * (self[i + k + 1] - t);
-                eval[i] = a * eval[i] + b * eval[i + 1];
+                let j = i - global_base;
+                eval[j] = a * eval[j] + b * eval[j + 1];
                 a = 1.0 - b;
             }
         }
@@ -283,10 +281,14 @@ impl KnotVec {
             for i in base..=usize::min(idx, n - k - 1) {
                 let delta = self[i + k + 1] - self[i + 1];
                 let b = inv_or_zero(delta);
-                eval[i] = (a * eval[i] - b * eval[i + 1]) * k as f64;
+                let j = i - global_base;
+                eval[j] = (a * eval[j] - b * eval[j + 1]) * k as f64;
                 a = b;
             }
         }
+
+        let len = usize::min(degree + 1, n - degree - global_base);
+        Ok(BasisWindow::new(global_base, _eval, len, n - degree))
     }
 
     #[doc(hidden)]
@@ -300,11 +302,13 @@ impl KnotVec {
         let mut max = vec![0.0; m];
         for i in 1..N {
             let t = self[0] + range * (i as f64) / (N as f64);
-            let vals = self.try_bspline_basis_functions(degree, 0, t).unwrap();
-            for j in 0..m {
-                if max[j] < vals[j] {
-                    max[j] = vals[j];
-                    res[j] = t;
+            let basis = self.try_bspline_basis_functions(degree, 0, t).unwrap();
+            let base = basis.base();
+            let vals = basis.as_slice();
+            for j in 0..vals.len() {
+                if max[base + j] < vals[j] {
+                    max[base + j] = vals[j];
+                    res[base + j] = t;
                 }
             }
         }
@@ -666,4 +670,48 @@ impl<'de> Deserialize<'de> for KnotVec {
         let vec = Vec::<f64>::deserialize(deserializer)?;
         Self::try_from(vec).map_err(serde::de::Error::custom)
     }
+}
+
+impl BasisWindow {
+    /// Returns the base index
+    #[inline(always)]
+    pub const fn base(&self) -> usize { self.base }
+    /// Extracts a slice containing the entire vector.
+    #[inline(always)]
+    pub fn as_slice(&self) -> &[f64] {
+        match &self.window {
+            AltVec::Inline(x) => &x[..self.len],
+            AltVec::Heap(x) => x.as_slice(),
+        }
+    }
+    #[inline(always)]
+    fn empty(total_len: usize) -> Self {
+        Self {
+            base: 0,
+            window: AltVec::Inline([0.0; 32]),
+            len: 0,
+            total_len,
+        }
+    }
+    #[inline(always)]
+    fn new(base: usize, window: AltVec<f64>, len: usize, total_len: usize) -> Self {
+        Self {
+            base,
+            window,
+            len,
+            total_len,
+        }
+    }
+    /// Returns the full array of basis function values, including zeros.
+    pub fn to_full_array(&self) -> Vec<f64> {
+        let mut res = vec![0.0; self.total_len];
+        let (s, g) = (self.base, self.base + self.len);
+        res[s..g].copy_from_slice(self.as_slice());
+        res
+    }
+}
+
+impl AsRef<[f64]> for BasisWindow {
+    #[inline(always)]
+    fn as_ref(&self) -> &[f64] { self.as_slice() }
 }

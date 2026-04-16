@@ -262,7 +262,11 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
 
         let rows = parameter_points
             .iter()
-            .map(|(t, _)| knot_vec.try_bspline_basis_functions(degree, 0, *t))
+            .map(|(t, _)| {
+                knot_vec
+                    .try_bspline_basis_functions(degree, 0, *t)
+                    .map(|vals| vals.to_full_array())
+            })
             .collect::<Result<Vec<_>>>()?;
 
         for i in 0..P::DIM {
@@ -357,10 +361,11 @@ impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
     type Vector = P::Diff;
     #[inline(always)]
     fn der_n(&self, n: usize, t: f64) -> P::Diff {
-        self.control_points
+        let basis = self.knot_vec.bspline_basis_functions(self.degree(), n, t);
+        self.control_points[basis.base()..]
             .iter()
-            .zip(self.knot_vec.bspline_basis_functions(self.degree(), n, t))
-            .fold(P::Diff::zero(), |sum, (p, b)| sum + p.to_vec() * b)
+            .zip(basis.as_slice())
+            .fold(P::Diff::zero(), |sum, (&p, &b)| sum + p.to_vec() * b)
     }
     #[inline(always)]
     fn subs(&self, t: f64) -> P { P::from_vec(self.der_n(0, t)) }

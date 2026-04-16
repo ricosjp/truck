@@ -537,8 +537,8 @@ impl<P: ControlPoint<f64>> ParametricSurface for BSplineSurface<P> {
         let basis0 = uknot_vec.bspline_basis_functions(degree0, m, u);
         let basis1 = vknot_vec.bspline_basis_functions(degree1, n, v);
         let mut sum = P::Diff::zero();
-        for (vec, b0) in control_points.iter().zip(basis0) {
-            for (p, b1) in vec.iter().zip(&basis1) {
+        for (vec, &b0) in control_points[basis0.base..].iter().zip(basis0.as_slice()) {
+            for (p, &b1) in vec[basis1.base..].iter().zip(basis1.as_slice()) {
                 sum += p.to_vec() * (b0 * b1);
             }
         }
