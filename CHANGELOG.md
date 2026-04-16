@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add tangent-based constraint support to circular arc construction in `truck-modeling`
 - Added `BasisWindow` to simplify and centralize basis-function range handling.
 - Fix non intersect bboxes has invalid intersects.
 - Fix syntax error when reading binary STL > 8192b.

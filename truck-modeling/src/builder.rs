@@ -73,15 +73,25 @@ where Line<Point3>: ToSameGeometry<C> {
     Edge::new(vertex0, vertex1, Line(pt0, pt1).to_same_geometry())
 }
 
-/// Returns a circle arc from `vertex0` to `vertex1` via `transit`.
+/// Additional constraint to determine a circular arc from its start and end points.
+#[derive(Clone, Copy, Debug, derive_more::From)]
+pub enum ArcConstraint {
+    /// A point that the arc must pass through.
+    Transit(Point3),
+    /// A tangent vector that the arc must have at the start point.
+    Tangent(Vector3),
+}
+
+/// Returns a circle arc from `vertex0` to `vertex1` with `constraint`.
 /// # Examples
 /// ```
 /// use truck_modeling::*;
 ///
-/// // draw the unit upper semicircle
+/// // draw the unit upper semicircle by transit
 /// let vertex0 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
 /// let vertex1 = builder::vertex(Point3::new(-1.0, 0.0, 0.0));
-/// let semi_circle = builder::circle_arc(&vertex0, &vertex1, Point3::new(0.0, 1.0, 0.0));
+/// let transit = Point3::new(0.0, 1.0, 0.0);
+/// let semi_circle = builder::circle_arc(&vertex0, &vertex1, transit);
 /// # let curve = match semi_circle.oriented_curve() {
 /// #       Curve::NurbsCurve(curve) => curve,
 /// #       _ => unreachable!(),
@@ -92,11 +102,40 @@ where Line<Point3>: ToSameGeometry<C> {
 /// #       assert!(curve.subs(t).to_vec().magnitude().near(&1.0));
 /// # }
 /// ```
-pub fn circle_arc<C>(vertex0: &Vertex, vertex1: &Vertex, transit: Point3) -> Edge<C>
-where Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>: ToSameGeometry<C> {
+/// ```
+/// use truck_modeling::*;
+///
+/// // draw 1/4 circle by tangent
+/// let vertex0 = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+/// let vertex1 = builder::vertex(Point3::new(0.0, 1.0, 0.0));
+/// let tangent = Vector3::new(0.0, 1.0, 0.0);
+/// let semi_circle = builder::circle_arc(&vertex0, &vertex1, tangent);
+/// # let curve = match semi_circle.oriented_curve() {
+/// #       Curve::NurbsCurve(curve) => curve,
+/// #       _ => unreachable!(),
+/// # };
+/// # const N: usize = 10;
+/// # for i in 0..=N {
+/// #       let t = curve.knot_vec()[0] + curve.knot_vec().range_length() * i as f64 / N as f64;
+/// #       assert!(curve.subs(t).to_vec().magnitude().near(&1.0));
+/// # }
+/// ```
+pub fn circle_arc<C>(
+    vertex0: &Vertex,
+    vertex1: &Vertex,
+    constraint: impl Into<ArcConstraint>,
+) -> Edge<C>
+where
+    Processor<TrimmedCurve<UnitCircle<Point3>>, Matrix4>: ToSameGeometry<C>,
+{
     let pt0 = vertex0.point();
     let pt1 = vertex1.point();
-    let curve = geom_impls::circle_arc_by_three_points(pt0, pt1, transit);
+    let curve = match constraint.into() {
+        ArcConstraint::Transit(transit) => {
+            geom_impls::circle_arc_by_three_points(pt0, pt1, transit)
+        }
+        ArcConstraint::Tangent(tangent) => geom_impls::circle_arc_by_tangent0(pt0, pt1, tangent),
+    };
     Edge::new(vertex0, vertex1, curve.to_same_geometry())
 }
 
