@@ -254,10 +254,11 @@ impl KnotVec {
         };
 
         let global_base = idx.saturating_sub(degree);
-        let mut eval = TinyVec::from([0.0; 32]);
-        if degree > 30 {
-            eval.resize(degree + 2, 0.0);
-        }
+        let mut _eval = match degree > 30 {
+            true => AltVec::Heap(vec![0.0; degree + 2]),
+            false => AltVec::Inline([0.0; 32]),
+        };
+        let eval = _eval.as_mut();
         eval[idx - global_base] = 1.0;
 
         for k in 1..=(degree - der_rank) {
@@ -286,9 +287,8 @@ impl KnotVec {
             }
         }
 
-        eval.truncate(usize::min(degree + 1, n - degree - global_base));
-
-        Ok(BasisWindow::new(global_base, eval, n - degree))
+        let len = usize::min(degree + 1, n - degree - global_base);
+        Ok(BasisWindow::new(global_base, _eval, len, n - degree))
     }
 
     #[doc(hidden)]
@@ -678,34 +678,40 @@ impl BasisWindow {
     pub const fn base(&self) -> usize { self.base }
     /// Extracts a slice containing the entire vector.
     #[inline(always)]
-    pub fn as_slice(&self) -> &[f64] { &self.window }
-    #[inline(always)]
-    fn empty(total_length: usize) -> Self {
-        Self {
-            base: 0,
-            window: TinyVec::new(),
-            total_length,
+    pub fn as_slice(&self) -> &[f64] {
+        match &self.window {
+            AltVec::Inline(x) => &x[..self.len],
+            AltVec::Heap(x) => x.as_slice(),
         }
     }
     #[inline(always)]
-    fn new(base: usize, window: TinyVec<[f64; 32]>, total_length: usize) -> Self {
+    fn empty(total_len: usize) -> Self {
+        Self {
+            base: 0,
+            window: AltVec::Inline([0.0; 32]),
+            len: 0,
+            total_len,
+        }
+    }
+    #[inline(always)]
+    fn new(base: usize, window: AltVec<f64>, len: usize, total_len: usize) -> Self {
         Self {
             base,
             window,
-            total_length,
+            len,
+            total_len,
         }
     }
     /// Returns the full array of basis function values, including zeros.
     pub fn to_full_array(&self) -> Vec<f64> {
-        let mut res = vec![0.0; self.total_length];
-        for (r, s) in res[self.base..].iter_mut().zip(&self.window) {
-            *r = *s;
-        }
+        let mut res = vec![0.0; self.total_len];
+        let (s, g) = (self.base, self.base + self.len);
+        res[s..g].copy_from_slice(self.as_slice());
         res
     }
 }
 
 impl AsRef<[f64]> for BasisWindow {
     #[inline(always)]
-    fn as_ref(&self) -> &[f64] { &self.window }
+    fn as_ref(&self) -> &[f64] { self.as_slice() }
 }

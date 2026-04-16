@@ -1,10 +1,24 @@
 use crate::{prelude::*, *};
-use tinyvec::TinyVec;
 use truck_base::cgmath64::control_point::ControlPoint;
 
 /// knot vector
 #[derive(Clone, PartialEq, Debug, Default, Serialize)]
 pub struct KnotVec(Vec<f64>);
+
+#[derive(Clone, Debug, PartialEq)]
+enum AltVec<T> {
+    Inline([T; 32]),
+    Heap(Vec<T>),
+}
+
+impl<T> AsMut<[T]> for AltVec<T> {
+    fn as_mut(&mut self) -> &mut [T] {
+        match self {
+            Self::Inline(x) => x,
+            Self::Heap(x) => x,
+        }
+    }
+}
 
 /// Stores the values of the B-spline basis functions that may be nonzero,
 /// restricted to their active index window.
@@ -37,11 +51,12 @@ pub struct KnotVec(Vec<f64>);
 ///     );
 /// }
 /// ```
-#[derive(Clone, PartialEq, Debug, Serialize)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct BasisWindow {
     base: usize,
-    window: TinyVec<[f64; 32]>,
-    total_length: usize,
+    window: AltVec<f64>,
+    len: usize,
+    total_len: usize,
 }
 
 /// B-spline curve
