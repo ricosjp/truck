@@ -1,8 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
+	"truck-assembly",
 	"truck-base",
 	"truck-derivers",
+	"truck-drafting",
 	"truck-geometry",
 	"truck-geotrait",
 	"truck-js",
@@ -12,7 +14,6 @@ members = [
 	"truck-polymesh",
 	"truck-rendimpl",
 	"truck-shapeops",
-	"truck-assembly",
 	"truck-stepio",
 	"truck-topology",
 	"example-pages-generator",
