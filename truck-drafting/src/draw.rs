@@ -1,4 +1,4 @@
-use crate::{geom_impl, *};
+use crate::*;
 
 type Vertex = truck_topology::Vertex<Point2>;
 type Edge<C> = truck_topology::Edge<Point2, C>;
@@ -22,9 +22,7 @@ pub enum ArcConstraint {
 /// # assert_eq!(vertex.point(), Point2::new(1.0, 2.0));
 /// ```
 #[inline(always)]
-pub fn vertex<P: Into<Point2>>(point: P) -> Vertex {
-    Vertex::new(point.into())
-}
+pub fn vertex<P: Into<Point2>>(point: P) -> Vertex { Vertex::new(point.into()) }
 
 /// Creates and returns vertices by two dimensional points.
 /// # Examples
@@ -58,9 +56,7 @@ pub fn vertices<P: Into<Point2>>(points: impl IntoIterator<Item = P>) -> Vec<Ver
 /// # assert_near!(curve.subs(1.0), Point2::new(2.0, 1.0));
 /// ```
 pub fn line<C>(vertex0: &Vertex, vertex1: &Vertex) -> Edge<C>
-where
-    Line<Point2>: ToSameGeometry<C>,
-{
+where Line<Point2>: ToSameGeometry<C> {
     let point0 = vertex0.point();
     let point1 = vertex1.point();
     Edge::new(vertex0, vertex1, Line(point0, point1).to_same_geometry())
@@ -83,8 +79,7 @@ where
 pub fn polyline<C, P>(points: impl IntoIterator<Item = P>) -> Wire<C>
 where
     P: Into<Point2>,
-    Line<Point2>: ToSameGeometry<C>,
-{
+    Line<Point2>: ToSameGeometry<C>, {
     let vertices = vertices(points);
     vertices
         .windows(2)
@@ -155,9 +150,7 @@ where
 /// # assert_near!(curve.subs(1.0), Point2::new(3.0, 0.0));
 /// ```
 pub fn bezier<C>(vertex0: &Vertex, vertex1: &Vertex, mut inter_points: Vec<Point2>) -> Edge<C>
-where
-    BSplineCurve<Point2>: ToSameGeometry<C>,
-{
+where BSplineCurve<Point2>: ToSameGeometry<C> {
     let point0 = vertex0.point();
     let point1 = vertex1.point();
     let mut control_points = vec![point0];

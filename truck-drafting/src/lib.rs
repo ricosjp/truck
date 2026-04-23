@@ -37,3 +37,9 @@ pub use topology::*;
 /// basic drafting utilities such as vertices and primitive curves.
 pub mod draw;
 mod geom_impl;
+
+/// corner treatment utilities such as fillets and chamfers.
+pub mod corner;
+
+/// classifies the errors that can occur in this crate.
+pub mod errors;

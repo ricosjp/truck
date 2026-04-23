@@ -64,28 +64,20 @@ impl Transformed<Matrix3> for Curve {
 
 impl ToSameGeometry<Curve> for Line<Point2> {
     #[inline]
-    fn to_same_geometry(&self) -> Curve {
-        Curve::from(*self)
-    }
+    fn to_same_geometry(&self) -> Curve { Curve::from(*self) }
 }
 
 impl ToSameGeometry<Curve> for BSplineCurve<Point2> {
     #[inline]
-    fn to_same_geometry(&self) -> Curve {
-        Curve::from(self.clone())
-    }
+    fn to_same_geometry(&self) -> Curve { Curve::from(self.clone()) }
 }
 
 impl ToSameGeometry<Curve> for NurbsCurve<Vector3> {
     #[inline]
-    fn to_same_geometry(&self) -> Curve {
-        Curve::from(self.clone())
-    }
+    fn to_same_geometry(&self) -> Curve { Curve::from(self.clone()) }
 }
 
 impl ToSameGeometry<Curve> for Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3> {
     #[inline]
-    fn to_same_geometry(&self) -> Curve {
-        Curve::from(self.clone())
-    }
+    fn to_same_geometry(&self) -> Curve { Curve::from(self.clone()) }
 }
