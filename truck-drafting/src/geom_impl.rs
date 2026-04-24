@@ -175,6 +175,59 @@ where
     })
 }
 
+pub fn parameter_at_curve_length<C>(
+    curve: &C,
+    origin: f64,
+    signed_length: f64,
+) -> Result<f64, Error>
+where
+    C: ParametricCurve2D + BoundedCurve,
+{
+    if signed_length.so_small() {
+        return Ok(origin);
+    }
+    let (front, back) = curve.range_tuple();
+    if origin < front - TOLERANCE || origin > back + TOLERANCE {
+        return Err(Error::CurveLengthOutOfRange);
+    }
+
+    let direction = signed_length.signum();
+    let length = signed_length.abs();
+    let steps = usize::max(8, (length / 0.01).ceil() as usize);
+    let ds = length / steps as f64;
+    let mut parameter = origin;
+    for _ in 0..steps {
+        let k1 = curve_length_parameter_derivative(curve, parameter, direction)?;
+        let k2 = curve_length_parameter_derivative(curve, parameter + 0.5 * ds * k1, direction)?;
+        let k3 = curve_length_parameter_derivative(curve, parameter + 0.5 * ds * k2, direction)?;
+        let k4 = curve_length_parameter_derivative(curve, parameter + ds * k3, direction)?;
+        parameter += ds * (k1 + 2.0 * k2 + 2.0 * k3 + k4) / 6.0;
+        if parameter < front - TOLERANCE || parameter > back + TOLERANCE {
+            return Err(Error::CurveLengthOutOfRange);
+        }
+    }
+    Ok(f64::clamp(parameter, front, back))
+}
+
+fn curve_length_parameter_derivative<C>(
+    curve: &C,
+    parameter: f64,
+    direction: f64,
+) -> Result<f64, Error>
+where
+    C: ParametricCurve2D + BoundedCurve,
+{
+    let (front, back) = curve.range_tuple();
+    if parameter < front - TOLERANCE || parameter > back + TOLERANCE {
+        return Err(Error::CurveLengthOutOfRange);
+    }
+    let der = curve.der(f64::clamp(parameter, front, back));
+    match der.so_small() {
+        true => Err(Error::DegenerateTangent),
+        false => Ok(direction / der.magnitude()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -210,5 +263,69 @@ mod tests {
         assert_near!(candidate.center, Point2::new(0.8, 0.2));
         assert_near2!(candidate.parameter0, 0.8);
         assert_near2!(candidate.parameter1, 0.2);
+    }
+
+    #[test]
+    fn fillet_candidate_for_two_quadratic_bspline_curves() {
+        let curve0 = BSplineCurve::new(
+            KnotVec::bezier_knot(2),
+            vec![
+                Point2::new(0.0, 0.0),
+                Point2::new(0.45, -0.25),
+                Point2::new(1.0, 0.0),
+            ],
+        );
+        let curve1 = BSplineCurve::new(
+            KnotVec::bezier_knot(2),
+            vec![
+                Point2::new(1.0, 0.0),
+                Point2::new(1.25, 0.55),
+                Point2::new(0.95, 1.2),
+            ],
+        );
+        let radius = 0.12;
+        let candidate = fillet_candidate(curve0.clone(), curve1.clone(), 1.0, 0.0, radius).unwrap();
+
+        assert!(0.0 < candidate.parameter0 && candidate.parameter0 < 1.0);
+        assert!(0.0 < candidate.parameter1 && candidate.parameter1 < 1.0);
+        assert!(!curve0.der2(candidate.parameter0).so_small());
+        assert!(!curve1.der2(candidate.parameter1).so_small());
+
+        let contact0 = curve0.subs(candidate.parameter0);
+        let contact1 = curve1.subs(candidate.parameter1);
+        let radius0 = candidate.center - contact0;
+        let radius1 = candidate.center - contact1;
+        assert_near2!(radius0.magnitude(), radius);
+        assert_near2!(radius1.magnitude(), radius);
+        assert_near2!(radius0.dot(curve0.der(candidate.parameter0)), 0.0);
+        assert_near2!(radius1.dot(curve1.der(candidate.parameter1)), 0.0);
+    }
+
+    #[test]
+    fn parameter_at_curve_length_for_line() {
+        let curve = Line(Point2::new(0.0, 0.0), Point2::new(2.0, 0.0));
+        assert_near2!(parameter_at_curve_length(&curve, 1.0, -0.5).unwrap(), 0.75);
+        assert_near2!(parameter_at_curve_length(&curve, 0.0, 0.5).unwrap(), 0.25);
+    }
+
+    #[test]
+    fn parameter_at_curve_length_for_quadratic_bezier() {
+        let curve = BSplineCurve::new(
+            KnotVec::bezier_knot(2),
+            vec![
+                Point2::new(0.0, 0.0),
+                Point2::new(0.5, 0.0),
+                Point2::new(1.0, 1.0),
+            ],
+        );
+        let distance = 0.35;
+        let parameter = parameter_at_curve_length(&curve, 0.0, distance).unwrap();
+        assert!(0.0 < parameter && parameter < 1.0);
+        assert_near!(quadratic_bezier_arc_length(parameter), distance);
+    }
+
+    fn quadratic_bezier_arc_length(parameter: f64) -> f64 {
+        let root = (1.0 + 4.0 * parameter * parameter).sqrt();
+        0.25 * (2.0 * parameter * root + (2.0 * parameter + root).ln())
     }
 }

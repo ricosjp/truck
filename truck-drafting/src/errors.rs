@@ -15,4 +15,10 @@ pub enum Error {
     /// Newton method did not converge while solving the fillet equations.
     #[error("failed to solve fillet candidate because Newton method did not converge. {0}")]
     FilletNewtonNotConverged(String),
+    /// the chamfer distance must be positive.
+    #[error("the chamfer distance must be positive.")]
+    NonPositiveChamferDistance,
+    /// the requested curve length goes outside the curve parameter range.
+    #[error("the requested curve length goes outside the curve parameter range.")]
+    CurveLengthOutOfRange,
 }
