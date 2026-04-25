@@ -21,4 +21,7 @@ pub enum Error {
     /// the requested curve length goes outside the curve parameter range.
     #[error("the requested curve length goes outside the curve parameter range.")]
     CurveLengthOutOfRange,
+    /// corner operations require a continuous wire.
+    #[error("corner operations require a continuous wire.")]
+    NonContinuousWire,
 }
