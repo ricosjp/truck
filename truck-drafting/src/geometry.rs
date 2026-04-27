@@ -79,5 +79,5 @@ impl ToSameGeometry<Curve> for NurbsCurve<Vector3> {
 
 impl ToSameGeometry<Curve> for Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3> {
     #[inline]
-    fn to_same_geometry(&self) -> Curve { Curve::from(self.clone()) }
+    fn to_same_geometry(&self) -> Curve { Curve::from(*self) }
 }
