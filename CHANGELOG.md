@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Implement `ToSameGeometry` for STEP 2D geometries.
 - Create 2D-handling crate `truck-drafting`.
 - Fix implementation of `ToSameGeometry<Surface>` for `RevolutedCurve<Curve3D>`. 
 - Add tangent-based constraint support to circular arc construction in `truck-modeling`
