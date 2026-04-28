@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix bugs and add test for `draw::circle_arc`.
 - Implement `ToSameGeometry` for STEP 2D geometries.
 - Create 2D-handling crate `truck-drafting`.
 - Fix implementation of `ToSameGeometry<Surface>` for `RevolutedCurve<Curve3D>`. 

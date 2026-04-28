@@ -1,5 +1,5 @@
 use crate::{errors::Error, *};
-use std::f64::consts::TAU;
+use std::f64::consts::PI;
 use truck_base::newton::{self, CalcOutput};
 
 pub fn circle_arc_by_three_points(
@@ -8,13 +8,10 @@ pub fn circle_arc_by_three_points(
     transit: Point2,
 ) -> Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3> {
     let origin = circum_center(point0, point1, transit);
-    let x_axis = point0 - origin;
-    let transit_angle = local_angle(transit - origin, x_axis);
-    let mut end_angle = local_angle(point1 - origin, x_axis);
-    if end_angle < transit_angle || (end_angle.so_small() && !transit_angle.so_small()) {
-        end_angle += TAU;
-    }
-    circle_arc(point0, origin, end_angle)
+    let Rad(circum_angle) = (point1 - transit).angle(point0 - transit);
+    let direction = circum_angle.signum();
+    let angle = 2.0 * (PI - circum_angle.abs());
+    circle_arc(point0, origin, angle, direction)
 }
 
 pub fn circle_arc_by_tangent0(
@@ -30,21 +27,16 @@ pub fn circle_arc_by_tangent0(
         !denom.so_small(),
         "cannot construct a circle arc when the tangent is parallel to the chord"
     );
-    let radius = chord.dot(chord) / denom;
+    let radius = chord.magnitude2() / denom;
     let origin = point0 + radius * to_origin;
-    let vec0 = point0 - origin;
-    let vec1 = point1 - origin;
-    let mut angle = perp_dot(vec0, vec1).atan2(vec0.dot(vec1));
-    if angle <= 0.0 {
-        angle += TAU;
-    }
-    circle_arc(point0, origin, angle)
+    let Rad(tc_angle) = tangent0.angle(chord);
+    circle_arc(point0, origin, 2.0 * tc_angle.abs(), tc_angle.signum())
 }
 
 fn circum_center(point0: Point2, point1: Point2, point2: Point2) -> Point2 {
     let vec0 = point1 - point0;
     let vec1 = point2 - point0;
-    let det = vec0.x * vec1.y - vec0.y * vec1.x;
+    let det = vec0.perp_dot(vec1);
     assert!(
         !det.so_small(),
         "cannot construct a circle arc from collinear points"
@@ -62,9 +54,10 @@ fn circle_arc(
     point: Point2,
     origin: Point2,
     angle: f64,
+    direction: f64,
 ) -> Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3> {
     let x_axis = point - origin;
-    let y_axis = Vector2::new(-x_axis.y, x_axis.x);
+    let y_axis = direction * Vector2::new(-x_axis.y, x_axis.x);
     let transform = Matrix3::from_cols(
         x_axis.extend(0.0),
         y_axis.extend(0.0),
@@ -73,17 +66,6 @@ fn circle_arc(
     let unit_arc = TrimmedCurve::new(UnitCircle::new(), (0.0, angle));
     Processor::with_transform(unit_arc, transform)
 }
-
-fn local_angle(vector: Vector2, axis: Vector2) -> f64 {
-    let radius2 = axis.magnitude2();
-    let perp = Vector2::new(-axis.y, axis.x);
-    let x = vector.dot(axis) / radius2;
-    let y = vector.dot(perp) / radius2;
-    let angle = y.atan2(x);
-    if angle < 0.0 { angle + TAU } else { angle }
-}
-
-fn perp_dot(vec0: Vector2, vec1: Vector2) -> f64 { vec0.x * vec1.y - vec0.y * vec1.x }
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
@@ -231,9 +213,103 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::{prelude::*, property_test};
+
+    #[property_test]
+    fn test_circle_arc(
+        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] origin: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] direction0: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] direction1: [f64; 2],
+        #[strategy = 0.5f64..=10.0f64] radius: f64,
+        #[strategy = 0.05f64..=0.95f64] sample_ratio: f64,
+    ) {
+        let origin = Point2::from(origin);
+        let direction0 = Vector2::from(direction0);
+        let direction1 = Vector2::from(direction1);
+        prop_assume!(!direction0.so_small());
+        prop_assume!(!direction1.so_small());
+
+        let point0 = origin + radius * direction0.normalize();
+        let point1 = origin + radius * direction1.normalize();
+        let Rad(sweep_angle) = (point0 - origin).angle(point1 - origin);
+
+        let reference = origin + Matrix2::from_angle(Rad(0.5 * sweep_angle)) * (point0 - origin);
+        let curve = circle_arc(point0, origin, sweep_angle.abs(), sweep_angle.signum());
+        let (t0, t1) = curve.range_tuple();
+        let sample = curve.subs(t0 + sample_ratio * (t1 - t0));
+
+        prop_assert_near!(curve.subs(t0), point0);
+        prop_assert_near!(curve.subs(t1), point1);
+
+        let angle0 = (reference - point0).angle(reference - point1);
+        let angle1 = (sample - point0).angle(sample - point1);
+        prop_assert_near!(angle0, angle1);
+    }
+
+    #[property_test]
+    fn test_circle_arc_by_three_points(
+        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] origin: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] direction0: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] direction1: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] transit_direction: [f64; 2],
+        #[strategy = 0.5f64..=10.0f64] radius: f64,
+        #[strategy = 0.05f64..=0.95f64] sample_ratio: f64,
+    ) {
+        let origin = Point2::from(origin);
+        let direction0 = Vector2::from(direction0);
+        let direction1 = Vector2::from(direction1);
+        let transit_direction = Vector2::from(transit_direction);
+        prop_assume!(!direction0.so_small());
+        prop_assume!(!direction1.so_small());
+        prop_assume!(!transit_direction.so_small());
+
+        let point0 = origin + radius * direction0.normalize();
+        let point1 = origin + radius * direction1.normalize();
+        let transit = origin + radius * transit_direction.normalize();
+        prop_assume!((point1 - point0).magnitude() > 0.05);
+        prop_assume!((transit - point0).magnitude() > 0.05);
+        prop_assume!((transit - point1).magnitude() > 0.05);
+        prop_assume!((point1 - point0).perp_dot(transit - point0).abs() > 0.05);
+
+        let curve = circle_arc_by_three_points(point0, point1, transit);
+        let (t0, t1) = curve.range_tuple();
+        let sample = curve.subs(t0 + sample_ratio * (t1 - t0));
+
+        prop_assert_near!(curve.subs(t0), point0);
+        prop_assert_near!(curve.subs(t1), point1);
+
+        let angle0 = (transit - point0).angle(transit - point1);
+        let angle1 = (sample - point0).angle(sample - point1);
+        prop_assert_near!(angle0, angle1);
+    }
+
+    #[property_test]
+    fn circle_arc_by_tangent0_has_no_excess_or_shortage(
+        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] point0: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] point1: [f64; 2],
+        #[strategy = 0f64..2.0 * PI] tangent_angle: f64,
+        #[strategy = 0.05f64..=0.95f64] sample_ratio: f64,
+    ) {
+        let point0 = Point2::from(point0);
+        let point1 = Point2::from(point1);
+        let tangent0 = Vector2::new(tangent_angle.cos(), tangent_angle.sin());
+        prop_assume!(!(point0 - point1).perp_dot(tangent0).so_small());
+
+        let curve = circle_arc_by_tangent0(point0, point1, tangent0);
+        let (t0, t1) = curve.range_tuple();
+        let sample = curve.subs(t0 + sample_ratio * (t1 - t0));
+
+        prop_assert_near!(curve.subs(t0), point0);
+        prop_assert_near!(curve.subs(t1), point1);
+        prop_assert_near!(curve.der(t0).normalize(), tangent0);
+
+        let angle0 = tangent0.angle(sample - point0);
+        let angle1 = (point0 - point1).angle(sample - point1);
+        assert_near!(angle0, angle1);
+    }
 
     #[test]
-    fn circle_arc_passes_via_transit() {
+    fn test_circle_arc_by_three_points_specific() {
         let curve = circle_arc_by_three_points(
             Point2::new(1.0, 0.0),
             Point2::new(-1.0, 0.0),
@@ -246,7 +322,7 @@ mod tests {
     }
 
     #[test]
-    fn circle_arc_matches_tangent_at_start() {
+    fn test_circle_arc_tangent0_specific() {
         let tangent = Vector2::new(0.0, 1.0);
         let curve = circle_arc_by_tangent0(Point2::new(1.0, 0.0), Point2::new(0.0, 1.0), tangent);
         let (t0, t1) = curve.range_tuple();

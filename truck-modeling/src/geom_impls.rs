@@ -10,8 +10,8 @@ pub(super) fn circle_arc_by_three_points(
     let origin = circum_center(point0, point1, transit);
     let (vec0, vec1) = (point0 - transit, point1 - transit);
     let axis = vec1.cross(vec0).normalize();
-    let angle = Rad(PI) - vec0.angle(vec1);
-    circle_arc(point0, origin, axis, angle * 2.0)
+    let angle = (Rad(PI) - vec1.angle(vec0)) * 2.0;
+    circle_arc(point0, origin, axis, angle)
 }
 
 pub(super) fn circle_arc_by_tangent0(
@@ -23,7 +23,7 @@ pub(super) fn circle_arc_by_tangent0(
     let tangent0 = tangent0.normalize();
     let axis = tangent0.cross(chord).normalize();
     let to_origin = axis.cross(tangent0);
-    let radius = chord.dot(chord) / (2.0 * chord.dot(to_origin));
+    let radius = chord.magnitude2() / (2.0 * chord.dot(to_origin));
     let origin = point0 + radius * to_origin;
     let (vec0, vec1) = (point0 - origin, point1 - origin);
     let mut angle = f64::atan2(axis.dot(vec0.cross(vec1)), vec0.dot(vec1));
