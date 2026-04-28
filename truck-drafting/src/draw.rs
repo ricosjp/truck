@@ -127,10 +127,10 @@ where
     let point1 = vertex1.point();
     let curve = match constraint.into() {
         ArcConstraint::Transit(transit) => {
-            geom_impl::circle_arc_by_three_points(point0, point1, transit)
+            geom_impls::circle_arc_by_three_points(point0, point1, transit)
         }
         ArcConstraint::Tangent(tangent) => {
-            geom_impl::circle_arc_by_tangent0(point0, point1, tangent)
+            geom_impls::circle_arc_by_tangent0(point0, point1, tangent)
         }
     };
     Edge::new(vertex0, vertex1, curve.to_same_geometry())

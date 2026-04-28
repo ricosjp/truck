@@ -1,4 +1,4 @@
-use crate::{errors::Error, geom_impl::FilletCandidate, *};
+use crate::{errors::Error, geom_impls::FilletCandidate, *};
 
 type Vertex = truck_topology::Vertex<Point2>;
 type Edge<C> = truck_topology::Edge<Point2, C>;
@@ -63,7 +63,7 @@ where
         parameter0,
         parameter1,
         ..
-    } = geom_impl::fillet_candidate(&curve0, &curve1, t0, t1, radius)?;
+    } = geom_impls::fillet_candidate(&curve0, &curve1, t0, t1, radius)?;
 
     let point0 = curve0.subs(parameter0);
     let point1 = curve1.subs(parameter1);
@@ -134,8 +134,8 @@ where
     let mut curve1 = edge1.oriented_curve();
     let (t1, _) = curve1.range_tuple();
 
-    let parameter0 = geom_impl::parameter_at_curve_length(&curve0, t0, -distance0)?;
-    let parameter1 = geom_impl::parameter_at_curve_length(&curve1, t1, distance1)?;
+    let parameter0 = geom_impls::parameter_at_curve_length(&curve0, t0, -distance0)?;
+    let parameter1 = geom_impls::parameter_at_curve_length(&curve1, t1, distance1)?;
     let point0 = curve0.subs(parameter0);
     let point1 = curve1.subs(parameter1);
 
