@@ -3,6 +3,12 @@ use thiserror::Error;
 /// Drafting errors
 #[derive(Debug, PartialEq, Eq, Error)]
 pub enum Error {
+    /// cannot construct a circle arc from collinear points.
+    #[error("cannot construct a circle arc from collinear points.")]
+    CollinearArcPoints,
+    /// cannot construct a circle arc when the tangent is parallel to the chord.
+    #[error("cannot construct a circle arc when the tangent is parallel to the chord.")]
+    ParallelArcTangent,
     /// the fillet radius must be positive.
     #[error("the fillet radius must be positive.")]
     NonPositiveFilletRadius,
