@@ -6,48 +6,54 @@ pub fn circle_arc_by_three_points(
     point0: Point2,
     point1: Point2,
     transit: Point2,
-) -> Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3> {
-    let origin = circum_center(point0, point1, transit);
+) -> Result<Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3>, Error> {
+    let origin = circum_center(point0, point1, transit)?;
     let Rad(circum_angle) = (point1 - transit).angle(point0 - transit);
     let direction = circum_angle.signum();
     let angle = 2.0 * (PI - circum_angle.abs());
-    circle_arc(point0, origin, angle, direction)
+    Ok(circle_arc(point0, origin, angle, direction))
 }
 
 pub fn circle_arc_by_tangent0(
     point0: Point2,
     point1: Point2,
     tangent0: Vector2,
-) -> Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3> {
+) -> Result<Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3>, Error> {
     let chord = point1 - point0;
+    if tangent0.so_small() {
+        return Err(Error::DegenerateTangent);
+    }
     let tangent0 = tangent0.normalize();
     let to_origin = Vector2::new(-tangent0.y, tangent0.x);
     let denom = 2.0 * chord.dot(to_origin);
-    assert!(
-        !denom.so_small(),
-        "cannot construct a circle arc when the tangent is parallel to the chord"
-    );
+    if denom.so_small() {
+        return Err(Error::ParallelArcTangent);
+    }
     let radius = chord.magnitude2() / denom;
     let origin = point0 + radius * to_origin;
     let Rad(tc_angle) = tangent0.angle(chord);
-    circle_arc(point0, origin, 2.0 * tc_angle.abs(), tc_angle.signum())
+    Ok(circle_arc(
+        point0,
+        origin,
+        2.0 * tc_angle.abs(),
+        tc_angle.signum(),
+    ))
 }
 
-fn circum_center(point0: Point2, point1: Point2, point2: Point2) -> Point2 {
+fn circum_center(point0: Point2, point1: Point2, point2: Point2) -> Result<Point2, Error> {
     let vec0 = point1 - point0;
     let vec1 = point2 - point0;
     let det = vec0.perp_dot(vec1);
-    assert!(
-        !det.so_small(),
-        "cannot construct a circle arc from collinear points"
-    );
+    if det.so_small() {
+        return Err(Error::CollinearArcPoints);
+    }
     let a2 = vec0.magnitude2();
     let b2 = vec1.magnitude2();
     let u = Vector2::new(
         (vec1.y * a2 - vec0.y * b2) / (2.0 * det),
         (vec0.x * b2 - vec1.x * a2) / (2.0 * det),
     );
-    point0 + u
+    Ok(point0 + u)
 }
 
 fn circle_arc(
@@ -83,7 +89,7 @@ pub fn fillet_candidate<C>(
     radius: f64,
 ) -> Result<FilletCandidate, Error>
 where
-    C: ParametricCurve2D,
+    C: ParametricCurve2D + SearchNearestParameter<D1, Point = Point2>,
 {
     if radius <= 0.0 {
         return Err(Error::NonPositiveFilletRadius);
@@ -94,16 +100,21 @@ where
         return Err(Error::DegenerateTangent);
     }
     let point = curve0.subs(t0).midpoint(curve1.subs(t1));
-    let seed_direction = match (der1 - der0).so_small() {
-        true => Vector2::new(-der0.y, der0.x).normalize(),
-        false => (der1 - der0).normalize(),
+    let (tan0, tan1) = (der0.normalize(), der1.normalize());
+    let seed_direction = match tan0.near(&tan1) {
+        true => return Err(Error::DegenerateCorner),
+        false => (tan1 - tan0).normalize(),
     };
-    let hint = Vector4::new(
-        point.x + radius * seed_direction.x,
-        point.y + radius * seed_direction.y,
-        t0,
-        t1,
-    );
+
+    let first_center = point + radius * seed_direction;
+    let t0_hint = curve0
+        .search_nearest_parameter(first_center, t0, 100)
+        .unwrap_or(t0);
+    let t1_hint = curve1
+        .search_nearest_parameter(first_center, t1, 100)
+        .unwrap_or(t1);
+
+    let hint = Vector4::new(first_center.x, first_center.y, t0_hint, t1_hint);
     let function = |Vector4 {
                         x: ox,
                         y: oy,
@@ -271,7 +282,7 @@ mod tests {
         prop_assume!((transit - point1).magnitude() > 0.05);
         prop_assume!((point1 - point0).perp_dot(transit - point0).abs() > 0.05);
 
-        let curve = circle_arc_by_three_points(point0, point1, transit);
+        let curve = circle_arc_by_three_points(point0, point1, transit).unwrap();
         let (t0, t1) = curve.range_tuple();
         let sample = curve.subs(t0 + sample_ratio * (t1 - t0));
 
@@ -295,7 +306,7 @@ mod tests {
         let tangent0 = Vector2::new(tangent_angle.cos(), tangent_angle.sin());
         prop_assume!(!(point0 - point1).perp_dot(tangent0).so_small());
 
-        let curve = circle_arc_by_tangent0(point0, point1, tangent0);
+        let curve = circle_arc_by_tangent0(point0, point1, tangent0).unwrap();
         let (t0, t1) = curve.range_tuple();
         let sample = curve.subs(t0 + sample_ratio * (t1 - t0));
 
@@ -314,7 +325,8 @@ mod tests {
             Point2::new(1.0, 0.0),
             Point2::new(-1.0, 0.0),
             Point2::new(0.0, 1.0),
-        );
+        )
+        .unwrap();
         let (t0, t1) = curve.range_tuple();
         assert_near!(curve.subs(t0), Point2::new(1.0, 0.0));
         assert_near!(curve.subs((t0 + t1) * 0.5), Point2::new(0.0, 1.0));
@@ -322,13 +334,36 @@ mod tests {
     }
 
     #[test]
+    fn circle_arc_by_three_points_rejects_collinear_points() {
+        let error = circle_arc_by_three_points(
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(0.5, 0.0),
+        )
+        .unwrap_err();
+        assert_eq!(error, Error::CollinearArcPoints);
+    }
+
+    #[test]
     fn test_circle_arc_tangent0_specific() {
         let tangent = Vector2::new(0.0, 1.0);
-        let curve = circle_arc_by_tangent0(Point2::new(1.0, 0.0), Point2::new(0.0, 1.0), tangent);
+        let curve =
+            circle_arc_by_tangent0(Point2::new(1.0, 0.0), Point2::new(0.0, 1.0), tangent).unwrap();
         let (t0, t1) = curve.range_tuple();
         assert_near!(curve.subs(t0), Point2::new(1.0, 0.0));
         assert_near!(curve.subs(t1), Point2::new(0.0, 1.0));
         assert_near!(curve.der(t0).normalize(), tangent.normalize());
+    }
+
+    #[test]
+    fn circle_arc_by_tangent0_rejects_parallel_tangent() {
+        let error = circle_arc_by_tangent0(
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Vector2::unit_x(),
+        )
+        .unwrap_err();
+        assert_eq!(error, Error::ParallelArcTangent);
     }
 
     #[test]
@@ -339,6 +374,14 @@ mod tests {
         assert_near!(candidate.center, Point2::new(0.8, 0.2));
         assert_near2!(candidate.parameter0, 0.8);
         assert_near2!(candidate.parameter1, 0.2);
+    }
+
+    #[test]
+    fn fillet_candidate_rejects_degenerate_corner() {
+        let curve0 = Line(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0));
+        let curve1 = Line(Point2::new(1.0, 0.0), Point2::new(2.0, 0.0));
+        let error = fillet_candidate(curve0, curve1, 1.0, 0.0, 0.2).unwrap_err();
+        assert_eq!(error, Error::DegenerateCorner);
     }
 
     #[test]
@@ -375,6 +418,40 @@ mod tests {
         assert_near2!(radius1.magnitude(), radius);
         assert_near2!(radius0.dot(curve0.der(candidate.parameter0)), 0.0);
         assert_near2!(radius1.dot(curve1.der(candidate.parameter1)), 0.0);
+    }
+
+    #[test]
+    fn fillet_cndidate_for_two_arcs() {
+        let curve0 = circle_arc_by_tangent0(
+            Point2::new(1.0, -1.0),
+            Point2::new(0.0, 0.0),
+            Vector2::unit_y(),
+        )
+        .unwrap();
+        let curve1 = circle_arc_by_tangent0(
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 1.0),
+            Vector2::unit_x(),
+        )
+        .unwrap();
+        let (_, t0) = curve0.range_tuple();
+        let (t1, _) = curve1.range_tuple();
+        let FilletCandidate {
+            center,
+            parameter0,
+            parameter1,
+        } = fillet_candidate(curve0, curve1, t0, t1, 1.0).unwrap();
+        assert_near2!(center, Point2::new(f64::sqrt(3.0), 0.0));
+        assert!(
+            (center - curve0.subs(parameter0))
+                .dot(curve0.der(parameter0))
+                .so_small()
+        );
+        assert!(
+            (center - curve1.subs(parameter1))
+                .dot(curve1.der(parameter1))
+                .so_small()
+        );
     }
 
     #[test]
