@@ -1,5 +1,5 @@
 use crate::{errors::Error, *};
-use std::f64::consts::PI;
+use std::{f64::consts::PI, ops::RangeBounds};
 use truck_base::newton::{self, CalcOutput};
 
 pub fn circle_arc_by_three_points(
@@ -106,15 +106,18 @@ where
         false => (tan1 - tan0).normalize(),
     };
 
-    let first_center = point + radius * seed_direction;
+    let param_center = point + radius * seed_direction;
     let t0_hint = curve0
-        .search_nearest_parameter(first_center, t0, 100)
+        .search_nearest_parameter(param_center, t0, 100)
+        .filter(|t0| curve0.parameter_range().contains(t0))
         .unwrap_or(t0);
     let t1_hint = curve1
-        .search_nearest_parameter(first_center, t1, 100)
+        .search_nearest_parameter(param_center, t1, 100)
+        .filter(|t1| curve1.parameter_range().contains(t1))
         .unwrap_or(t1);
 
-    let hint = Vector4::new(first_center.x, first_center.y, t0_hint, t1_hint);
+    let sgn = -curve0.der(t0_hint).perp_dot(curve1.der(t1_hint)).signum();
+    let hint = Vector4::new(param_center.x, param_center.y, t0_hint, t1_hint);
     let function = |Vector4 {
                         x: ox,
                         y: oy,
@@ -128,23 +131,25 @@ where
         let der20 = curve0.der2(parameter0);
         let diff0 = center - point0;
         let perp0 = diff0.dot(der0);
-        let rad0 = diff0.magnitude2() - radius * radius;
+        let dmag0 = der0.magnitude();
+        let rad0 = sgn * der0.perp_dot(diff0) + dmag0 * radius;
 
         let point1 = curve1.subs(parameter1);
         let der1 = curve1.der(parameter1);
         let der21 = curve1.der2(parameter1);
         let diff1 = center - point1;
         let perp1 = diff1.dot(der1);
-        let rad1 = diff1.magnitude2() - radius * radius;
+        let dmag1 = der1.magnitude();
+        let rad1 = sgn * der1.perp_dot(diff1) + dmag1 * radius;
 
         CalcOutput {
             value: Vector4::new(perp0, rad0, perp1, rad1),
             derivation: Matrix4::from_cols(
-                Vector4::new(der0.x, 2.0 * diff0.x, der1.x, 2.0 * diff1.x),
-                Vector4::new(der0.y, 2.0 * diff0.y, der1.y, 2.0 * diff1.y),
+                Vector4::new(der0.x, -sgn * der0.y, der1.x, -sgn * der1.y),
+                Vector4::new(der0.y, sgn * der0.x, der1.y, sgn * der1.x),
                 Vector4::new(
                     -der0.magnitude2() + diff0.dot(der20),
-                    -2.0 * diff0.dot(der0),
+                    sgn * der20.perp_dot(diff0) + der0.dot(der20) / dmag0 * radius,
                     0.0,
                     0.0,
                 ),
@@ -152,7 +157,7 @@ where
                     0.0,
                     0.0,
                     -der1.magnitude2() + diff1.dot(der21),
-                    -2.0 * diff1.dot(der1),
+                    sgn * der21.perp_dot(diff1) + der1.dot(der21) / dmag1 * radius,
                 ),
             ),
         }
@@ -370,6 +375,16 @@ mod tests {
     fn fillet_candidate_for_two_lines() {
         let curve0 = Line(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0));
         let curve1 = Line(Point2::new(1.0, 0.0), Point2::new(1.0, 1.0));
+        let candidate = fillet_candidate(curve0, curve1, 1.0, 0.0, 0.2).unwrap();
+        assert_near!(candidate.center, Point2::new(0.8, 0.2));
+        assert_near2!(candidate.parameter0, 0.8);
+        assert_near2!(candidate.parameter1, 0.2);
+    }
+
+    #[test]
+    fn fillet_candidate_for_two_lines_counter_direction() {
+        let curve0 = Line(Point2::new(1.0, 1.0), Point2::new(1.0, 0.0));
+        let curve1 = Line(Point2::new(1.0, 0.0), Point2::new(0.0, 0.0));
         let candidate = fillet_candidate(curve0, curve1, 1.0, 0.0, 0.2).unwrap();
         assert_near!(candidate.center, Point2::new(0.8, 0.2));
         assert_near2!(candidate.parameter0, 0.8);
