@@ -9,6 +9,9 @@ pub enum Error {
     /// the tangent vector at the specified parameter vanished.
     #[error("the tangent vector vanished near the specified corner.")]
     DegenerateTangent,
+    /// the specified corner is degenerate and cannot define a fillet direction.
+    #[error("the specified corner is degenerate and cannot define a fillet direction.")]
+    DegenerateCorner,
     /// the Jacobian of fillet equations became degenerate.
     #[error("failed to solve fillet candidate because the Jacobian became degenerate. {0}")]
     DegenerateFilletJacobian(String),

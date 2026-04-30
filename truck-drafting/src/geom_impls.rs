@@ -83,7 +83,7 @@ pub fn fillet_candidate<C>(
     radius: f64,
 ) -> Result<FilletCandidate, Error>
 where
-    C: ParametricCurve2D,
+    C: ParametricCurve2D + SearchNearestParameter<D1, Point = Point2>,
 {
     if radius <= 0.0 {
         return Err(Error::NonPositiveFilletRadius);
@@ -94,16 +94,21 @@ where
         return Err(Error::DegenerateTangent);
     }
     let point = curve0.subs(t0).midpoint(curve1.subs(t1));
-    let seed_direction = match (der1 - der0).so_small() {
-        true => Vector2::new(-der0.y, der0.x).normalize(),
-        false => (der1 - der0).normalize(),
+    let (tan0, tan1) = (der0.normalize(), der1.normalize());
+    let seed_direction = match tan0.near(&tan1) {
+        true => return Err(Error::DegenerateCorner),
+        false => (tan1 - tan0).normalize(),
     };
-    let hint = Vector4::new(
-        point.x + radius * seed_direction.x,
-        point.y + radius * seed_direction.y,
-        t0,
-        t1,
-    );
+
+    let first_center = point + radius * seed_direction;
+    let t0_hint = curve0
+        .search_nearest_parameter(first_center, t0, 100)
+        .unwrap_or(t0);
+    let t1_hint = curve1
+        .search_nearest_parameter(first_center, t1, 100)
+        .unwrap_or(t1);
+
+    let hint = Vector4::new(first_center.x, first_center.y, t0_hint, t1_hint);
     let function = |Vector4 {
                         x: ox,
                         y: oy,
@@ -342,6 +347,14 @@ mod tests {
     }
 
     #[test]
+    fn fillet_candidate_rejects_degenerate_corner() {
+        let curve0 = Line(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0));
+        let curve1 = Line(Point2::new(1.0, 0.0), Point2::new(2.0, 0.0));
+        let error = fillet_candidate(curve0, curve1, 1.0, 0.0, 0.2).unwrap_err();
+        assert_eq!(error, Error::DegenerateCorner);
+    }
+
+    #[test]
     fn fillet_candidate_for_two_quadratic_bspline_curves() {
         let curve0 = BSplineCurve::new(
             KnotVec::bezier_knot(2),
@@ -375,6 +388,38 @@ mod tests {
         assert_near2!(radius1.magnitude(), radius);
         assert_near2!(radius0.dot(curve0.der(candidate.parameter0)), 0.0);
         assert_near2!(radius1.dot(curve1.der(candidate.parameter1)), 0.0);
+    }
+
+    #[test]
+    fn fillet_cndidate_for_two_arcs() {
+        let curve0 = circle_arc_by_tangent0(
+            Point2::new(1.0, -1.0),
+            Point2::new(0.0, 0.0),
+            Vector2::unit_y(),
+        );
+        let curve1 = circle_arc_by_tangent0(
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 1.0),
+            Vector2::unit_x(),
+        );
+        let (_, t0) = curve0.range_tuple();
+        let (t1, _) = curve1.range_tuple();
+        let FilletCandidate {
+            center,
+            parameter0,
+            parameter1,
+        } = fillet_candidate(curve0, curve1, t0, t1, 1.0).unwrap();
+        assert_near2!(center, Point2::new(f64::sqrt(3.0), 0.0));
+        assert!(
+            (center - curve0.subs(parameter0))
+                .dot(curve0.der(parameter0))
+                .so_small()
+        );
+        assert!(
+            (center - curve1.subs(parameter1))
+                .dot(curve1.der(parameter1))
+                .so_small()
+        );
     }
 
     #[test]
