@@ -117,7 +117,7 @@ pub(super) fn attach_plane(mut pts: Vec<Vec<Point3>>) -> Option<Plane> {
 #[cfg(test)]
 mod test_geom_impl {
     use super::*;
-    use proptest::*;
+    use proptest::{property_test, *};
 
     fn pole_to_normal(pole: [f64; 2]) -> Vector3 {
         let theta = PI * pole[0];
@@ -180,173 +180,173 @@ mod test_geom_impl {
         res
     }
 
-    proptest! {
-        #[test]
-        fn test_circum_center(
-            p0 in array::uniform3(-10.0f64..10.0),
-            p1 in array::uniform3(-10.0f64..10.0),
-            p2 in array::uniform3(-10.0f64..10.0),
-        ) {
-            let p0 = Point3::from(p0);
-            let p1 = Point3::from(p1);
-            let p2 = Point3::from(p2);
-            let c = circum_center(p0, p1, p2);
+    #[property_test]
+    fn test_circum_center(
+        #[strategy = array::uniform3(-10.0f64..10.0)] p0: [f64; 3],
+        #[strategy = array::uniform3(-10.0f64..10.0)] p1: [f64; 3],
+        #[strategy = array::uniform3(-10.0f64..10.0)] p2: [f64; 3],
+    ) {
+        let p0 = Point3::from(p0);
+        let p1 = Point3::from(p1);
+        let p2 = Point3::from(p2);
+        let c = circum_center(p0, p1, p2);
 
-            // The point `c` exists at the same distance from the three points.
-            let d0 = c.distance2(p0);
-            let d1 = c.distance2(p1);
-            let d2 = c.distance2(p2);
-            prop_assert!(d0.near(&d1) && d1.near(&d2) && d2.near(&d0));
-        }
+        // The point `c` exists at the same distance from the three points.
+        let d0 = c.distance2(p0);
+        let d1 = c.distance2(p1);
+        let d2 = c.distance2(p2);
+        prop_assert!(d0.near(&d1) && d1.near(&d2) && d2.near(&d0));
+    }
 
-        #[test]
-        fn test_circle_arc_three_point(
-            p0 in array::uniform3(-10.0f64..10.0),
-            p1 in array::uniform3(-10.0f64..10.0),
-            p2 in array::uniform3(-10.0f64..10.0),
-            t in TOLERANCE..(1.0 - TOLERANCE),
-        ) {
-            let p0 = Point3::from(p0);
-            let p1 = Point3::from(p1);
-            let p2 = Point3::from(p2);
-            let curve = circle_arc_by_three_points(p0, p1, p2);
+    #[property_test]
+    fn test_circle_arc_three_point(
+        #[strategy = array::uniform3(-10.0f64..10.0)] p0: [f64; 3],
+        #[strategy = array::uniform3(-10.0f64..10.0)] p1: [f64; 3],
+        #[strategy = array::uniform3(-10.0f64..10.0)] p2: [f64; 3],
+        #[strategy = TOLERANCE..(1.0 - TOLERANCE)] t: f64,
+    ) {
+        let p0 = Point3::from(p0);
+        let p1 = Point3::from(p1);
+        let p2 = Point3::from(p2);
+        let curve = circle_arc_by_three_points(p0, p1, p2);
 
-            // The curve `curve` is from `p0` to `p1`.
-            prop_assert_near!(curve.front(), p0);
-            prop_assert_near!(curve.back(), p1);
+        // The curve `curve` is from `p0` to `p1`.
+        prop_assert_near!(curve.front(), p0);
+        prop_assert_near!(curve.back(), p1);
 
-            // Any point on the curve is on the same side as point `p2`.
-            // Check by the circular angle theorem.
-            let (t0, t1) = curve.range_tuple();
-            let p3 = curve.subs((1.0 - t) * t0 + t * t1);
-            let angle2 = (p2 - p1).angle(p2 - p0);
-            let angle3 = (p3 - p1).angle(p3 - p0);
-            prop_assert_near!(angle2, angle3);
-        }
+        // Any point on the curve is on the same side as point `p2`.
+        // Check by the circular angle theorem.
+        let (t0, t1) = curve.range_tuple();
+        let p3 = curve.subs((1.0 - t) * t0 + t * t1);
+        let angle2 = (p2 - p1).angle(p2 - p0);
+        let angle3 = (p3 - p1).angle(p3 - p0);
+        prop_assert_near!(angle2, angle3);
+    }
 
-        #[test]
-        fn test_circle_arc_tangent0(
-            p0 in array::uniform3(-10.0f64..10.0),
-            p1 in array::uniform3(-10.0f64..10.0),
-            tangent0 in array::uniform3(-10.0f64..10.0),
-            t in TOLERANCE..(1.0 - TOLERANCE),
-        ) {
-            let p0 = Point3::from(p0);
-            let p1 = Point3::from(p1);
-            let tangent0 = Vector3::from(tangent0);
-            prop_assume!(!(p1 - p0).so_small());
-            prop_assume!(!tangent0.so_small());
-            prop_assume!(!tangent0.cross(p1 - p0).so_small());
-            let curve = circle_arc_by_tangent0(p0, p1, tangent0);
-            let (t0, t1) = curve.range_tuple();
+    #[property_test]
+    fn test_circle_arc_tangent0(
+        #[strategy = array::uniform3(-10.0f64..10.0)] p0: [f64; 3],
+        #[strategy = array::uniform3(-10.0f64..10.0)] p1: [f64; 3],
+        #[strategy = array::uniform3(-10.0f64..10.0)] tangent0: [f64; 3],
+        #[strategy = TOLERANCE..(1.0 - TOLERANCE)] t: f64,
+    ) {
+        let p0 = Point3::from(p0);
+        let p1 = Point3::from(p1);
+        let tangent0 = Vector3::from(tangent0);
+        prop_assume!(!(p1 - p0).so_small());
+        prop_assume!(!tangent0.so_small());
+        prop_assume!(!tangent0.cross(p1 - p0).so_small());
+        let curve = circle_arc_by_tangent0(p0, p1, tangent0);
+        let (t0, t1) = curve.range_tuple();
 
-            prop_assert_near!(curve.front(), p0);
-            prop_assert_near!(curve.back(), p1);
-            prop_assert_near!(curve.der(t0).normalize(), tangent0.normalize());
+        prop_assert_near!(curve.front(), p0);
+        prop_assert_near!(curve.back(), p1);
+        prop_assert_near!(curve.der(t0).normalize(), tangent0.normalize());
 
-            let p2 = curve.subs((1.0 - t) * t0 + t * t1);
-            let origin = circum_center(p0, p1, p2);
-            let r0 = p0.distance2(origin);
-            let r1 = p1.distance2(origin);
-            let r2 = p2.distance2(origin);
-            prop_assert!(r0.near(&r1) && r1.near(&r2));
-        }
+        let p2 = curve.subs((1.0 - t) * t0 + t * t1);
+        let origin = circum_center(p0, p1, p2);
+        let r0 = p0.distance2(origin);
+        let r1 = p1.distance2(origin);
+        let r2 = p2.distance2(origin);
+        prop_assert!(r0.near(&r1) && r1.near(&r2));
+    }
 
-        #[test]
-        fn test_circle_arc(
-            origin in array::uniform3(-10.0f64..10.0),
-            axis_pole in array::uniform2(-1.0f64..1.0),
-            angle in TOLERANCE..(1.5 * PI),
-            pt0 in array::uniform3(-10.0f64..10.0),
-            t in TOLERANCE..(1.0 - TOLERANCE),
-        ) {
-            let origin = Point3::from(origin);
-            let axis = pole_to_normal(axis_pole);
-            let angle = Rad(angle);
-            let pt0 = Point3::from(pt0);
-            let curve = circle_arc(pt0, origin, axis, angle);
+    #[property_test]
+    fn test_circle_arc(
+        #[strategy = array::uniform3(-10.0f64..10.0)] origin: [f64; 3],
+        #[strategy = array::uniform2(-1.0f64..1.0)] axis_pole: [f64; 2],
+        #[strategy = TOLERANCE..(1.5 * PI)] angle: f64,
+        #[strategy = array::uniform3(-10.0f64..10.0)] pt0: [f64; 3],
+        #[strategy = TOLERANCE..(1.0 - TOLERANCE)] t: f64,
+    ) {
+        let origin = Point3::from(origin);
+        let axis = pole_to_normal(axis_pole);
+        let angle = Rad(angle);
+        let pt0 = Point3::from(pt0);
+        let curve = circle_arc(pt0, origin, axis, angle);
 
-            // front point and back point
-            let trans = Matrix4::from_translation(origin.to_vec())
-                * Matrix4::from_axis_angle(axis, angle)
-                * Matrix4::from_translation(-origin.to_vec());
-            let pt1 = trans.transform_point(pt0);
-            prop_assert_near!(curve.front(), pt0);
-            prop_assert_near!(curve.back(), pt1);
+        // front point and back point
+        let trans = Matrix4::from_translation(origin.to_vec())
+            * Matrix4::from_axis_angle(axis, angle)
+            * Matrix4::from_translation(-origin.to_vec());
+        let pt1 = trans.transform_point(pt0);
+        prop_assert_near!(curve.front(), pt0);
+        prop_assert_near!(curve.back(), pt1);
 
-            // Any point on the curve lies in the same plane perpendicular to the axis.
-            let (t0, t1) = curve.range_tuple();
-            let pt2 = curve.subs((1.0 - t) * t0 + t * t1);
-            let vec0 = pt0 - origin;
-            let vec2 = pt2 - origin;
-            prop_assert_near!(vec0.dot(axis), vec2.dot(axis));
+        // Any point on the curve lies in the same plane perpendicular to the axis.
+        let (t0, t1) = curve.range_tuple();
+        let pt2 = curve.subs((1.0 - t) * t0 + t * t1);
+        let vec0 = pt0 - origin;
+        let vec2 = pt2 - origin;
+        prop_assert_near!(vec0.dot(axis), vec2.dot(axis));
 
-            // Any point on the curve lies in the circle arc from `p0` to `p1`.
-            // Check by the circular angle theorem.
-            let angle0 = (pt2 - pt1).angle(pt2 - pt0);
-            prop_assert_near!(angle0 * 2.0, Rad(2.0 * PI) - angle);
-        }
+        // Any point on the curve lies in the circle arc from `p0` to `p1`.
+        // Check by the circular angle theorem.
+        let angle0 = (pt2 - pt1).angle(pt2 - pt0);
+        prop_assert_near!(angle0 * 2.0, Rad(2.0 * PI) - angle);
+    }
 
-        #[test]
-        fn test_take_one_axis_by_normal(normal in array::uniform3(-100.0f64..100.0)) {
-            let normal = Vector3::from(normal);
-            let axis = take_one_axis_by_normal(normal);
-            prop_assert!(normal.so_small() || (!axis.so_small() && axis.dot(normal).so_small()));
-        }
+    #[property_test]
+    fn test_take_one_axis_by_normal(
+        #[strategy = array::uniform3(-100.0f64..100.0)] normal: [f64; 3],
+    ) {
+        let normal = Vector3::from(normal);
+        let axis = take_one_axis_by_normal(normal);
+        prop_assert!(normal.so_small() || (!axis.so_small() && axis.dot(normal).so_small()));
+    }
 
-        #[test]
-        fn test_attach_plane_with_single_boundary(
-            axis_pole in array::uniform2(-1.0f64..1.0),
-            origin in array::uniform3(-10.0f64..10.0),
-            angles in array::uniform10(0.01f64..(2.0 * PI - 0.01)),
-        ) {
-            let axis = pole_to_normal(axis_pole);
-            let origin = Point3::from(origin);
-            let diag = take_one_axis_by_normal(axis);
-            let trsf = Matrix4::from_cols(
-                diag.extend(0.0),
-                axis.cross(diag).extend(0.0),
-                axis.extend(0.0),
-                origin.to_homogeneous(),
-            );
-            let boundary: Vec<_> = complex_boundary(angles)
-                .into_iter()
-                .map(|p| trsf.transform_point(p))
-                .collect();
-            let plane = attach_plane(vec![boundary]).unwrap();
-            prop_assert_near!(plane.normal(), axis);
-        }
+    #[property_test]
+    fn test_attach_plane_with_single_boundary(
+        #[strategy = array::uniform2(-1.0f64..1.0)] axis_pole: [f64; 2],
+        #[strategy = array::uniform3(-10.0f64..10.0)] origin: [f64; 3],
+        #[strategy = array::uniform10(0.01f64..(2.0 * PI - 0.01))] angles: [f64; 10],
+    ) {
+        let axis = pole_to_normal(axis_pole);
+        let origin = Point3::from(origin);
+        let diag = take_one_axis_by_normal(axis);
+        let trsf = Matrix4::from_cols(
+            diag.extend(0.0),
+            axis.cross(diag).extend(0.0),
+            axis.extend(0.0),
+            origin.to_homogeneous(),
+        );
+        let boundary: Vec<_> = complex_boundary(angles)
+            .into_iter()
+            .map(|p| trsf.transform_point(p))
+            .collect();
+        let plane = attach_plane(vec![boundary]).unwrap();
+        prop_assert_near!(plane.normal(), axis);
+    }
 
-        #[test]
-        fn test_attach_plane_with_multiple_boundary(
-            axis_pole in array::uniform2(-1.0f64..1.0),
-            origin in array::uniform3(-10.0f64..10.0),
-            points in array::uniform8(1.0f64..9.0),
-            radius_ratios in array::uniform4(0.1f64..0.9),
-        ) {
-            let axis = pole_to_normal(axis_pole);
-            let origin = Point3::from(origin);
-            let diag = take_one_axis_by_normal(axis);
-            let trsf = Matrix4::from_cols(
-                diag.extend(0.0),
-                axis.cross(diag).extend(0.0),
-                axis.extend(0.0),
-                origin.to_homogeneous(),
-            );
-            let points = [
-                Point3::new(points[0], points[1], 0.0),
-                Point3::new(points[2] - 10.0, points[3], 0.0),
-                Point3::new(points[4] - 10.0, points[5] - 10.0, 0.0),
-                Point3::new(points[6], points[7] - 10.0, 0.0),
-            ];
-            let mut multiple_boundary = multiple_boundary(points, radius_ratios);
-            multiple_boundary
-                .iter_mut()
-                .flatten()
-                .for_each(|p| *p = trsf.transform_point(*p));
-            let plane = attach_plane(multiple_boundary).unwrap();
-            prop_assert_near!(plane.normal(), axis);
-        }
+    #[property_test]
+    fn test_attach_plane_with_multiple_boundary(
+        #[strategy = array::uniform2(-1.0f64..1.0)] axis_pole: [f64; 2],
+        #[strategy = array::uniform3(-10.0f64..10.0)] origin: [f64; 3],
+        #[strategy = array::uniform8(1.0f64..9.0)] points: [f64; 8],
+        #[strategy = array::uniform4(0.1f64..0.9)] radius_ratios: [f64; 4],
+    ) {
+        let axis = pole_to_normal(axis_pole);
+        let origin = Point3::from(origin);
+        let diag = take_one_axis_by_normal(axis);
+        let trsf = Matrix4::from_cols(
+            diag.extend(0.0),
+            axis.cross(diag).extend(0.0),
+            axis.extend(0.0),
+            origin.to_homogeneous(),
+        );
+        let points = [
+            Point3::new(points[0], points[1], 0.0),
+            Point3::new(points[2] - 10.0, points[3], 0.0),
+            Point3::new(points[4] - 10.0, points[5] - 10.0, 0.0),
+            Point3::new(points[6], points[7] - 10.0, 0.0),
+        ];
+        let mut multiple_boundary = multiple_boundary(points, radius_ratios);
+        multiple_boundary
+            .iter_mut()
+            .flatten()
+            .for_each(|p| *p = trsf.transform_point(*p));
+        let plane = attach_plane(multiple_boundary).unwrap();
+        prop_assert_near!(plane.normal(), axis);
     }
 }
 

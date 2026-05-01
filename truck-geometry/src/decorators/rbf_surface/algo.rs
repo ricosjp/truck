@@ -432,43 +432,41 @@ fn rot_der_n(orders: [usize; 4], axis: Vector3, angle: f64) -> Matrix3 {
 }
 
 #[cfg(test)]
-use proptest::prelude::*;
+use proptest::{prelude::*, property_test};
 
 #[cfg(test)]
-proptest! {
-   #[test]
-    fn rot_der_n_test(
-        (u, v) in (0.0f64..2.0 * PI, -1.0f64..=1.0),
-        angle in 0.0f64..2.0 * PI,
-        orders in prop::array::uniform4(0usize..=4usize),
-        index in 0..4usize,
-    ) {
-        const EPS: f64 = 1.0e-4;
-        let (r, z) = ((1.0 - v * v).sqrt(), v);
-        let (s, c) = u.sin_cos();
-        let axis = Vector3::new(r * c, r * s, z);
+#[property_test]
+fn rot_der_n_test(
+    #[strategy = (0.0f64..2.0 * PI, -1.0f64..=1.0)] (u, v): (f64, f64),
+    #[strategy = 0.0f64..2.0 * PI] angle: f64,
+    #[strategy = prop::array::uniform4(0usize..=4usize)] orders: [usize; 4],
+    #[strategy = 0..4usize] index: usize,
+) {
+    const EPS: f64 = 1.0e-4;
+    let (r, z) = ((1.0 - v * v).sqrt(), v);
+    let (s, c) = u.sin_cos();
+    let axis = Vector3::new(r * c, r * s, z);
 
-        let mut orders0 = orders;
-        orders0[index] += 1;
-        let mat0 = rot_der_n(orders0, axis, angle);
+    let mut orders0 = orders;
+    orders0[index] += 1;
+    let mat0 = rot_der_n(orders0, axis, angle);
 
-        let (mut axis_p, mut angle_p) = (axis, angle);
-        if index < 3 {
-            axis_p[index] += EPS;
-        } else {
-            angle_p += EPS;
-        }
-        let (mut axis_m, mut angle_m) = (axis, angle);
-        if index < 3 {
-            axis_m[index] -= EPS;
-        } else {
-            angle_m -= EPS;
-        }
-        let mat1 =
-            (rot_der_n(orders, axis_p, angle_p) - rot_der_n(orders, axis_m, angle_m)) / (2.0 * EPS);
-
-        prop_assert!((0..3).all(|i| (mat0[i] - mat1[i]).magnitude() < EPS));
+    let (mut axis_p, mut angle_p) = (axis, angle);
+    if index < 3 {
+        axis_p[index] += EPS;
+    } else {
+        angle_p += EPS;
     }
+    let (mut axis_m, mut angle_m) = (axis, angle);
+    if index < 3 {
+        axis_m[index] -= EPS;
+    } else {
+        angle_m -= EPS;
+    }
+    let mat1 =
+        (rot_der_n(orders, axis_p, angle_p) - rot_der_n(orders, axis_m, angle_m)) / (2.0 * EPS);
+
+    prop_assert!((0..3).all(|i| (mat0[i] - mat1[i]).magnitude() < EPS));
 }
 
 pub(super) fn v_parameter_division_for_fillet<S>(

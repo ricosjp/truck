@@ -1,4 +1,4 @@
-use proptest::prelude::*;
+use proptest::{prelude::*, property_test};
 use truck_geometry::prelude::*;
 use truck_geotrait::polynomial::*;
 
@@ -37,24 +37,25 @@ fn exec_pcurve_derivation(
     Ok(())
 }
 
-proptest! {
-    #[test]
-    fn pcurve_derivation(
-        curve_coef in prop::array::uniform6(prop::array::uniform2(-1f64..=1.0)),
-        curve_degree in 1usize..6,
-        surface_ucoef in prop::array::uniform6(prop::array::uniform3(-1f64..=1.0)),
-        surface_vcoef in prop::array::uniform6(prop::array::uniform3(-1f64..=1.0)),
-        surface_udegree in 1usize..6,
-        surface_vdegree in 1usize..6,
-        n in 0usize..=5,
-        t in -1f64..=1.0,
-    ) {
-        exec_pcurve_derivation(
-            &curve_coef[..=curve_degree],
-            &surface_ucoef[..=surface_udegree],
-            &surface_vcoef[..=surface_vdegree],
-            n,
-            t,
-        )?;
-    }
+#[property_test]
+fn pcurve_derivation(
+    #[strategy = prop::array::uniform6(prop::array::uniform2(-1f64..=1.0))] curve_coef: [[f64; 2];
+        6],
+    #[strategy = 1usize..6] curve_degree: usize,
+    #[strategy = prop::array::uniform6(prop::array::uniform3(-1f64..=1.0))] surface_ucoef: [[f64; 3];
+        6],
+    #[strategy = prop::array::uniform6(prop::array::uniform3(-1f64..=1.0))] surface_vcoef: [[f64; 3];
+        6],
+    #[strategy = 1usize..6] surface_udegree: usize,
+    #[strategy = 1usize..6] surface_vdegree: usize,
+    #[strategy = 0usize..=5] n: usize,
+    #[strategy = -1f64..=1.0] t: f64,
+) {
+    exec_pcurve_derivation(
+        &curve_coef[..=curve_degree],
+        &surface_ucoef[..=surface_udegree],
+        &surface_vcoef[..=surface_vdegree],
+        n,
+        t,
+    )?;
 }

@@ -1,4 +1,4 @@
-use proptest::prelude::*;
+use proptest::{prelude::*, property_test};
 use truck_geometry::prelude::*;
 
 #[test]
@@ -56,44 +56,42 @@ fn test_2nd_derivation() {
     }
 }
 
-proptest! {
-    #[test]
-    fn test_der_n(
-        t in 0f64..=1.0,
-        n in 0usize..=4,
-        degree in 2usize..=6,
-        div in 1usize..=10,
-        pts in prop::array::uniform16(prop::array::uniform3(-10f64..=10.0))
-    ) {
-        prop_assume!(degree > n + 1);
-        let knot_vec = KnotVec::uniform_knot(degree, div);
-        let control_points = pts[0..degree + div]
-            .iter()
-            .map(|&p| Point3::from(p))
-            .collect::<Vec<_>>();
-        let bsp = BSplineCurve::new(knot_vec, control_points);
+#[property_test]
+fn test_der_n(
+    #[strategy = 0f64..=1.0] t: f64,
+    #[strategy = 0usize..=4] n: usize,
+    #[strategy = 2usize..=6] degree: usize,
+    #[strategy = 1usize..=10] div: usize,
+    #[strategy = prop::array::uniform16(prop::array::uniform3(-10f64..=10.0))] pts: [[f64; 3]; 16],
+) {
+    prop_assume!(degree > n + 1);
+    let knot_vec = KnotVec::uniform_knot(degree, div);
+    let control_points = pts[0..degree + div]
+        .iter()
+        .map(|&p| Point3::from(p))
+        .collect::<Vec<_>>();
+    let bsp = BSplineCurve::new(knot_vec, control_points);
 
-        const EPS: f64 = 1.0e-4;
-        let der0 = bsp.der_n(n + 1, t);
-        let der1 = (bsp.der_n(n, t + EPS) - bsp.der_n(n, t - EPS)) / (2.0 * EPS);
-        prop_assert!((der0 - der1).magnitude() < 0.01 * der0.magnitude());
-    }
+    const EPS: f64 = 1.0e-4;
+    let der0 = bsp.der_n(n + 1, t);
+    let der1 = (bsp.der_n(n, t + EPS) - bsp.der_n(n, t - EPS)) / (2.0 * EPS);
+    prop_assert!((der0 - der1).magnitude() < 0.01 * der0.magnitude());
 }
 
-proptest! {
-    #[test]
-    fn parameter_random_tests(c in prop::array::uniform8(prop::array::uniform3(-10f64..10f64))) {
-        let curve = BSplineCurve::new(
-            KnotVec::uniform_knot(4, 4),
-            c.into_iter().map(Point3::from).collect(),
-        );
-        truck_geotrait::parameter_transform_random_test(&curve, 10);
-        truck_geotrait::cut_random_test(&curve, 10);
+#[property_test]
+fn parameter_random_tests(
+    #[strategy = prop::array::uniform8(prop::array::uniform3(-10f64..10f64))] c: [[f64; 3]; 8],
+) {
+    let curve = BSplineCurve::new(
+        KnotVec::uniform_knot(4, 4),
+        c.into_iter().map(Point3::from).collect(),
+    );
+    truck_geotrait::parameter_transform_random_test(&curve, 10);
+    truck_geotrait::cut_random_test(&curve, 10);
 
-        let mut part0 = curve.clone();
-        let part1 = part0.cut(0.56);
-        truck_geotrait::concat_random_test(&part0, &part1, 10);
-    }
+    let mut part0 = curve.clone();
+    let part1 = part0.cut(0.56);
+    truck_geotrait::concat_random_test(&part0, &part1, 10);
 }
 
 #[test]

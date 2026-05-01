@@ -1,6 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
-use proptest::*;
+use proptest::{property_test, *};
 use ruststep::{ast::DataSection, tables::*};
 use std::{f64::consts::PI, str::FromStr};
 use truck_geometry::prelude as truck;
@@ -65,11 +65,9 @@ fn exec_cartesian_point(coord: [f64; 3]) {
     );
 }
 
-proptest! {
-    #[test]
-    fn cartesian_point(coord in array::uniform3(-100.0f64..100.0f64)) {
-        exec_cartesian_point(coord)
-    }
+#[property_test]
+fn cartesian_point(#[strategy = array::uniform3(-100.0f64..100.0f64)] coord: [f64; 3]) {
+    exec_cartesian_point(coord)
 }
 
 fn exec_direction(dir_array: [f64; 2]) {
@@ -95,11 +93,9 @@ fn exec_direction(dir_array: [f64; 2]) {
     );
 }
 
-proptest! {
-    #[test]
-    fn direction(dir_array in array::uniform2(0.0f64..1.0)) {
-        exec_direction(dir_array)
-    }
+#[property_test]
+fn direction(#[strategy = array::uniform2(0.0f64..1.0)] dir_array: [f64; 2]) {
+    exec_direction(dir_array)
 }
 
 fn exec_vector(elem: [f64; 3]) {
@@ -115,12 +111,8 @@ fn exec_vector(elem: [f64; 3]) {
     );
 }
 
-proptest! {
-    #[test]
-    fn vector(elem in array::uniform3(-100.0f64..100.0f64)) {
-        exec_vector(elem)
-    }
-}
+#[property_test]
+fn vector(#[strategy = array::uniform3(-100.0f64..100.0f64)] elem: [f64; 3]) { exec_vector(elem) }
 
 fn exec_placement(org_coord: [f64; 3]) {
     let org = Point2::new(org_coord[0], org_coord[1]);
@@ -141,11 +133,9 @@ fn exec_placement(org_coord: [f64; 3]) {
     );
 }
 
-proptest! {
-    #[test]
-    fn placement(org_coord in array::uniform3(-100.0f64..100.0f64)) {
-        exec_placement(org_coord)
-    }
+#[property_test]
+fn placement(#[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3]) {
+    exec_placement(org_coord)
 }
 
 fn exec_axis1_placement(org_coord: [f64; 3], dir_array: [f64; 2]) {
@@ -173,14 +163,12 @@ fn exec_axis1_placement(org_coord: [f64; 3], dir_array: [f64; 2]) {
     assert_near!(dir, placement.direction());
 }
 
-proptest! {
-    #[test]
-    fn axis1_placement(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_array in array::uniform2(0.0f64..1.0),
-    ) {
-        exec_axis1_placement(org_coord, dir_array)
-    }
+#[property_test]
+fn axis1_placement(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0)] dir_array: [f64; 2],
+) {
+    exec_axis1_placement(org_coord, dir_array)
 }
 
 fn exec_axis2_placement2d(org_coord: [f64; 2], theta: f64) {
@@ -198,14 +186,12 @@ fn exec_axis2_placement2d(org_coord: [f64; 2], theta: f64) {
     assert_near!(res, ans);
 }
 
-proptest! {
-    #[test]
-    fn axis2_placement_2d(
-        org_coord in array::uniform2(-100.0f64..100.0f64),
-        theta in 0.0f64..2.0 * PI,
-    ) {
-        exec_axis2_placement2d(org_coord, theta)
-    }
+#[property_test]
+fn axis2_placement_2d(
+    #[strategy = array::uniform2(-100.0f64..100.0f64)] org_coord: [f64; 2],
+    #[strategy = 0.0f64..2.0 * PI] theta: f64,
+) {
+    exec_axis2_placement2d(org_coord, theta)
 }
 
 fn exec_axis2_placement3d(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2]) {
@@ -235,15 +221,13 @@ fn exec_axis2_placement3d(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_arra
     assert_near!(res, ans);
 }
 
-proptest! {
-    #[test]
-    fn axis2_placement_3d(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_array in array::uniform2(0.0f64..1.0f64),
-        ref_dir_array in array::uniform2(0.0f64..1.0f64),
-    ) {
-        exec_axis2_placement3d(org_coord, dir_array, ref_dir_array)
-    }
+#[property_test]
+fn axis2_placement_3d(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] ref_dir_array: [f64; 2],
+) {
+    exec_axis2_placement3d(org_coord, dir_array, ref_dir_array)
 }
 
 fn exec_line(org_coord: [f64; 3], vec_elem: [f64; 3]) {
@@ -262,14 +246,12 @@ fn exec_line(org_coord: [f64; 3], vec_elem: [f64; 3]) {
     assert_near!(res.1, ans.1);
 }
 
-proptest! {
-    #[test]
-    fn line(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        vec_elem in array::uniform3(-100.0f64..100.0f64),
-    ) {
-        exec_line(org_coord, vec_elem)
-    }
+#[property_test]
+fn line(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] vec_elem: [f64; 3],
+) {
+    exec_line(org_coord, vec_elem)
 }
 
 fn exec_polyline(length: usize, coords: Vec<[f64; 3]>) {
@@ -300,14 +282,12 @@ fn exec_polyline(length: usize, coords: Vec<[f64; 3]>) {
         .for_each(|(p, q)| assert_near!(p, q));
 }
 
-proptest! {
-    #[test]
-    fn polyline(
-        length in 2usize..100,
-        coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 100)
-    ) {
-        exec_polyline(length, coords)
-    }
+#[property_test]
+fn polyline(
+    #[strategy = 2usize..100] length: usize,
+    #[strategy = collection::vec(array::uniform3(-100.0f64..100.0f64), 100)] coords: Vec<[f64; 3]>,
+) {
+    exec_polyline(length, coords)
 }
 
 fn exec_b_spline_curve_with_knots(
@@ -349,17 +329,17 @@ fn exec_b_spline_curve_with_knots(
         .for_each(|(x, y)| assert_near!(x, y));
 }
 
-proptest! {
-    #[test]
-    fn b_spline_curve_with_knots(
-        knot_len in 7usize..20,
-        knot_incrs in collection::vec(1.0e-3f64..100.0f64, 20),
-        knot_mults in collection::vec(1usize..4usize, 20),
-        degree in 2usize..6,
-        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 80),
-    ) {
-        exec_b_spline_curve_with_knots(knot_len, knot_incrs, knot_mults, degree, ctrlpt_coords)
-    }
+#[property_test]
+fn b_spline_curve_with_knots(
+    #[strategy = 7usize..20] knot_len: usize,
+    #[strategy = collection::vec(1.0e-3f64..100.0f64, 20)] knot_incrs: Vec<f64>,
+    #[strategy = collection::vec(1usize..4usize, 20)] knot_mults: Vec<usize>,
+    #[strategy = 2usize..6] degree: usize,
+    #[strategy = collection::vec(array::uniform3(-100.0f64..100.0f64), 80)] ctrlpt_coords: Vec<
+        [f64; 3],
+    >,
+) {
+    exec_b_spline_curve_with_knots(knot_len, knot_incrs, knot_mults, degree, ctrlpt_coords)
 }
 
 fn step_bsp_curve_ctrls(points: &[Point3]) -> (String, String) {
@@ -401,14 +381,14 @@ fn exec_bezier_curve(degree: usize, ctrlpt_coords: Vec<[f64; 3]>) {
         .for_each(|(x, y)| assert_near!(x, y));
 }
 
-proptest! {
-    #[test]
-    fn bezier_curve(
-        degree in 1usize..6,
-        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 6),
-    ) {
-        exec_bezier_curve(degree, ctrlpt_coords)
-    }
+#[property_test]
+fn bezier_curve(
+    #[strategy = 1usize..6] degree: usize,
+    #[strategy = collection::vec(array::uniform3(-100.0f64..100.0f64), 6)] ctrlpt_coords: Vec<
+        [f64; 3],
+    >,
+) {
+    exec_bezier_curve(degree, ctrlpt_coords)
 }
 
 fn exec_quasi_uniform_curve(degree: usize, division: usize, ctrlpt_coords: Vec<[f64; 3]>) {
@@ -440,15 +420,15 @@ fn exec_quasi_uniform_curve(degree: usize, division: usize, ctrlpt_coords: Vec<[
         .for_each(|(x, y)| assert_near!(x, y));
 }
 
-proptest! {
-    #[test]
-    fn quasi_uniform_curve(
-        degree in 1usize..4,
-        division in 3usize..5,
-        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 20),
-    ) {
-        exec_quasi_uniform_curve(degree, division, ctrlpt_coords)
-    }
+#[property_test]
+fn quasi_uniform_curve(
+    #[strategy = 1usize..4] degree: usize,
+    #[strategy = 3usize..5] division: usize,
+    #[strategy = collection::vec(array::uniform3(-100.0f64..100.0f64), 20)] ctrlpt_coords: Vec<
+        [f64; 3],
+    >,
+) {
+    exec_quasi_uniform_curve(degree, division, ctrlpt_coords)
 }
 
 fn exec_uniform_curve(degree: usize, knot_len: usize, ctrlpt_coords: Vec<[f64; 3]>) {
@@ -479,15 +459,15 @@ fn exec_uniform_curve(degree: usize, knot_len: usize, ctrlpt_coords: Vec<[f64; 3
         .for_each(|(x, y)| assert_near!(x, y));
 }
 
-proptest! {
-   #[test]
-    fn uniform_curve(
-        degree in 1usize..4,
-        knot_len in 6usize..10,
-        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 40),
-    ) {
-        exec_uniform_curve(degree, knot_len, ctrlpt_coords)
-    }
+#[property_test]
+fn uniform_curve(
+    #[strategy = 1usize..4] degree: usize,
+    #[strategy = 6usize..10] knot_len: usize,
+    #[strategy = collection::vec(array::uniform3(-100.0f64..100.0f64), 40)] ctrlpt_coords: Vec<
+        [f64; 3],
+    >,
+) {
+    exec_uniform_curve(degree, knot_len, ctrlpt_coords)
 }
 
 fn exec_nurbs_curve_b_spline_with_knots(
@@ -532,18 +512,25 @@ fn exec_nurbs_curve_b_spline_with_knots(
         .for_each(|(x, y)| assert_near!(x, y));
 }
 
-proptest! {
-    #[test]
-    fn nurbs_curve_b_spline_curve_with_knots(
-        knot_len in 7usize..20,
-        knot_incrs in collection::vec(1.0e-3f64..100.0f64, 20),
-        knot_mults in collection::vec(1usize..4usize, 20),
-        weights in collection::vec(0.01f64..100.0, 80),
-        degree in 2usize..6,
-        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 80),
-    ) {
-        exec_nurbs_curve_b_spline_with_knots(knot_len, knot_incrs, knot_mults, weights, degree, ctrlpt_coords)
-    }
+#[property_test]
+fn nurbs_curve_b_spline_curve_with_knots(
+    #[strategy = 7usize..20] knot_len: usize,
+    #[strategy = collection::vec(1.0e-3f64..100.0f64, 20)] knot_incrs: Vec<f64>,
+    #[strategy = collection::vec(1usize..4usize, 20)] knot_mults: Vec<usize>,
+    #[strategy = collection::vec(0.01f64..100.0, 80)] weights: Vec<f64>,
+    #[strategy = 2usize..6] degree: usize,
+    #[strategy = collection::vec(array::uniform3(-100.0f64..100.0f64), 80)] ctrlpt_coords: Vec<
+        [f64; 3],
+    >,
+) {
+    exec_nurbs_curve_b_spline_with_knots(
+        knot_len,
+        knot_incrs,
+        knot_mults,
+        weights,
+        degree,
+        ctrlpt_coords,
+    )
 }
 
 fn exec_nurbs_curve_bezier_curve(
@@ -588,15 +575,15 @@ fn exec_nurbs_curve_bezier_curve(
         .for_each(|(x, y)| assert_near!(x, y));
 }
 
-proptest! {
-    #[test]
-    fn nurbs_curve_bezier_curve(
-        degree in 1usize..6,
-        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 6),
-        weights in collection::vec(0.01f64..100.0, 6),
-    ) {
-        exec_nurbs_curve_bezier_curve(degree, ctrlpt_coords, weights)
-    }
+#[property_test]
+fn nurbs_curve_bezier_curve(
+    #[strategy = 1usize..6] degree: usize,
+    #[strategy = collection::vec(array::uniform3(-100.0f64..100.0f64), 6)] ctrlpt_coords: Vec<
+        [f64; 3],
+    >,
+    #[strategy = collection::vec(0.01f64..100.0, 6)] weights: Vec<f64>,
+) {
+    exec_nurbs_curve_bezier_curve(degree, ctrlpt_coords, weights)
 }
 
 fn exec_nurbs_curve_quasi_uniform_curve(
@@ -644,16 +631,16 @@ fn exec_nurbs_curve_quasi_uniform_curve(
         .for_each(|(x, y)| assert_near!(x, y));
 }
 
-proptest! {
-    #[test]
-    fn nurbs_curve_quasi_uniform_curve(
-        degree in 1usize..4,
-        division in 3usize..5,
-        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 20),
-        weights in collection::vec(0.01f64..100.0, 20),
-    ) {
-        exec_nurbs_curve_quasi_uniform_curve(degree, division, ctrlpt_coords, weights)
-    }
+#[property_test]
+fn nurbs_curve_quasi_uniform_curve(
+    #[strategy = 1usize..4] degree: usize,
+    #[strategy = 3usize..5] division: usize,
+    #[strategy = collection::vec(array::uniform3(-100.0f64..100.0f64), 20)] ctrlpt_coords: Vec<
+        [f64; 3],
+    >,
+    #[strategy = collection::vec(0.01f64..100.0, 20)] weights: Vec<f64>,
+) {
+    exec_nurbs_curve_quasi_uniform_curve(degree, division, ctrlpt_coords, weights)
 }
 
 fn exec_nurbs_curve_uniform_curve(
@@ -700,16 +687,16 @@ fn exec_nurbs_curve_uniform_curve(
         .for_each(|(x, y)| assert_near!(x, y));
 }
 
-proptest! {
-   #[test]
-    fn nurbs_curve_uniform_curve(
-        degree in 1usize..4,
-        knot_len in 6usize..10,
-        ctrlpt_coords in collection::vec(array::uniform3(-100.0f64..100.0f64), 40),
-        weights in collection::vec(0.01f64..100.0, 40),
-    ) {
-        exec_nurbs_curve_uniform_curve(degree, knot_len, ctrlpt_coords, weights)
-    }
+#[property_test]
+fn nurbs_curve_uniform_curve(
+    #[strategy = 1usize..4] degree: usize,
+    #[strategy = 6usize..10] knot_len: usize,
+    #[strategy = collection::vec(array::uniform3(-100.0f64..100.0f64), 40)] ctrlpt_coords: Vec<
+        [f64; 3],
+    >,
+    #[strategy = collection::vec(0.01f64..100.0, 40)] weights: Vec<f64>,
+) {
+    exec_nurbs_curve_uniform_curve(degree, knot_len, ctrlpt_coords, weights)
 }
 
 fn exec_circle(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2], radius: f64) {
@@ -743,16 +730,14 @@ fn exec_circle(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2]
     });
 }
 
-proptest! {
-    #[test]
-    fn circle(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_array in array::uniform2(0.0f64..1.0),
-        ref_dir_array in array::uniform2(0.0f64..1.0),
-        radius in 1.0e-2f64..100.0,
-    ) {
-        exec_circle(org_coord, dir_array, ref_dir_array, radius)
-    }
+#[property_test]
+fn circle(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0)] ref_dir_array: [f64; 2],
+    #[strategy = 1.0e-2f64..100.0] radius: f64,
+) {
+    exec_circle(org_coord, dir_array, ref_dir_array, radius)
 }
 
 fn exec_ellipse(
@@ -793,16 +778,14 @@ fn exec_ellipse(
     });
 }
 
-proptest! {
-    #[test]
-    fn ellipse(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_array in array::uniform2(0.0f64..1.0),
-        ref_dir_array in array::uniform2(0.0f64..1.0),
-        radius in array::uniform2(1.0e-2f64..100.0),
-    ) {
-        exec_ellipse(org_coord, dir_array, ref_dir_array, radius)
-    }
+#[property_test]
+fn ellipse(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0)] ref_dir_array: [f64; 2],
+    #[strategy = array::uniform2(1.0e-2f64..100.0)] radius: [f64; 2],
+) {
+    exec_ellipse(org_coord, dir_array, ref_dir_array, radius)
 }
 
 fn exec_hyperbola(
@@ -844,16 +827,14 @@ fn exec_hyperbola(
     });
 }
 
-proptest! {
-    #[test]
-    fn hyperbola(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_array in array::uniform2(0.0f64..1.0),
-        ref_dir_array in array::uniform2(0.0f64..1.0),
-        radius in array::uniform2(1.0e-2f64..100.0),
-    ) {
-        exec_hyperbola(org_coord, dir_array, ref_dir_array, radius)
-    }
+#[property_test]
+fn hyperbola(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0)] ref_dir_array: [f64; 2],
+    #[strategy = array::uniform2(1.0e-2f64..100.0)] radius: [f64; 2],
+) {
+    exec_hyperbola(org_coord, dir_array, ref_dir_array, radius)
 }
 
 fn exec_parabola(
@@ -893,16 +874,14 @@ fn exec_parabola(
     });
 }
 
-proptest! {
-    #[test]
-    fn parabola(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_array in array::uniform2(0.0f64..1.0),
-        ref_dir_array in array::uniform2(0.0f64..1.0),
-        focal_dist in 0.01f64..100.0,
-    ) {
-        exec_parabola(org_coord, dir_array, ref_dir_array, focal_dist)
-    }
+#[property_test]
+fn parabola(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0)] ref_dir_array: [f64; 2],
+    #[strategy = 0.01f64..100.0] focal_dist: f64,
+) {
+    exec_parabola(org_coord, dir_array, ref_dir_array, focal_dist)
 }
 
 fn exec_plane(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2]) {
@@ -931,15 +910,13 @@ fn exec_plane(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2])
     assert_near!(plane.v_axis(), y);
 }
 
-proptest! {
-    #[test]
-    fn plane(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_array in array::uniform2(0.0f64..1.0f64),
-        ref_dir_array in array::uniform2(0.0f64..1.0f64),
-    ) {
-        exec_plane(org_coord, dir_array, ref_dir_array)
-    }
+#[property_test]
+fn plane(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] ref_dir_array: [f64; 2],
+) {
+    exec_plane(org_coord, dir_array, ref_dir_array)
 }
 
 fn exec_spherical_surface(
@@ -989,16 +966,14 @@ fn exec_spherical_surface(
         })
 }
 
-proptest! {
-    #[test]
-    fn spherical_surface(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_array in array::uniform2(0.0f64..1.0f64),
-        ref_dir_array in array::uniform2(0.0f64..1.0f64),
-        radius in 1.0e-2f64..100.0f64
-    ) {
-        exec_spherical_surface(org_coord, dir_array, ref_dir_array, radius)
-    }
+#[property_test]
+fn spherical_surface(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] ref_dir_array: [f64; 2],
+    #[strategy = 1.0e-2f64..100.0f64] radius: f64,
+) {
+    exec_spherical_surface(org_coord, dir_array, ref_dir_array, radius)
 }
 
 fn exec_cylindrical_surface(
@@ -1053,16 +1028,14 @@ fn exec_cylindrical_surface(
         })
 }
 
-proptest! {
-    #[test]
-    fn cylindrical_surface(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_array in array::uniform2(0.0f64..1.0f64),
-        ref_dir_array in array::uniform2(0.0f64..1.0f64),
-        radius in 1.0e-2f64..100.0f64
-    ) {
-        exec_cylindrical_surface(org_coord, dir_array, ref_dir_array, radius)
-    }
+#[property_test]
+fn cylindrical_surface(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] ref_dir_array: [f64; 2],
+    #[strategy = 1.0e-2f64..100.0f64] radius: f64,
+) {
+    exec_cylindrical_surface(org_coord, dir_array, ref_dir_array, radius)
 }
 
 fn exec_toroidal_surface(
@@ -1114,16 +1087,14 @@ fn exec_toroidal_surface(
         })
 }
 
-proptest! {
-    #[test]
-    fn toroidal_surface(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_array in array::uniform2(0.0f64..1.0f64),
-        ref_dir_array in array::uniform2(0.0f64..1.0f64),
-        radii in array::uniform2(1.0e-2f64..100.0f64),
-    ) {
-        exec_toroidal_surface(org_coord, dir_array, ref_dir_array, radii)
-    }
+#[property_test]
+fn toroidal_surface(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] ref_dir_array: [f64; 2],
+    #[strategy = array::uniform2(1.0e-2f64..100.0f64)] radii: [f64; 2],
+) {
+    exec_toroidal_surface(org_coord, dir_array, ref_dir_array, radii)
 }
 
 fn exec_conical_surface(
@@ -1183,17 +1154,15 @@ fn exec_conical_surface(
         })
 }
 
-proptest! {
-    #[test]
-    fn conical_surface(
-        org_coord in array::uniform3(-100.0f64..100.0f64),
-        dir_array in array::uniform2(0.0f64..1.0f64),
-        ref_dir_array in array::uniform2(0.0f64..1.0f64),
-        radius in 0.01f64..100.0f64,
-        semi_angle in 0.0f64..PI / 2.0,
-    ) {
-        exec_conical_surface(org_coord, dir_array, ref_dir_array, radius, semi_angle)
-    }
+#[property_test]
+fn conical_surface(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0f64)] ref_dir_array: [f64; 2],
+    #[strategy = 0.01f64..100.0f64] radius: f64,
+    #[strategy = 0.0f64..PI / 2.0] semi_angle: f64,
+) {
+    exec_conical_surface(org_coord, dir_array, ref_dir_array, radius, semi_angle)
 }
 
 fn coords_to_points(
@@ -1296,31 +1265,30 @@ fn exec_b_spline_surface_with_knots(
     compare_bsp_surfaces(&res, &bsp);
 }
 
-proptest! {
-    #[test]
-    fn b_spline_surface_with_knots(
-        uknot_len in 7usize..10,
-        uknot_mults in collection::vec(1usize..4usize, 10),
-        uknot_incrs in collection::vec(1.0e-3f64..100.0f64, 10),
-        udegree in 2usize..6,
-        vknot_len in 7usize..10,
-        vknot_mults in collection::vec(1usize..4usize, 10),
-        vknot_incrs in collection::vec(1.0e-3f64..100.0f64, 10),
-        vdegree in 2usize..6,
-        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 40), 40),
-    ) {
-        exec_b_spline_surface_with_knots(
-            uknot_len,
-            uknot_mults,
-            uknot_incrs,
-            udegree,
-            vknot_len,
-            vknot_mults,
-            vknot_incrs,
-            vdegree,
-            ctrlpt_coords,
-        )
-    }
+#[property_test]
+fn b_spline_surface_with_knots(
+    #[strategy = 7usize..10] uknot_len: usize,
+    #[strategy = collection::vec(1usize..4usize, 10)] uknot_mults: Vec<usize>,
+    #[strategy = collection::vec(1.0e-3f64..100.0f64, 10)] uknot_incrs: Vec<f64>,
+    #[strategy = 2usize..6] udegree: usize,
+    #[strategy = 7usize..10] vknot_len: usize,
+    #[strategy = collection::vec(1usize..4usize, 10)] vknot_mults: Vec<usize>,
+    #[strategy = collection::vec(1.0e-3f64..100.0f64, 10)] vknot_incrs: Vec<f64>,
+    #[strategy = 2usize..6] vdegree: usize,
+    #[strategy = collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 40), 40)]
+    ctrlpt_coords: Vec<Vec<[f64; 3]>>,
+) {
+    exec_b_spline_surface_with_knots(
+        uknot_len,
+        uknot_mults,
+        uknot_incrs,
+        udegree,
+        vknot_len,
+        vknot_mults,
+        vknot_incrs,
+        vdegree,
+        ctrlpt_coords,
+    )
 }
 
 fn step_bsp_surface_ctrls(points: &[Vec<Point3>]) -> (String, String) {
@@ -1362,14 +1330,13 @@ fn exec_bezier_surface([udegree, vdegree]: [usize; 2], ctrlpt_coords: Vec<Vec<[f
     compare_bsp_surfaces(&res, &ans);
 }
 
-proptest! {
-    #[test]
-    fn bezier_surface(
-        degrees in array::uniform2(1usize..6),
-        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 6), 6),
-    ) {
-        exec_bezier_surface(degrees, ctrlpt_coords)
-    }
+#[property_test]
+fn bezier_surface(
+    #[strategy = array::uniform2(1usize..6)] degrees: [usize; 2],
+    #[strategy = collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 6), 6)]
+    ctrlpt_coords: Vec<Vec<[f64; 3]>>,
+) {
+    exec_bezier_surface(degrees, ctrlpt_coords)
 }
 
 fn exec_quasi_uniform_surface(
@@ -1398,15 +1365,14 @@ fn exec_quasi_uniform_surface(
     compare_bsp_surfaces(&res, &ans);
 }
 
-proptest! {
-    #[test]
-    fn quasi_uniform_surface(
-        degrees in array::uniform2(1usize..6),
-        divisions in array::uniform2(2usize..5),
-        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 30), 30),
-    ) {
-        exec_quasi_uniform_surface(degrees, divisions, ctrlpt_coords)
-    }
+#[property_test]
+fn quasi_uniform_surface(
+    #[strategy = array::uniform2(1usize..6)] degrees: [usize; 2],
+    #[strategy = array::uniform2(2usize..5)] divisions: [usize; 2],
+    #[strategy = collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 30), 30)]
+    ctrlpt_coords: Vec<Vec<[f64; 3]>>,
+) {
+    exec_quasi_uniform_surface(degrees, divisions, ctrlpt_coords)
 }
 
 fn exec_uniform_surface(
@@ -1433,15 +1399,14 @@ fn exec_uniform_surface(
     compare_bsp_surfaces(&res, &ans);
 }
 
-proptest! {
-    #[test]
-    fn uniform_surface(
-        degrees in array::uniform2(1usize..6),
-        knot_lens in array::uniform2(7usize..30),
-        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 30), 30),
-    ) {
-        exec_uniform_surface(degrees, knot_lens, ctrlpt_coords)
-    }
+#[property_test]
+fn uniform_surface(
+    #[strategy = array::uniform2(1usize..6)] degrees: [usize; 2],
+    #[strategy = array::uniform2(7usize..30)] knot_lens: [usize; 2],
+    #[strategy = collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 30), 30)]
+    ctrlpt_coords: Vec<Vec<[f64; 3]>>,
+) {
+    exec_uniform_surface(degrees, knot_lens, ctrlpt_coords)
 }
 
 fn exec_nurbs_surface_b_spline_surface_with_knots(
@@ -1496,33 +1461,34 @@ fn exec_nurbs_surface_b_spline_surface_with_knots(
     compare_nurbs_surfaces(&res, &ans);
 }
 
-proptest! {
-    #[test]
-    fn nurbs_surface_b_spline_surface_with_knots(
-        uknot_len in 7usize..10,
-        uknot_mults in collection::vec(1usize..4usize, 10),
-        uknot_incrs in collection::vec(1.0e-3f64..100.0f64, 10),
-        udegree in 2usize..6,
-        vknot_len in 7usize..10,
-        vknot_mults in collection::vec(1usize..4usize, 10),
-        vknot_incrs in collection::vec(1.0e-3f64..100.0f64, 10),
-        vdegree in 2usize..6,
-        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 40), 40),
-        weights in collection::vec(collection::vec(0.01f64..100.0f64, 40), 40),
-    ) {
-        exec_nurbs_surface_b_spline_surface_with_knots(
-            uknot_len,
-            uknot_mults,
-            uknot_incrs,
-            udegree,
-            vknot_len,
-            vknot_mults,
-            vknot_incrs,
-            vdegree,
-            ctrlpt_coords,
-            weights,
-        )
-    }
+#[property_test]
+fn nurbs_surface_b_spline_surface_with_knots(
+    #[strategy = 7usize..10] uknot_len: usize,
+    #[strategy = collection::vec(1usize..4usize, 10)] uknot_mults: Vec<usize>,
+    #[strategy = collection::vec(1.0e-3f64..100.0f64, 10)] uknot_incrs: Vec<f64>,
+    #[strategy = 2usize..6] udegree: usize,
+    #[strategy = 7usize..10] vknot_len: usize,
+    #[strategy = collection::vec(1usize..4usize, 10)] vknot_mults: Vec<usize>,
+    #[strategy = collection::vec(1.0e-3f64..100.0f64, 10)] vknot_incrs: Vec<f64>,
+    #[strategy = 2usize..6] vdegree: usize,
+    #[strategy = collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 40), 40)]
+    ctrlpt_coords: Vec<Vec<[f64; 3]>>,
+    #[strategy = collection::vec(collection::vec(0.01f64..100.0f64, 40), 40)] weights: Vec<
+        Vec<f64>,
+    >,
+) {
+    exec_nurbs_surface_b_spline_surface_with_knots(
+        uknot_len,
+        uknot_mults,
+        uknot_incrs,
+        udegree,
+        vknot_len,
+        vknot_mults,
+        vknot_incrs,
+        vdegree,
+        ctrlpt_coords,
+        weights,
+    )
 }
 
 fn exec_nurbs_surface_bezier_surface(
@@ -1565,15 +1531,14 @@ fn exec_nurbs_surface_bezier_surface(
     compare_nurbs_surfaces(&res, &ans);
 }
 
-proptest! {
-    #[test]
-    fn nurbs_surface_bezier_surface(
-        degrees in array::uniform2(1usize..6),
-        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 6), 6),
-        weights in collection::vec(collection::vec(0.01f64..100.0f64, 6), 6),
-    ) {
-        exec_nurbs_surface_bezier_surface(degrees, ctrlpt_coords, weights)
-    }
+#[property_test]
+fn nurbs_surface_bezier_surface(
+    #[strategy = array::uniform2(1usize..6)] degrees: [usize; 2],
+    #[strategy = collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 6), 6)]
+    ctrlpt_coords: Vec<Vec<[f64; 3]>>,
+    #[strategy = collection::vec(collection::vec(0.01f64..100.0f64, 6), 6)] weights: Vec<Vec<f64>>,
+) {
+    exec_nurbs_surface_bezier_surface(degrees, ctrlpt_coords, weights)
 }
 
 fn exec_nurbs_surface_quasi_uniform_surface(
@@ -1622,16 +1587,17 @@ fn exec_nurbs_surface_quasi_uniform_surface(
     compare_nurbs_surfaces(&res, &ans);
 }
 
-proptest! {
-    #[test]
-    fn nurbs_surface_quasi_uniform_surface(
-        degrees in array::uniform2(1usize..6),
-        divisions in array::uniform2(2usize..5),
-        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 30), 30),
-        weights in collection::vec(collection::vec(0.01f64..100.0f64, 30), 30),
-    ) {
-        exec_nurbs_surface_quasi_uniform_surface(degrees, divisions, ctrlpt_coords, weights)
-    }
+#[property_test]
+fn nurbs_surface_quasi_uniform_surface(
+    #[strategy = array::uniform2(1usize..6)] degrees: [usize; 2],
+    #[strategy = array::uniform2(2usize..5)] divisions: [usize; 2],
+    #[strategy = collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 30), 30)]
+    ctrlpt_coords: Vec<Vec<[f64; 3]>>,
+    #[strategy = collection::vec(collection::vec(0.01f64..100.0f64, 30), 30)] weights: Vec<
+        Vec<f64>,
+    >,
+) {
+    exec_nurbs_surface_quasi_uniform_surface(degrees, divisions, ctrlpt_coords, weights)
 }
 
 fn exec_nurbs_surface_uniform_surface(
@@ -1679,16 +1645,17 @@ fn exec_nurbs_surface_uniform_surface(
     compare_nurbs_surfaces(&res, &ans);
 }
 
-proptest! {
-    #[test]
-    fn nurbs_surface_uniform_surface(
-        degrees in array::uniform2(1usize..6),
-        knot_lens in array::uniform2(7usize..30),
-        ctrlpt_coords in collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 30), 30),
-        weights in collection::vec(collection::vec(0.01f64..100.0f64, 30), 30),
-    ) {
-        exec_nurbs_surface_uniform_surface(degrees, knot_lens, ctrlpt_coords, weights)
-    }
+#[property_test]
+fn nurbs_surface_uniform_surface(
+    #[strategy = array::uniform2(1usize..6)] degrees: [usize; 2],
+    #[strategy = array::uniform2(7usize..30)] knot_lens: [usize; 2],
+    #[strategy = collection::vec(collection::vec(array::uniform3(-100.0f64..100.0f64), 30), 30)]
+    ctrlpt_coords: Vec<Vec<[f64; 3]>>,
+    #[strategy = collection::vec(collection::vec(0.01f64..100.0f64, 30), 30)] weights: Vec<
+        Vec<f64>,
+    >,
+) {
+    exec_nurbs_surface_uniform_surface(degrees, knot_lens, ctrlpt_coords, weights)
 }
 
 fn exec_surface_of_linear_extrusion(
@@ -1716,15 +1683,13 @@ fn exec_surface_of_linear_extrusion(
         });
 }
 
-proptest! {
-    #[test]
-    fn surface_of_linear_extrusion(
-        point0_coord in array::uniform3(-100.0f64..100.0f64),
-        point1_coord in array::uniform3(-100.0f64..100.0f64),
-        axis_elem in array::uniform3(-100.0f64..100.0f64),
-    ) {
-        exec_surface_of_linear_extrusion(point0_coord, point1_coord, axis_elem)
-    }
+#[property_test]
+fn surface_of_linear_extrusion(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] point0_coord: [f64; 3],
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] point1_coord: [f64; 3],
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] axis_elem: [f64; 3],
+) {
+    exec_surface_of_linear_extrusion(point0_coord, point1_coord, axis_elem)
 }
 
 fn exec_surface_of_revolution(
@@ -1763,14 +1728,12 @@ fn exec_surface_of_revolution(
         });
 }
 
-proptest! {
-    #[test]
-    fn surface_of_revolution(
-        point0_coord in array::uniform3(-100f64..100.0),
-        point1_coord in array::uniform3(-100f64..100.0),
-        org_coord in array::uniform3(-100f64..100.0),
-        axis_array in array::uniform2(0.0f64..1.0),
-    ) {
-        exec_surface_of_revolution(point0_coord, point1_coord, org_coord, axis_array)
-    }
+#[property_test]
+fn surface_of_revolution(
+    #[strategy = array::uniform3(-100f64..100.0)] point0_coord: [f64; 3],
+    #[strategy = array::uniform3(-100f64..100.0)] point1_coord: [f64; 3],
+    #[strategy = array::uniform3(-100f64..100.0)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0)] axis_array: [f64; 2],
+) {
+    exec_surface_of_revolution(point0_coord, point1_coord, org_coord, axis_array)
 }
