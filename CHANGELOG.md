@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix and renewal tests in `truck-geotrait`.
 - Fix fillet's newton function.
 - Use `search_nearest_parameter` for fillet of degenerate sharp corner.
 - Fix bugs and add test for `draw::circle_arc`.
