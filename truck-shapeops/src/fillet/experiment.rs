@@ -11,7 +11,7 @@ use std::f64::consts::PI;
 use truck_geometry::prelude::*;
 
 #[cfg(test)]
-use proptest::prelude::*;
+use proptest::{prelude::*, property_test};
 #[cfg(test)]
 use truck_meshalgo::prelude::*;
 
@@ -181,12 +181,14 @@ fn unit_circle_info() {
 }
 
 #[cfg(test)]
-proptest! {
-    #[test]
+    #[property_test]
     fn test_unit_circle(
-        angle in 0.1f64..(1.5 * PI),
-        w0 in 0.1f64..5.0,
-        w1 in 0.1f64..5.0,
+        #[strategy = 0.1f64..(1.5 * PI)]
+        angle: f64,
+        #[strategy = 0.1f64..5.0]
+        w0: f64,
+        #[strategy = 0.1f64..5.0]
+        w1: f64,
     ) {
         let uc = unit_circle_arc(Rad(angle), w0, w1);
         const N: usize = 10;
@@ -201,7 +203,6 @@ proptest! {
         prop_assert_near!(uc.subs(0.0), Point3::new(1.0, 0.0, 0.0));
         prop_assert_near!(uc.subs(1.0), Point3::new(f64::cos(angle), f64::sin(angle), 0.0));
     }
-}
 
 fn interpole_bezier(points: &[Vector4]) -> BSplineCurve<Vector4> {
     let n = points.len() - 1;

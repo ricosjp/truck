@@ -379,7 +379,7 @@ impl<C: BoundedCurve> IntersectionCurve<C, Plane, Plane> {
 #[cfg(test)]
 mod double_projection_tests {
     use super::*;
-    use proptest::prelude::*;
+    use proptest::{prelude::*, property_test};
     use std::f64::consts::PI;
     type PResult = std::result::Result<(), TestCaseError>;
 
@@ -425,16 +425,14 @@ mod double_projection_tests {
         Ok(())
     }
 
-    proptest! {
-        #[test]
-        fn plane_case(
-            c0 in prop::array::uniform3(-1f64..=1f64),
-            n0 in prop::array::uniform2(0f64..=1f64),
-            c1 in prop::array::uniform3(-1f64..=1f64),
-            n1 in prop::array::uniform2(0f64..=1f64),
-        ) {
-            exec_plane_case(c0, n0, c1, n1)?;
-        }
+    #[property_test]
+    fn plane_case(
+        #[strategy = prop::array::uniform3(-1f64..=1f64)] c0: [f64; 3],
+        #[strategy = prop::array::uniform2(0f64..=1f64)] n0: [f64; 2],
+        #[strategy = prop::array::uniform3(-1f64..=1f64)] c1: [f64; 3],
+        #[strategy = prop::array::uniform2(0f64..=1f64)] n1: [f64; 2],
+    ) {
+        exec_plane_case(c0, n0, c1, n1)?;
     }
 
     fn exec_sphere_case(t: f64, r: f64) -> PResult {
@@ -450,10 +448,8 @@ mod double_projection_tests {
         Ok(())
     }
 
-    proptest! {
-        #[test]
-        fn sphere_case(t in 0f64..=(2.0 * PI), r in 0.5f64..=1.5f64) {
-            exec_sphere_case(t, r)?;
-        }
+    #[property_test]
+    fn sphere_case(#[strategy = 0f64..=(2.0 * PI)] t: f64, #[strategy = 0.5f64..=1.5f64] r: f64) {
+        exec_sphere_case(t, r)?;
     }
 }

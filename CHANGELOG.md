@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Make all `proptest!` `#[property_test]`.
 - Fix and renewal tests in `truck-geotrait`.
 - Fix fillet's newton function.
 - Use `search_nearest_parameter` for fillet of degenerate sharp corner.

@@ -1,4 +1,4 @@
-use proptest::prelude::*;
+use proptest::{prelude::*, property_test};
 use truck_geometry::prelude::*;
 type PResult = std::result::Result<(), TestCaseError>;
 
@@ -38,14 +38,12 @@ fn exec_compatible_with_bspcurve(ycoords: [f64; 7], mat: [f64; 9]) -> PResult {
     Ok(())
 }
 
-proptest! {
-    #[test]
-    fn compatible_with_bspcurve(
-        ycoords in prop::array::uniform7(-10f64..10f64),
-        mat in prop::array::uniform9(-2f64..2f64),
-    ) {
-        exec_compatible_with_bspcurve(ycoords, mat)?;
-    }
+#[property_test]
+fn compatible_with_bspcurve(
+    #[strategy = prop::array::uniform7(-10f64..10f64)] ycoords: [f64; 7],
+    #[strategy = prop::array::uniform9(-2f64..2f64)] mat: [f64; 9],
+) {
+    exec_compatible_with_bspcurve(ycoords, mat)?;
 }
 
 fn exec_compatible_with_bspsurface(
@@ -124,13 +122,12 @@ fn exec_compatible_with_bspsurface(
     Ok(())
 }
 
-proptest! {
-    #[test]
-    fn compatible_with_bspsurface(
-        ycoords in prop::array::uniform7(prop::array::uniform7(-10f64..10f64)),
-        mat in prop::array::uniform9(-2f64..2f64),
-        (u, v) in (0f64..=1f64, 0f64..=1f64),
-    ) {
-        exec_compatible_with_bspsurface(ycoords, mat, (u, v))?;
-    }
+#[property_test]
+fn compatible_with_bspsurface(
+    #[strategy = prop::array::uniform7(prop::array::uniform7(-10f64..10f64))] ycoords: [[f64; 7];
+        7],
+    #[strategy = prop::array::uniform9(-2f64..2f64)] mat: [f64; 9],
+    #[strategy = (0f64..=1f64, 0f64..=1f64)] (u, v): (f64, f64),
+) {
+    exec_compatible_with_bspsurface(ycoords, mat, (u, v))?;
 }
