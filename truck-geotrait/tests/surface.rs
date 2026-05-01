@@ -1,6 +1,7 @@
 #![cfg(feature = "polynomial")]
 
 use algo::surface;
+use proptest::{prelude::*, property_test};
 use truck_base::{cgmath64::*, tolerance::*, *};
 use truck_geotrait::{polynomial::*, *};
 
@@ -67,128 +68,71 @@ fn polysurface_presearch() {
     assert_eq!(v, 0.3);
 }
 
-fn exec_polysurface_snp_on_surface() -> bool {
+#[property_test]
+fn polysurface_snp_on_surface(
+    #[strategy = prop::array::uniform6(-1.5f64..=1.5f64)] z: [f64; 6],
+    #[strategy = -5.0f64..=5.0f64] u: f64,
+    #[strategy = -5.0f64..=5.0f64] v: f64,
+    #[strategy = -0.1f64..=0.1f64] u_offset: f64,
+    #[strategy = -0.1f64..=0.1f64] v_offset: f64,
+) {
     let coef0 = vec![
-        Vector3::new(0.0, 1.0, 3.0 * rand::random::<f64>() - 1.5),
-        Vector3::new(1.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
-        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(0.0, 1.0, z[0]),
+        Vector3::new(1.0, 0.0, z[1]),
+        Vector3::new(0.0, 0.0, z[2]),
     ];
     let coef1 = vec![
-        Vector3::new(1.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
-        Vector3::new(0.0, 1.0, 3.0 * rand::random::<f64>() - 1.5),
-        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(1.0, 0.0, z[3]),
+        Vector3::new(0.0, 1.0, z[4]),
+        Vector3::new(0.0, 0.0, z[5]),
     ];
     let curve0 = PolynomialCurve::<Point3>(coef0);
     let curve1 = PolynomialCurve::<Point3>(coef1);
     let poly = PolynomialSurface::by_tensor(curve0, curve1);
-    let u = 10.0 * rand::random::<f64>() - 5.0;
-    let v = 10.0 * rand::random::<f64>() - 5.0;
     let pt = poly.subs(u, v);
-    let u0 = u + 0.2 * rand::random::<f64>() - 0.1;
-    let v0 = v + 0.2 * rand::random::<f64>() - 0.1;
-    match algo::surface::search_nearest_parameter(&poly, pt, (u0, v0), 100) {
-        Some(res) => match poly.subs(res.0, res.1).near(&pt) {
-            true => true,
-            false => {
-                eprintln!(
-                    "wrong answer\npolynomial: {:?}\nanswer: {:?}\nhint: {:?}\nresult: {:?}",
-                    poly,
-                    (u, v),
-                    (u0, v0),
-                    res,
-                );
-                false
-            }
-        },
-        None => {
-            eprintln!(
-                "not converge\npolynomial: {:?}\nanswer: {:?}\nhint: {:?}",
-                poly,
-                (u, v),
-                (u0, v0),
-            );
-            false
-        }
-    }
+    let hint = (u + u_offset, v + v_offset);
+    let res = algo::surface::search_nearest_parameter(&poly, pt, hint, 100);
+    prop_assert!(res.is_some());
+    let res = res.unwrap();
+    prop_assert!(poly.subs(res.0, res.1).near(&pt));
 }
 
-#[test]
-fn polysurface_snp_on_surface() {
-    let flag = (0..10).any(|_| {
-        let count = (0..100)
-            .filter(|_| exec_polysurface_snp_on_surface())
-            .count();
-        if count <= 90 {
-            eprintln!("wrong answer: {:?}", 100 - count);
-        }
-        count > 90
-    });
-    assert!(flag, "too many failure");
-}
-
-fn exec_polysurface_sp_on_surface() -> bool {
+#[property_test]
+fn polysurface_sp_on_surface(
+    #[strategy = prop::array::uniform8(-1.5f64..=1.5f64)] z: [f64; 8],
+    #[strategy = -1.0f64..=1.0f64] u: f64,
+    #[strategy = -1.0f64..=1.0f64] v: f64,
+    #[strategy = -0.2f64..=0.2f64] u_offset: f64,
+    #[strategy = -0.2f64..=0.2f64] v_offset: f64,
+) {
     let coef0 = vec![
-        Vector3::new(0.0, 1.0, 3.0 * rand::random::<f64>() - 1.5),
-        Vector3::new(1.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
-        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
-        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(0.0, 1.0, z[0]),
+        Vector3::new(1.0, 0.0, z[1]),
+        Vector3::new(0.0, 0.0, z[2]),
+        Vector3::new(0.0, 0.0, z[3]),
     ];
     let coef1 = vec![
-        Vector3::new(1.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
-        Vector3::new(0.0, 1.0, 3.0 * rand::random::<f64>() - 1.5),
-        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
-        Vector3::new(0.0, 0.0, 3.0 * rand::random::<f64>() - 1.5),
+        Vector3::new(1.0, 0.0, z[4]),
+        Vector3::new(0.0, 1.0, z[5]),
+        Vector3::new(0.0, 0.0, z[6]),
+        Vector3::new(0.0, 0.0, z[7]),
     ];
     let curve0 = PolynomialCurve::<Point3>(coef0);
     let curve1 = PolynomialCurve::<Point3>(coef1);
     let poly = PolynomialSurface::by_tensor(curve0, curve1);
-    let u = 10.0 * rand::random::<f64>() - 5.0;
-    let v = 10.0 * rand::random::<f64>() - 5.0;
     let pt = poly.subs(u, v);
-    let u0 = u + 2.0 * rand::random::<f64>() - 1.0;
-    let v0 = v + 2.0 * rand::random::<f64>() - 1.0;
-    match algo::surface::search_parameter(&poly, pt, (u0, v0), 100) {
-        Some(res) => match poly.subs(res.0, res.1).near(&pt) {
-            true => true,
-            false => {
-                eprintln!(
-                    "wrong answer\npolynomial: {:?}\nanswer: {:?}\nhint: {:?}\nresult: {:?}",
-                    poly,
-                    (u, v),
-                    (u0, v0),
-                    res,
-                );
-                false
-            }
-        },
-        None => {
-            eprintln!(
-                "not converge\npolynomial: {:?}\nanswer: {:?}\nhint: {:?}",
-                poly,
-                (u, v),
-                (u0, v0),
-            );
-            false
-        }
-    }
+    let hint = (u + u_offset, v + v_offset);
+    let res = algo::surface::search_parameter(&poly, pt, hint, 100);
+    prop_assert!(res.is_some());
+    let res = res.unwrap();
+    prop_assert!(poly.subs(res.0, res.1).near(&pt));
 }
 
-#[test]
-fn polysurface_sp_on_surface() {
-    let flag = (0..10).any(|_| {
-        let count = (0..100)
-            .filter(|_| exec_polysurface_sp_on_surface())
-            .count();
-        if count <= 90 {
-            eprintln!("wrong answer: {:?}", 100 - count);
-        }
-        count > 90
-    });
-    assert!(flag, "too many failure");
-}
-
-fn exec_polysurface_intersection_point() -> bool {
-    let (a, b) = (rand::random::<f64>(), rand::random::<f64>());
+#[property_test]
+fn polysurface_intersection_point(
+    #[strategy = 0.0f64..=1.0f64] a: f64,
+    #[strategy = 0.0f64..=1.0f64] b: f64,
+) {
     let coef0 = vec![
         Vector3::new(0.0, 1.0, 0.0),
         Vector3::new(1.0, 0.0, 0.0),
@@ -205,21 +149,11 @@ fn exec_polysurface_intersection_point() -> bool {
     let coef = vec![Vector3::new(a, b, 0.0), Vector3::new(0.0, 0.0, 1.0)];
     let curve = PolynomialCurve::<Point3>(coef);
 
-    match surface::search_intersection_parameter(&surface, (0.5, 0.5), &curve, 0.0, 100) {
-        Some(((x, y), z)) => {
-            let (p, q) = (surface.subs(x, y), curve.subs(z));
-            p.near(&q) && x.near(&a) && y.near(&b) && p.z.near(&z)
-        }
-        None => false,
-    }
-}
-
-#[test]
-fn polysurface_intersection_point() {
-    let count = (0..10)
-        .filter(|_| exec_polysurface_intersection_point())
-        .count();
-    assert!(count > 7, "wrong answer: {:?}", 10 - count);
+    let res = surface::search_intersection_parameter(&surface, (0.5, 0.5), &curve, 0.0, 100);
+    prop_assert!(res.is_some());
+    let ((x, y), z) = res.unwrap();
+    let (p, q) = (surface.subs(x, y), curve.subs(z));
+    prop_assert!(p.near(&q) && x.near(&a) && y.near(&b) && p.z.near(&z));
 }
 
 fn exec_polysurface_division() -> bool {

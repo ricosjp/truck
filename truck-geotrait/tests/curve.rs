@@ -1,5 +1,6 @@
 #![cfg(feature = "polynomial")]
 
+use proptest::{prelude::*, property_test};
 use truck_base::{cgmath64::*, tolerance::*};
 use truck_geotrait::{polynomial::PolynomialCurve, *};
 
@@ -38,121 +39,80 @@ fn polycurve_presearch() {
     assert_eq!(t, 0.0);
 }
 
-fn exec_polycurve_snp_on_curve() -> bool {
-    let coef: Vec<Vector3> = (0..5)
-        .map(|_| {
-            Vector3::new(
-                20.0 * rand::random::<f64>() - 10.0,
-                20.0 * rand::random::<f64>() - 10.0,
-                20.0 * rand::random::<f64>() - 10.0,
-            )
-        })
-        .collect();
+#[property_test]
+fn polycurve_snp_on_curve(
+    #[strategy = prop::array::uniform4(-0.5f64..=0.5f64)] a: [f64; 4],
+    #[strategy = -1.0f64..=1.0f64] t: f64,
+    #[strategy = -0.2f64..=0.2f64] hint_offset: f64,
+) {
+    let coef = vec![
+        Vector3::new(0.0, a[0], a[1]),
+        Vector3::new(1.0, a[1], a[2]),
+        Vector3::new(0.0, a[2], a[3]),
+        Vector3::new(0.0, a[3], a[0]),
+    ];
     let poly = PolynomialCurve::<Point3>(coef);
-    let t = 20.0 * rand::random::<f64>() - 10.0;
     let pt = poly.subs(t);
-    let hint = t + 1.0 * rand::random::<f64>() - 0.5;
-    match algo::curve::search_nearest_parameter(&poly, pt, hint, 100) {
-        Some(res) => match poly.subs(res).near(&pt) {
-            true => true,
-            false => {
-                eprintln!(
-                    "wrong answer\npolynomial: {poly:?}\nt: {t:?}\nhint: {hint:?}\nresult: {res:?}",
-                );
-                false
-            }
-        },
-        None => {
-            eprintln!("not converge\npolynomial: {poly:?}\nt: {t:?}\nhint: {hint:?}");
-            false
-        }
-    }
+    let hint = t + hint_offset;
+    let res = algo::curve::search_nearest_parameter(&poly, pt, hint, 100);
+    prop_assert!(res.is_some());
+    prop_assert!(poly.subs(res.unwrap()).near(&pt));
 }
 
-#[test]
-fn polycurve_snp_on_curve() {
-    let count = (0..100).filter(|_| exec_polycurve_snp_on_curve()).count();
-    assert!(count > 90, "wrong answer: {:?}", 100 - count);
-}
-
-fn exec_polycurve_division() -> bool {
-    let coef: Vec<Vector3> = (0..5)
-        .map(|_| {
-            Vector3::new(
-                20.0 * rand::random::<f64>() - 10.0,
-                20.0 * rand::random::<f64>() - 10.0,
-                20.0 * rand::random::<f64>() - 10.0,
-            )
-        })
+#[property_test]
+fn polycurve_division(#[strategy = prop::array::uniform15(-10.0f64..=10.0f64)] a: [f64; 15]) {
+    let coef: Vec<Vector3> = a
+        .chunks_exact(3)
+        .map(|a| Vector3::new(a[0], a[1], a[2]))
         .collect();
     let poly = PolynomialCurve::<Point3>(coef);
     let (division, pts) = algo::curve::parameter_division(&poly, (-10.0, 10.0), 0.05);
-    division.windows(2).zip(pts).all(|(a, pt)| {
+    for (a, pt) in division.windows(2).zip(pts) {
         let pt0 = poly.subs(a[0]);
-        assert_eq!(pt0, pt);
+        prop_assert_eq!(pt0, pt);
         let pt1 = poly.subs(a[1]);
-        (1..3).all(|i| {
+        for i in 1..3 {
             let t = i as f64 / 3.0;
             let res = pt0 + (pt1 - pt0) * t;
             let t = a[0] * (1.0 - t) + a[1] * t;
             let ans = poly.subs(t);
-            res.distance(ans) < 0.1
-        })
-    })
+            prop_assert!(res.distance(ans) < 0.1);
+        }
+    }
 }
 
-#[test]
-fn polycurve_division() {
-    let count = (0..100).filter(|_| exec_polycurve_division()).count();
-    println!("division error: {}", 100 - count);
-    assert!(count > 98);
-}
-
-fn exec_polycurve_closest_point() -> bool {
-    let a = [
-        1.0 * rand::random::<f64>() - 0.5,
-        1.0 * rand::random::<f64>() - 0.5,
-        1.0 * rand::random::<f64>() - 0.5,
-        1.0 * rand::random::<f64>() - 0.5,
-    ];
+#[property_test]
+fn polycurve_closest_point(#[strategy = prop::array::uniform4(-0.5f64..=0.5f64)] a: [f64; 4]) {
     let coef0 = vec![
         Vector3::new(0.0, 0.0, 0.0),
-        Vector3::new(4.0 * a[0] - 1.0, 4.0 * a[1] - 1.0, 0.0),
-        Vector3::new(2.0 - 4.0 * a[0], 2.0 - 4.0 * a[1], 0.0),
+        Vector3::new(2.0 * a[0] + 1.0, 2.0 * a[1] + 1.0, 0.0),
+        Vector3::new(-2.0 * a[0], -2.0 * a[1], 0.0),
     ];
     let coef1 = vec![
         Vector3::new(1.0, 0.0, 1.0),
-        Vector3::new(4.0 * a[2] - 3.0, 4.0 * a[3] - 1.0, 0.0),
-        Vector3::new(2.0 - 4.0 * a[2], 2.0 - 4.0 * a[3], 0.0),
+        Vector3::new(2.0 * a[2] - 2.0, 2.0 * a[3], 0.0),
+        Vector3::new(1.0 - 2.0 * a[2], 1.0 - 2.0 * a[3], 0.0),
     ];
     let poly0 = PolynomialCurve::<Point3>(coef0);
     let poly1 = PolynomialCurve::<Point3>(coef1);
     let res = algo::curve::search_closest_parameter(&poly0, &poly1, (0.5, 0.5), 100);
-    let (t0, t1) = match res {
-        Some(res) => res,
-        None => return false,
-    };
+    prop_assert!(res.is_some());
+    let (t0, t1) = res.unwrap();
 
     let (p0, der0) = (poly0.subs(t0), poly0.der(t0));
     let (p1, der1) = (poly1.subs(t1), poly1.der(t1));
     let n = p1 - p0;
 
-    n.dot(der0).so_small() && n.dot(der1).so_small()
+    prop_assert!(n.dot(der0).so_small() && n.dot(der1).so_small());
 }
 
-#[test]
-fn polycurve_closest_point() {
-    let count = (0..10).filter(|_| exec_polycurve_closest_point()).count();
-    println!("searching closest point error: {}", 10 - count);
-    assert!(count >= 7);
-}
-
-fn exec_polycurve_intersection_point() -> bool {
-    let a = [
-        0.5 * rand::random::<f64>() + 0.1,
-        0.5 * rand::random::<f64>() + 0.1,
-        1.0 * rand::random::<f64>() - 0.5,
-    ];
+#[property_test]
+fn polycurve_intersection_point(
+    #[strategy = 0.1f64..=0.6f64] a0: f64,
+    #[strategy = 0.1f64..=0.6f64] a1: f64,
+    #[strategy = -0.5f64..=0.5f64] a2: f64,
+) {
+    let a = [a0, a1, a2];
     let (x, y) = (-1.0 + a[0], 1.0 - a[1]);
     let coef0 = vec![
         Vector2::new(-1.0, 1.0),
@@ -168,20 +128,9 @@ fn exec_polycurve_intersection_point() -> bool {
     let poly0 = PolynomialCurve::<Point2>(coef0);
     let poly1 = PolynomialCurve::<Point2>(coef1);
     let res = algo::curve::search_intersection_parameter(&poly0, &poly1, (0.5, 0.5), 100);
-    let (t0, t1) = match res {
-        Some(res) => res,
-        None => return false,
-    };
+    prop_assert!(res.is_some());
+    let (t0, t1) = res.unwrap();
 
     let (p0, p1) = (poly0.subs(t0), poly1.subs(t1));
-    poly0.subs(t0).near(&p0) && poly1.subs(t1).near(&p1) && p0.near(&p1)
-}
-
-#[test]
-fn polycurve_intersection_point() {
-    let count = (0..10)
-        .filter(|_| exec_polycurve_intersection_point())
-        .count();
-    println!("searching intersection point error: {}", 10 - count);
-    assert!(count >= 7);
+    prop_assert!(poly0.subs(t0).near(&p0) && poly1.subs(t1).near(&p1) && p0.near(&p1));
 }
