@@ -43,4 +43,4 @@ console_log = "1.0.0"
 web-sys = { version = "0.3.97", features = ["Location"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-proptest = "1.11.0"
+proptest = { version = "1.11.0", features = ["attr-macro"] }
