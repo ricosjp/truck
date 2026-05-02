@@ -30,8 +30,11 @@
 use std::sync::Arc;
 use truck_platform::*;
 use wgpu::*;
-use winit::event::*;
-use winit::event_loop::*;
+use winit::window::Window as WinitWindow;
+use winit::{event::*, event_loop::*};
+
+#[cfg(target_arch = "wasm32")]
+use winit::platform::web::{EventLoopExtWebSys, WindowExtWebSys};
 
 const DEFAULT_SHADER: &str = include_str!("newton-cuberoot.wgsl");
 
@@ -262,7 +265,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
 }
 use plane::Plane;
 
-async fn run(event_loop: EventLoop<()>, window: winit::window::Window) {
+async fn run(event_loop: EventLoop<()>, window: WinitWindow) {
     let mut scene = WindowScene::from_window(Arc::new(window), &Default::default()).await;
     let args: Vec<_> = std::env::args().collect();
     let source = if args.len() > 1 {
@@ -291,6 +294,8 @@ async fn run(event_loop: EventLoop<()>, window: winit::window::Window) {
             }
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::RedrawRequested => {
+                    #[cfg(target_arch = "wasm32")]
+                    wasm_utils::resize_canvas(scene.window());
                     scene.update_bind_group(&plane);
                     if clicked {
                         plane.mouse[3] = -plane.mouse[3];
@@ -344,15 +349,12 @@ async fn run(event_loop: EventLoop<()>, window: winit::window::Window) {
     #[cfg(not(target_arch = "wasm32"))]
     event_loop.run(routine).unwrap();
     #[cfg(target_arch = "wasm32")]
-    {
-        use winit::platform::web::EventLoopExtWebSys;
-        event_loop.spawn(routine);
-    }
+    event_loop.spawn(routine);
 }
 
 fn main() {
-    let event_loop = winit::event_loop::EventLoop::new().unwrap();
-    let mut wa = winit::window::Window::default_attributes();
+    let event_loop = EventLoop::new().unwrap();
+    let mut wa = WinitWindow::default_attributes();
     wa.title = "WGSL Sandbox".to_string();
     let window = event_loop
         .create_window(wa)
@@ -363,18 +365,49 @@ fn main() {
     {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
         console_log::init().expect("could not initialize logger");
-        use winit::platform::web::WindowExtWebSys;
-        // On wasm, append the canvas to the document body
-        web_sys::window()
-            .and_then(|win| win.document())
-            .and_then(|doc| doc.body())
-            .and_then(|body| {
-                let canvas = window.canvas()?;
-                canvas.set_width(500);
-                canvas.set_height(500);
-                body.append_child(&web_sys::Element::from(canvas)).ok()
+        wasm_utils::set_styles(&window);
+        wasm_bindgen_futures::spawn_local(run(event_loop, window));
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm_utils {
+    use crate::*;
+
+    pub fn set_styles(window: &WinitWindow) {
+        window
+            .canvas()
+            .and_then(|canvas| {
+                let style = canvas.style();
+                style.set_property("display", "block").ok()?;
+                style.set_property("position", "absolute").ok()?;
+                style.set_property("top", "0").ok()?;
+                style.set_property("left", "0").ok()?;
+
+                let body = gloo_utils::body();
+                let body_style = body.style();
+                body_style.set_property("margin", "0").ok()?;
+                body_style.set_property("padding", "0").ok()?;
+                body_style.set_property("overflow", "hidden").ok()?;
+
+                body.append_child(&canvas.into()).ok()
             })
             .expect("couldn't append canvas to document body");
-        wasm_bindgen_futures::spawn_local(run(event_loop, window));
+    }
+
+    pub fn resize_canvas(window: &WinitWindow) {
+        window
+            .canvas()
+            .and_then(|canvas| {
+                let html_window = gloo_utils::window();
+                let cheight = html_window.inner_height().ok()?.as_f64()? as u32;
+                let cwidth = html_window.inner_width().ok()?.as_f64()? as u32;
+                if canvas.height() != cheight || canvas.width() != cwidth {
+                    canvas.set_height(cheight);
+                    canvas.set_width(cwidth);
+                }
+                Some(())
+            })
+            .expect("failed to resize canvas");
     }
 }

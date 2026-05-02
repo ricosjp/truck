@@ -17,7 +17,6 @@ use std::thread::JoinHandle;
 
 const EXAMPLES: &[&str] = &[
     "wgsl-sandbox",
-    "bsp-animation",
     "collision-sphere",
     "material-samples",
     "rotate-objects",
