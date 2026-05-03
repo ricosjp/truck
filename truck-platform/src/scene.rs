@@ -573,7 +573,7 @@ impl Scene {
     ///
     /// If there exists a render object which does not exist in the scene, returns `false`.
     #[inline(always)]
-    pub fn remove_objects_by_id<I>(&mut self, objects: I) -> bool
+    pub fn remove_objects_by_ids<I>(&mut self, objects: I) -> bool
     where I: IntoIterator<Item = RenderID> {
         let closure = move |flag, id| flag && self.remove_object_by_id(id);
         objects.into_iter().fold(true, closure)
