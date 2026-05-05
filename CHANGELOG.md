@@ -7,6 +7,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - Fix `truck_geotrait::algo::surface::parameter_division`.
 - Make `MAX_DER_ORDER = 10`.
 - Fix `NormalField::subs, uder, vder`.
+- Update the deterministic hash function.
 - Implement `Offset` geometry.
 - Remove render object by `RenderID`.
 - Fix example pages for working on Mac.
