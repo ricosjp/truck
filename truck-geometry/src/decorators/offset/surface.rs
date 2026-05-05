@@ -69,7 +69,6 @@ where
 {
     type Point = Vector3;
     type Vector = Vector3;
-    #[inline(always)]
     fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
         let surface_ders = self.entity.ders(max_order + 1, u, v);
         let uders = surface_ders.uder();
@@ -87,11 +86,19 @@ where
         self.ders(m + n, u, v)[m][n]
     }
     #[inline(always)]
-    fn subs(&self, u: f64, v: f64) -> Self::Point { self.der_mn(0, 0, u, v) }
+    fn subs(&self, u: f64, v: f64) -> Self::Point {
+        self.entity.normal(u, v) * self.scalar.subs(u, v)
+    }
     #[inline(always)]
-    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(1, 0, u, v) }
+    fn uder(&self, u: f64, v: f64) -> Self::Vector {
+        self.entity.normal_uder(u, v) * self.scalar.subs(u, v)
+            + self.entity.normal(u, v) * self.scalar.uder(u, v)
+    }
     #[inline(always)]
-    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(0, 1, u, v) }
+    fn vder(&self, u: f64, v: f64) -> Self::Vector {
+        self.entity.normal_vder(u, v) * self.scalar.subs(u, v)
+            + self.entity.normal(u, v) * self.scalar.vder(u, v)
+    }
     #[inline(always)]
     fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(2, 0, u, v) }
     #[inline(always)]
