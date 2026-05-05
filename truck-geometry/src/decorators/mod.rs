@@ -345,13 +345,81 @@ pub struct ApproxFilletSurface<S0, S1> {
     weights: Vec<f64>,
 }
 
+/// Offset geometry
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
+pub struct Offset<T, N> {
+    entity: T,
+    offset: N,
+}
+
+/// Normal vector field on curve in plane or surface in space.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
+pub struct NormalField<T, F> {
+    entity: T,
+    scalar: F,
+}
+
+/// trait for one-variable scalar function
+pub trait ScalarFunctionD1: Clone {
+    /// Returns the `n`th order derivation.
+    fn der_n(&self, n: usize, t: f64) -> f64;
+    /// Substitutes the parameter `t`.
+    #[inline]
+    fn subs(&self, t: f64) -> f64 { self.der_n(0, t) }
+    /// Returns the derivation.
+    #[inline]
+    fn der(&self, t: f64) -> f64 { self.der_n(1, t) }
+    /// Returns the 2nd-order derivation.
+    #[inline]
+    fn der2(&self, t: f64) -> f64 { self.der_n(2, t) }
+    /// Substitutes the higher-order derivations to `out`.
+    #[inline]
+    fn ders(&self, max_order: usize, t: f64) -> CurveDers<f64> {
+        (0..=max_order).map(|n| self.der_n(n, t)).collect()
+    }
+}
+
+/// trait for two-variable scalar function
+pub trait ScalarFunctionD2: Clone {
+    /// Returns $\partial^{m + n} f / \partial u^m \partial v^n$.
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> f64;
+    /// Substitutes the parameter `(u, v)`.
+    #[inline]
+    fn subs(&self, u: f64, v: f64) -> f64 { self.der_mn(0, 0, u, v) }
+    /// Returns the derivation by `u`.
+    #[inline]
+    fn uder(&self, u: f64, v: f64) -> f64 { self.der_mn(1, 0, u, v) }
+    /// Returns the derivation by `v`.
+    #[inline]
+    fn vder(&self, u: f64, v: f64) -> f64 { self.der_mn(0, 1, u, v) }
+    /// Returns the 2nd-order derivation by `u`.
+    #[inline]
+    fn uuder(&self, u: f64, v: f64) -> f64 { self.der_mn(2, 0, u, v) }
+    /// Returns the 2nd-order derivation by both `u` and `v`.
+    #[inline]
+    fn uvder(&self, u: f64, v: f64) -> f64 { self.der_mn(1, 1, u, v) }
+    /// Returns the 2nd-order derivation by `v`.
+    #[inline]
+    fn vvder(&self, u: f64, v: f64) -> f64 { self.der_mn(0, 2, u, v) }
+    /// Calculates higher degree derivations at the parameter `(u, v)`.
+    #[inline]
+    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<f64> {
+        let mut ders = SurfaceDers::new(max_order);
+        (0..=max_order)
+            .for_each(|m| (0..=max_order - m).for_each(|n| ders[m][n] = self.der_mn(m, n, u, v)));
+        ders
+    }
+}
+
 mod af_surface;
 mod extruded_curve;
 mod homotopy;
 mod intersection_curve;
+mod offset;
 mod pcurve;
 mod processor;
 /// structure and trait, associated with rolling ball fillet surface
 pub mod rbf_surface;
 mod revolved_curve;
+mod scalar_function;
 mod trimmied_curve;
