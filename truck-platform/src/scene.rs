@@ -562,6 +562,22 @@ impl Scene {
         let closure = move |flag, object| flag && self.remove_object(object);
         objects.into_iter().fold(true, closure)
     }
+    /// Removes a render object from the scene by `RenderID`.
+    ///
+    /// If there does not exist the render object in the scene, does nothing and returns `false`.
+    #[inline(always)]
+    pub fn remove_object_by_id(&mut self, render_id: RenderID) -> bool {
+        self.objects.remove(&render_id).is_some()
+    }
+    /// Removes render objects from the scene by `RenderID`s.
+    ///
+    /// If there exists a render object which does not exist in the scene, returns `false`.
+    #[inline(always)]
+    pub fn remove_objects_by_ids<I>(&mut self, objects: I) -> bool
+    where I: IntoIterator<Item = RenderID> {
+        let closure = move |flag, id| flag && self.remove_object_by_id(id);
+        objects.into_iter().fold(true, closure)
+    }
 
     /// Removes all render objects from the scene.
     #[inline(always)]

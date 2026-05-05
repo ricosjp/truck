@@ -1,13 +1,11 @@
-use proptest::prelude::*;
+use proptest::{prelude::*, property_test};
 use truck_geometry::prelude::*;
 
-proptest! {
-    #[test]
-    fn sp_test(t in -10f64..=10f64) {
-        let curve = UnitHyperbola::<Point2>::new();
-        let p = curve.subs(t);
-        prop_assert_near!(curve.search_parameter(p, None, 0).unwrap(), t);
-    }
+#[property_test]
+fn sp_test(#[strategy = -10f64..=10f64] t: f64) {
+    let curve = UnitHyperbola::<Point2>::new();
+    let p = curve.subs(t);
+    prop_assert_near!(curve.search_parameter(p, None, 0).unwrap(), t);
 }
 
 #[test]

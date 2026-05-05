@@ -15,7 +15,10 @@ use winit::window::Window;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
-use web_time::Instant;
+use {
+    web_time::Instant,
+    winit::platform::web::{EventLoopExtWebSys, WindowExtWebSys},
+};
 
 #[allow(unused)]
 #[derive(Clone, Copy, Debug)]
@@ -108,18 +111,7 @@ pub trait App: Sized + 'static {
         {
             std::panic::set_hook(Box::new(console_error_panic_hook::hook));
             console_log::init().expect("could not initialize logger");
-            use winit::platform::web::WindowExtWebSys;
-            // On wasm, append the canvas to the document body
-            web_sys::window()
-                .and_then(|win| win.document())
-                .and_then(|doc| doc.body())
-                .and_then(|body| {
-                    let canvas = window.canvas()?;
-                    canvas.set_width(500);
-                    canvas.set_height(500);
-                    body.append_child(&web_sys::Element::from(canvas)).ok()
-                })
-                .expect("couldn't append canvas to document body");
+            wasm_utils::set_styles(&window);
         }
 
         let window = Arc::new(window);
@@ -137,6 +129,8 @@ pub trait App: Sized + 'static {
                         Self::default_control_flow()
                     }
                     WindowEvent::RedrawRequested => {
+                        #[cfg(target_arch = "wasm32")]
+                        wasm_utils::resize_canvas(&window);
                         app.render();
                         Self::default_control_flow()
                     }
@@ -165,10 +159,7 @@ pub trait App: Sized + 'static {
         #[cfg(not(target_arch = "wasm32"))]
         event_loop.run(routine).unwrap();
         #[cfg(target_arch = "wasm32")]
-        {
-            use winit::platform::web::EventLoopExtWebSys;
-            event_loop.spawn(routine);
-        }
+        event_loop.spawn(routine);
     }
     /// Run the application.
     #[inline]
@@ -193,4 +184,46 @@ fn main() {
         async fn init(_: Arc<Window>) -> Self { MyApp }
     }
     MyApp::run()
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm_utils {
+    use super::*;
+
+    pub fn set_styles(window: &Window) {
+        window
+            .canvas()
+            .and_then(|canvas| {
+                let style = canvas.style();
+                style.set_property("display", "block").ok()?;
+                style.set_property("position", "absolute").ok()?;
+                style.set_property("top", "0").ok()?;
+                style.set_property("left", "0").ok()?;
+
+                let body = gloo_utils::body();
+                let body_style = body.style();
+                body_style.set_property("margin", "0").ok()?;
+                body_style.set_property("padding", "0").ok()?;
+                body_style.set_property("overflow", "hidden").ok()?;
+
+                body.append_child(&canvas.into()).ok()
+            })
+            .expect("couldn't append canvas to document body");
+    }
+
+    pub fn resize_canvas(window: &Window) {
+        window
+            .canvas()
+            .and_then(|canvas| {
+                let html_window = gloo_utils::window();
+                let cheight = html_window.inner_height().ok()?.as_f64()? as u32;
+                let cwidth = html_window.inner_width().ok()?.as_f64()? as u32;
+                if canvas.height() != cheight || canvas.width() != cwidth {
+                    canvas.set_height(cheight);
+                    canvas.set_width(cwidth);
+                }
+                Some(())
+            })
+            .expect("failed to resize canvas");
+    }
 }

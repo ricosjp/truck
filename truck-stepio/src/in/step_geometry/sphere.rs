@@ -77,56 +77,54 @@ impl ParameterDivision2D for Sphere {
 }
 
 #[cfg(test)]
-proptest::proptest! {
-    #[test]
-    fn surface(
-        center in proptest::array::uniform3(-100.0f64..100.0f64),
-        radius in 0.1f64..100.0f64,
-        (u, v) in (0.0..=2.0 * PI, -PI / 2.0..=PI / 2.0),
-    ) {
-        const EPS: f64 = 1.0e-3;
-        let sphere = Sphere(truck_geometry::prelude::Sphere::new(center.into(), radius));
+#[proptest::property_test]
+fn surface(
+    #[strategy = proptest::array::uniform3(-100.0f64..100.0f64)] center: [f64; 3],
+    #[strategy = 0.1f64..100.0f64] radius: f64,
+    #[strategy = (0.0..=2.0 * PI, -PI / 2.0..=PI / 2.0)] (u, v): (f64, f64),
+) {
+    const EPS: f64 = 1.0e-3;
+    let sphere = Sphere(truck_geometry::prelude::Sphere::new(center.into(), radius));
 
-        let uder0 = sphere.uder(u, v);
-        let uder1 = (sphere.subs(u + EPS, v) - sphere.subs(u - EPS, v)) / (2.0 * EPS);
-        assert!(
-            (uder0 - uder1).magnitude2() < EPS,
-            "uder failed: {uder0:?}, {uder1:?}"
-        );
+    let uder0 = sphere.uder(u, v);
+    let uder1 = (sphere.subs(u + EPS, v) - sphere.subs(u - EPS, v)) / (2.0 * EPS);
+    assert!(
+        (uder0 - uder1).magnitude2() < EPS,
+        "uder failed: {uder0:?}, {uder1:?}"
+    );
 
-        let vder0 = sphere.vder(u, v);
-        let vder1 = (sphere.subs(u, v + EPS) - sphere.subs(u, v - EPS)) / (2.0 * EPS);
-        assert!(
-            (vder0 - vder1).magnitude2() < EPS,
-            "vder failed: {vder0:?}, {vder1:?}"
-        );
+    let vder0 = sphere.vder(u, v);
+    let vder1 = (sphere.subs(u, v + EPS) - sphere.subs(u, v - EPS)) / (2.0 * EPS);
+    assert!(
+        (vder0 - vder1).magnitude2() < EPS,
+        "vder failed: {vder0:?}, {vder1:?}"
+    );
 
-        let uuder0 = sphere.uuder(u, v);
-        let uuder1 = (sphere.uder(u + EPS, v) - sphere.uder(u - EPS, v)) / (2.0 * EPS);
-        assert!(
-            (uuder0 - uuder1).magnitude2() < EPS,
-            "uuder failed: {uuder0:?}, {uuder1:?}"
-        );
+    let uuder0 = sphere.uuder(u, v);
+    let uuder1 = (sphere.uder(u + EPS, v) - sphere.uder(u - EPS, v)) / (2.0 * EPS);
+    assert!(
+        (uuder0 - uuder1).magnitude2() < EPS,
+        "uuder failed: {uuder0:?}, {uuder1:?}"
+    );
 
-        let uvder0 = sphere.uvder(u, v);
-        let uvder1 = (sphere.uder(u, v + EPS) - sphere.uder(u, v - EPS)) / (2.0 * EPS);
-        assert!(
-            (uvder0 - uvder1).magnitude2() < EPS,
-            "uvder failed: {uvder0:?}, {uvder1:?}"
-        );
+    let uvder0 = sphere.uvder(u, v);
+    let uvder1 = (sphere.uder(u, v + EPS) - sphere.uder(u, v - EPS)) / (2.0 * EPS);
+    assert!(
+        (uvder0 - uvder1).magnitude2() < EPS,
+        "uvder failed: {uvder0:?}, {uvder1:?}"
+    );
 
-        let vvder0 = sphere.vvder(u, v);
-        let vvder1 = (sphere.vder(u, v + EPS) - sphere.vder(u, v - EPS)) / (2.0 * EPS);
-        assert!(
-            (vvder0 - vvder1).magnitude2() < EPS,
-            "vvder failed: {vvder0:?}, {vvder1:?}"
-        );
+    let vvder0 = sphere.vvder(u, v);
+    let vvder1 = (sphere.vder(u, v + EPS) - sphere.vder(u, v - EPS)) / (2.0 * EPS);
+    assert!(
+        (vvder0 - vvder1).magnitude2() < EPS,
+        "vvder failed: {vvder0:?}, {vvder1:?}"
+    );
 
-        let n0 = sphere.normal(u, v);
-        let n1 = sphere.uder(u, v).cross(sphere.vder(u, v)).normalize();
-        assert!(
-            (n0 - n1).magnitude2() < EPS,
-            "normal failed: {n0:?}, {n1:?}"
-        );
-    }
+    let n0 = sphere.normal(u, v);
+    let n1 = sphere.uder(u, v).cross(sphere.vder(u, v)).normalize();
+    assert!(
+        (n0 - n1).magnitude2() < EPS,
+        "normal failed: {n0:?}, {n1:?}"
+    );
 }

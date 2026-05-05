@@ -4,6 +4,12 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Remove render object by `RenderID`.
+- Fix example pages for working on Mac.
+- Make all `proptest!` `#[property_test]`.
+- Fix and renewal tests in `truck-geotrait`.
+- Fix fillet's newton function.
+- Use `search_nearest_parameter` for fillet of degenerate sharp corner.
 - Fix bugs and add test for `draw::circle_arc`.
 - Implement `ToSameGeometry` for STEP 2D geometries.
 - Create 2D-handling crate `truck-drafting`.
@@ -72,7 +78,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ### Latest `cargo upgrade`
 
-2026-04-20
+2026-05-04
 
 ## v0.6
 

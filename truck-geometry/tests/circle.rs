@@ -1,38 +1,39 @@
-use proptest::prelude::*;
+use proptest::{prelude::*, property_test};
 use std::f64::consts::PI;
 use truck_geometry::prelude::*;
 
-proptest! {
-    #[test]
-    fn search_parameter(t in 0f64..=(2.0 * PI)) {
-        let circle = UnitCircle::<Point2>::new();
-        let p = circle.subs(t);
-        let s = circle.search_nearest_parameter(p, None, 1).unwrap();
-        prop_assert_near!(s, t);
-    }
-    #[test]
-    fn search_nearest_parameter(t in 0f64..=(2.0 * PI), a in 0.1f64..=5f64) {
-        let circle = UnitCircle::<Point2>::new();
-        let p = a * circle.subs(t);
-        let s = circle.search_nearest_parameter(p, None, 1).unwrap();
-        let q = a * circle.subs(s);
-        prop_assert_near!(p, q);
-    }
+#[property_test]
+fn search_parameter(#[strategy = 0f64..=(2.0 * PI)] t: f64) {
+    let circle = UnitCircle::<Point2>::new();
+    let p = circle.subs(t);
+    let s = circle.search_nearest_parameter(p, None, 1).unwrap();
+    prop_assert_near!(s, t);
+}
+#[property_test]
+fn search_nearest_parameter(
+    #[strategy = 0f64..=(2.0 * PI)] t: f64,
+    #[strategy = 0.1f64..=5f64] a: f64,
+) {
+    let circle = UnitCircle::<Point2>::new();
+    let p = a * circle.subs(t);
+    let s = circle.search_nearest_parameter(p, None, 1).unwrap();
+    let q = a * circle.subs(s);
+    prop_assert_near!(p, q);
+}
 
-    #[test]
-    fn to_nurbs(t0 in 0f64..=PI, t1 in PI..=(2.0 * PI)) {
-        let circle = UnitCircle::<Point2>::new();
-        let arc = TrimmedCurve::new(circle, (t0, t1));
-        let bsp: NurbsCurve<_> = arc.to_same_geometry();
-        prop_assert_near!(bsp.front(), arc.front());
-        prop_assert_near!(bsp.back(), arc.back());
-        for i in 0..=10 {
-            let t = i as f64 / 10.0;
-            let p = bsp.subs(t).to_vec();
-            let der = bsp.der(t);
-            prop_assert_near!(p.magnitude2(), 1.0);
-            prop_assert!(der.dot(p).so_small());
-        }
+#[property_test]
+fn to_nurbs(#[strategy = 0f64..=PI] t0: f64, #[strategy = PI..=(2.0 * PI)] t1: f64) {
+    let circle = UnitCircle::<Point2>::new();
+    let arc = TrimmedCurve::new(circle, (t0, t1));
+    let bsp: NurbsCurve<_> = arc.to_same_geometry();
+    prop_assert_near!(bsp.front(), arc.front());
+    prop_assert_near!(bsp.back(), arc.back());
+    for i in 0..=10 {
+        let t = i as f64 / 10.0;
+        let p = bsp.subs(t).to_vec();
+        let der = bsp.der(t);
+        prop_assert_near!(p.magnitude2(), 1.0);
+        prop_assert!(der.dot(p).so_small());
     }
 }
 

@@ -5,9 +5,20 @@ type Edge<C> = truck_topology::Edge<Point2, C>;
 type Wire<C> = truck_topology::Wire<Point2, C>;
 
 /// Trait alias for 2-dimensional curves that can be trimmed for corner operations.
-pub trait TrimmableCurve2D: ParametricCurve2D + BoundedCurve + Cut + Invertible {}
+pub trait TrimmableCurve2D:
+    ParametricCurve2D + BoundedCurve + Cut + Invertible + SearchNearestParameter<D1, Point = Point2>
+{
+}
 
-impl<C: ParametricCurve2D + BoundedCurve + Cut + Invertible> TrimmableCurve2D for C {}
+impl<
+    C: ParametricCurve2D
+        + BoundedCurve
+        + Cut
+        + Invertible
+        + SearchNearestParameter<D1, Point = Point2>,
+> TrimmableCurve2D for C
+{
+}
 
 /// Result of a corner operation represented by the trimmed incoming edge,
 /// the inserted connector, and the trimmed outgoing edge.

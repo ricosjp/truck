@@ -87,6 +87,55 @@ where
         .collect()
 }
 
+/// Tries to return a circle arc from `vertex0` to `vertex1` with `constraint`.
+/// # Examples
+/// ```
+/// use truck_drafting::*;
+///
+/// let vertex0 = draw::vertex((1.0, 0.0));
+/// let vertex1 = draw::vertex((-1.0, 0.0));
+/// let transit = Point2::new(0.0, 1.0);
+/// let arc: Edge = draw::try_circle_arc(&vertex0, &vertex1, transit).unwrap();
+/// # let curve = arc.oriented_curve();
+/// # let (t0, t1) = curve.range_tuple();
+/// # assert_near!(curve.subs(t0), Point2::new(1.0, 0.0));
+/// # assert_near!(curve.subs((t0 + t1) * 0.5), Point2::new(0.0, 1.0));
+/// # assert_near!(curve.subs(t1), Point2::new(-1.0, 0.0));
+/// ```
+/// ```
+/// use truck_drafting::*;
+///
+/// let vertex0 = draw::vertex((1.0, 0.0));
+/// let vertex1 = draw::vertex((0.0, 1.0));
+/// let tangent = Vector2::new(0.0, 1.0);
+/// let arc: Edge = draw::try_circle_arc(&vertex0, &vertex1, tangent).unwrap();
+/// # let curve = arc.oriented_curve();
+/// # let (t0, t1) = curve.range_tuple();
+/// # assert_near!(curve.subs(t0), Point2::new(1.0, 0.0));
+/// # assert_near!(curve.subs(t1), Point2::new(0.0, 1.0));
+/// # assert_near!(curve.der(t0).normalize(), Vector2::new(0.0, 1.0));
+/// ```
+pub fn try_circle_arc<C>(
+    vertex0: &Vertex,
+    vertex1: &Vertex,
+    constraint: impl Into<ArcConstraint>,
+) -> Result<Edge<C>, errors::Error>
+where
+    Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3>: ToSameGeometry<C>,
+{
+    let point0 = vertex0.point();
+    let point1 = vertex1.point();
+    let curve = match constraint.into() {
+        ArcConstraint::Transit(transit) => {
+            geom_impls::circle_arc_by_three_points(point0, point1, transit)
+        }
+        ArcConstraint::Tangent(tangent) => {
+            geom_impls::circle_arc_by_tangent0(point0, point1, tangent)
+        }
+    }?;
+    Ok(Edge::new(vertex0, vertex1, curve.to_same_geometry()))
+}
+
 /// Returns a circle arc from `vertex0` to `vertex1` with `constraint`.
 /// # Examples
 /// ```
@@ -123,17 +172,7 @@ pub fn circle_arc<C>(
 where
     Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3>: ToSameGeometry<C>,
 {
-    let point0 = vertex0.point();
-    let point1 = vertex1.point();
-    let curve = match constraint.into() {
-        ArcConstraint::Transit(transit) => {
-            geom_impls::circle_arc_by_three_points(point0, point1, transit)
-        }
-        ArcConstraint::Tangent(tangent) => {
-            geom_impls::circle_arc_by_tangent0(point0, point1, tangent)
-        }
-    };
-    Edge::new(vertex0, vertex1, curve.to_same_geometry())
+    try_circle_arc(vertex0, vertex1, constraint).unwrap()
 }
 
 /// Returns a Bezier curve from `vertex0` to `vertex1` with inter control points `inter_points`.

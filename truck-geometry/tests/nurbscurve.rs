@@ -1,4 +1,4 @@
-use proptest::prelude::*;
+use proptest::{prelude::*, property_test};
 use truck_geometry::prelude::*;
 
 #[test]
@@ -21,61 +21,59 @@ fn nurbs_circle() {
     }
 }
 
-proptest! {
-    #[test]
-    fn test_der_n(
-        t in 0f64..=1.0,
-        n in 0usize..=4,
-        degree in 2usize..=6,
-        div in 1usize..=10,
-        pts in prop::array::uniform16(prop::array::uniform3(-10f64..=10.0)),
-        weights in prop::array::uniform16(0.5f64..=10.0),
-    ) {
-        prop_assume!(degree > n + 1);
-        let knot_vec = KnotVec::uniform_knot(degree, div);
-        let control_points = pts[0..degree + div]
-            .iter()
-            .zip(weights)
-            .map(|(&p, w)| Vector4::new(p[0], p[1], p[2], w))
-            .collect::<Vec<_>>();
-        let bsp = NurbsCurve::new(BSplineCurve::new(knot_vec, control_points));
+#[property_test]
+fn test_der_n(
+    #[strategy = 0f64..=1.0] t: f64,
+    #[strategy = 0usize..=4] n: usize,
+    #[strategy = 2usize..=6] degree: usize,
+    #[strategy = 1usize..=10] div: usize,
+    #[strategy = prop::array::uniform16(prop::array::uniform3(-10f64..=10.0))] pts: [[f64; 3]; 16],
+    #[strategy = prop::array::uniform16(0.5f64..=10.0)] weights: [f64; 16],
+) {
+    prop_assume!(degree > n + 1);
+    let knot_vec = KnotVec::uniform_knot(degree, div);
+    let control_points = pts[0..degree + div]
+        .iter()
+        .zip(weights)
+        .map(|(&p, w)| Vector4::new(p[0], p[1], p[2], w))
+        .collect::<Vec<_>>();
+    let bsp = NurbsCurve::new(BSplineCurve::new(knot_vec, control_points));
 
-        const EPS: f64 = 1.0e-4;
-        let der0 = bsp.der_n(n + 1, t);
-        let der1 = (bsp.der_n(n, t + EPS) - bsp.der_n(n, t - EPS)) / (2.0 * EPS);
-        prop_assert!((der0 - der1).magnitude() <= 0.01 * der0.magnitude());
-    }
+    const EPS: f64 = 1.0e-4;
+    let der0 = bsp.der_n(n + 1, t);
+    let der1 = (bsp.der_n(n, t + EPS) - bsp.der_n(n, t - EPS)) / (2.0 * EPS);
+    prop_assert!((der0 - der1).magnitude() <= 0.01 * der0.magnitude());
+}
 
-    #[test]
-    fn test_ders(
-        t in 0f64..=1.0,
-        n in 0usize..=6,
-        degree in 2usize..=6,
-        div in 1usize..=10,
-        pts in prop::array::uniform16(prop::array::uniform3(-10f64..=10.0)),
-        weights in prop::array::uniform16(0.5f64..=10.0),
-    ) {
-        prop_assume!(degree > n + 1);
-        let knot_vec = KnotVec::uniform_knot(degree, div);
-        let control_points = pts[0..degree + div]
-            .iter()
-            .zip(weights)
-            .map(|(&p, w)| Vector4::new(p[0], p[1], p[2], w))
-            .collect::<Vec<_>>();
-        let bsp = NurbsCurve::new(BSplineCurve::new(knot_vec, control_points));
+#[property_test]
+fn test_ders(
+    #[strategy = 0f64..=1.0] t: f64,
+    #[strategy = 0usize..=6] n: usize,
+    #[strategy = 2usize..=6] degree: usize,
+    #[strategy = 1usize..=10] div: usize,
+    #[strategy = prop::array::uniform16(prop::array::uniform3(-10f64..=10.0))] pts: [[f64; 3]; 16],
+    #[strategy = prop::array::uniform16(0.5f64..=10.0)] weights: [f64; 16],
+) {
+    prop_assume!(degree > n + 1);
+    let knot_vec = KnotVec::uniform_knot(degree, div);
+    let control_points = pts[0..degree + div]
+        .iter()
+        .zip(weights)
+        .map(|(&p, w)| Vector4::new(p[0], p[1], p[2], w))
+        .collect::<Vec<_>>();
+    let bsp = NurbsCurve::new(BSplineCurve::new(knot_vec, control_points));
 
-        let ders0 = (0..=n).map(|i| bsp.der_n(i, t)).collect::<Vec<_>>();
+    let ders0 = (0..=n).map(|i| bsp.der_n(i, t)).collect::<Vec<_>>();
 
-        let ders1 =  bsp.ders(n, t);
+    let ders1 = bsp.ders(n, t);
 
-        prop_assert_eq!(ders0.len(), ders1.len());
+    prop_assert_eq!(ders0.len(), ders1.len());
 
-        let mut iter = ders0.into_iter().zip(&*ders1);
-        iter.try_for_each(|(v0, v1)| {
-            prop_assert_near!(v0, v1);
-            Ok(())
-        })?;
-    }
+    let mut iter = ders0.into_iter().zip(&*ders1);
+    iter.try_for_each(|(v0, v1)| {
+        prop_assert_near!(v0, v1);
+        Ok(())
+    })?;
 }
 
 fn exec_concat_positive_test(
@@ -98,16 +96,14 @@ fn exec_concat_positive_test(
     Ok(())
 }
 
-proptest! {
-    #[test]
-    fn concat_positive_test(
-        v0 in prop::array::uniform8(prop::array::uniform3(-10f64..10f64)),
-        v1 in prop::array::uniform8(0.5f64..=10f64),
-        t in 0f64..=1f64,
-        w in -10f64..=10f64,
-    ) {
-        exec_concat_positive_test(v0, v1, t, w)?;
-    }
+#[property_test]
+fn concat_positive_test(
+    #[strategy = prop::array::uniform8(prop::array::uniform3(-10f64..10f64))] v0: [[f64; 3]; 8],
+    #[strategy = prop::array::uniform8(0.5f64..=10f64)] v1: [f64; 8],
+    #[strategy = 0f64..=1f64] t: f64,
+    #[strategy = -10f64..=10f64] w: f64,
+) {
+    exec_concat_positive_test(v0, v1, t, w)?;
 }
 
 #[test]

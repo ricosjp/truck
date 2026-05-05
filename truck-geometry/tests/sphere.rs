@@ -1,30 +1,30 @@
-use proptest::prelude::*;
+use proptest::{prelude::*, property_test};
 use std::f64::consts::PI;
 use truck_geometry::prelude::*;
 
-proptest! {
-    #[test]
-    fn test_der_mn(
-        (u, v) in (0f64..=PI, 0f64..=2.0 * PI),
-        (m, n) in (0usize..=4, 0usize..=4),
-        center in prop::array::uniform3(-100f64..=100.0),
-        radius in 0.1f64..=10.0,
-        u_derivate in prop::bool::ANY,
-    ) {
-        let sphere = Sphere::new(Point3::from(center), radius);
+#[property_test]
+fn test_der_mn(
+    #[strategy = (0f64..=PI, 0f64..=2.0 * PI)] (u, v): (f64, f64),
+    #[strategy = (0usize..=4, 0usize..=4)] (m, n): (usize, usize),
+    #[strategy = prop::array::uniform3(-100f64..=100.0)] center: [f64; 3],
+    #[strategy = 0.1f64..=10.0] radius: f64,
+    #[strategy = prop::bool::ANY] u_derivate: bool,
+) {
+    let sphere = Sphere::new(Point3::from(center), radius);
 
-        const EPS: f64 = 1.0e-4;
-        let (der0, der1) = if u_derivate {
-            let der0 = sphere.der_mn(m + 1, n, u, v);
-            let der1 = (sphere.der_mn(m, n, u + EPS, v) - sphere.der_mn(m, n, u - EPS, v)) / (2.0 * EPS);
-            (der0, der1)
-        } else {
-            let der0 = sphere.der_mn(m, n + 1, u, v);
-            let der1 = (sphere.der_mn(m, n, u, v + EPS) - sphere.der_mn(m, n, u, v - EPS)) / (2.0 * EPS);
-            (der0, der1)
-        };
-        prop_assert!((der0 - der1).magnitude() < 0.01 * der0.magnitude());
-    }
+    const EPS: f64 = 1.0e-4;
+    let (der0, der1) = if u_derivate {
+        let der0 = sphere.der_mn(m + 1, n, u, v);
+        let der1 =
+            (sphere.der_mn(m, n, u + EPS, v) - sphere.der_mn(m, n, u - EPS, v)) / (2.0 * EPS);
+        (der0, der1)
+    } else {
+        let der0 = sphere.der_mn(m, n + 1, u, v);
+        let der1 =
+            (sphere.der_mn(m, n, u, v + EPS) - sphere.der_mn(m, n, u, v - EPS)) / (2.0 * EPS);
+        (der0, der1)
+    };
+    prop_assert!((der0 - der1).magnitude() < 0.01 * der0.magnitude());
 }
 
 fn exec_search_parameter_test(
@@ -55,18 +55,15 @@ fn exec_search_parameter_test(
     Ok(())
 }
 
-proptest! {
-    #[test]
-    fn search_parameter_test(
-        center in prop::array::uniform3(-50f64..=50f64),
-        radius in 0.1f64..100f64,
-        (u, v) in (0f64..=PI, 0f64..=(2.0 * PI)),
-        disp in prop::array::uniform3(0.01f64..0.1f64),
-        sign in prop::array::uniform3(prop::bool::ANY),
-    ) {
-        exec_search_parameter_test(center, radius, (u, v), disp, sign)?;
-    }
-
+#[property_test]
+fn search_parameter_test(
+    #[strategy = prop::array::uniform3(-50f64..=50f64)] center: [f64; 3],
+    #[strategy = 0.1f64..100f64] radius: f64,
+    #[strategy = (0f64..=PI, 0f64..=(2.0 * PI))] (u, v): (f64, f64),
+    #[strategy = prop::array::uniform3(0.01f64..0.1f64)] disp: [f64; 3],
+    #[strategy = prop::array::uniform3(prop::bool::ANY)] sign: [bool; 3],
+) {
+    exec_search_parameter_test(center, radius, (u, v), disp, sign)?;
 }
 
 #[test]
