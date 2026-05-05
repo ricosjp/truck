@@ -46,54 +46,8 @@ impl<C, S0, S1, R> RbfSurface<C, S0, S1, R> {
     }
 }
 
-/// trait for radius function
-pub trait RadiusFunction: Clone {
-    /// Returns the `n`th order derivation.
-    fn der_n(&self, n: usize, t: f64) -> f64;
-    /// Substitutes the parameter `t`.
-    #[inline]
-    fn subs(&self, t: f64) -> f64 { self.der_n(0, t) }
-    /// Returns the derivation.
-    #[inline]
-    fn der(&self, t: f64) -> f64 { self.der_n(1, t) }
-    /// Returns the 2nd-order derivation.
-    #[inline]
-    fn der2(&self, t: f64) -> f64 { self.der_n(2, t) }
-    /// Substitutes the higher-order derivations to `out`.
-    #[inline]
-    fn ders(&self, max_order: usize, t: f64) -> CurveDers<f64> {
-        (0..=max_order).map(|n| self.der_n(n, t)).collect()
-    }
-}
-
-impl RadiusFunction for f64 {
-    #[inline]
-    fn der_n(&self, n: usize, _: f64) -> f64 {
-        match n {
-            0 => *self,
-            _ => 0.0,
-        }
-    }
-}
-
-macro_rules! impl_radius_1dim {
-    ($ty: ty) => {
-        impl RadiusFunction for $ty {
-            #[inline]
-            fn der_n(&self, n: usize, t: f64) -> f64 { ParametricCurve::der_n(self, n, t).x }
-        }
-    };
-}
-impl_radius_1dim!(BSplineCurve<Point1>);
-impl_radius_1dim!(NurbsCurve<Vector2>);
-
-impl<T: RadiusFunction> RadiusFunction for &T {
-    #[inline(always)]
-    fn der_n(&self, n: usize, t: f64) -> f64 { (**self).der_n(n, t) }
-}
-
 /// Oriented and reversible
-pub trait InvertibleRadiusFunction: RadiusFunction {
+pub trait InvertibleRadiusFunction: ScalarFunctionD1 {
     /// Inverts `self`
     fn inverse(&self) -> Self;
     /// Returns the inverse.
@@ -145,7 +99,7 @@ where
     C: ParametricCurve3D,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     fn sub_der_mn(&self, m: usize, n: usize, u: f64, cc: ContactCircle) -> Vector3 {
         match (m, n) {
@@ -163,7 +117,7 @@ where
     C: ParametricCurve3D,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     type Point = Point3;
     type Vector = Vector3;
@@ -207,7 +161,7 @@ where
     C: ParametricCurve3D,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
 }
 
@@ -216,7 +170,7 @@ where
     C: ParametricCurve3D + BoundedCurve,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
 }
 
@@ -225,7 +179,7 @@ where
     C: ParametricCurve3D,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     fn parameter_division(
         &self,
@@ -265,7 +219,7 @@ where
     C: ParametricCurve3D,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     type Point = Point3;
     type Vector = Vector3;
@@ -303,7 +257,7 @@ where
     C: ParametricCurve3D + BoundedCurve,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
 }
 
@@ -312,7 +266,7 @@ where
     C: ParametricCurve3D + Cut,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     fn cut(&mut self, t: f64) -> Self {
         let edge_curve = self.surface.edge_curve.cut(t);
@@ -358,7 +312,7 @@ where
     C: ParametricCurve3D,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     type Point = Point3;
     fn parameter_division(&self, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<Self::Point>) {
@@ -375,7 +329,7 @@ where
     S1: ParametricSurface3D
         + SearchParameter<D2, Point = Point3>
         + SearchNearestParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     type Point = Point3;
     fn search_parameter<H: Into<SPHint1D>>(
@@ -404,7 +358,7 @@ where
     C: ParametricCurve3D + BoundedCurve,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     type Point = Point3;
     fn search_nearest_parameter<H: Into<<D1 as SPDimension>::Hint>>(

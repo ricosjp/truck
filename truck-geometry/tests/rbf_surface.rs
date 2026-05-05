@@ -40,7 +40,7 @@ fn fillet_between_two_spheres() {
 
     #[derive(Clone, Copy, Debug)]
     struct Radius(f64);
-    impl RadiusFunction for Radius {
+    impl ScalarFunctionD1 for Radius {
         fn der_n(&self, n: usize, t: f64) -> f64 {
             let o = if n == 0 { 1.0 } else { 0.0 };
             let x = match n % 4 {
@@ -179,7 +179,7 @@ fn test_cpwae() {
 
     #[derive(Clone, Copy, Debug)]
     struct Radius;
-    impl RadiusFunction for Radius {
+    impl ScalarFunctionD1 for Radius {
         fn der_n(&self, n: usize, t: f64) -> f64 {
             match n {
                 0 => 0.3 + 0.3 * t,

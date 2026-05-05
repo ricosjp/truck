@@ -133,6 +133,42 @@ impl<C: Cut> Cut for Box<C> {
     fn cut(&mut self, t: f64) -> Self { Box::new((**self).cut(t)) }
 }
 
+macro_rules! impl_constant_curve {
+    ($ty: ty, $vec: ty, $into: expr) => {
+        impl ParametricCurve for $ty {
+            type Point = $ty;
+            type Vector = $vec;
+            #[inline(always)]
+            fn subs(&self, _: f64) -> Self::Point { *self }
+            #[inline(always)]
+            fn der(&self, _: f64) -> Self::Vector { <$vec>::zero() }
+            #[inline(always)]
+            fn der2(&self, _: f64) -> Self::Vector { <$vec>::zero() }
+            #[inline(always)]
+            fn der_n(&self, n: usize, _: f64) -> Self::Vector {
+                match n {
+                    0 => $into(*self),
+                    _ => <$vec>::zero(),
+                }
+            }
+            #[inline(always)]
+            fn ders(&self, n: usize, _: f64) -> CurveDers<Self::Vector> {
+                let mut ders = CurveDers::new(n);
+                ders[0] = $into(*self);
+                ders
+            }
+        }
+    };
+}
+
+impl_constant_curve!(f64, f64, std::convert::identity);
+impl_constant_curve!(Point1, Vector1, Self::to_vec);
+impl_constant_curve!(Point2, Vector2, Self::to_vec);
+impl_constant_curve!(Point3, Vector3, Self::to_vec);
+impl_constant_curve!(Vector1, Vector1, std::convert::identity);
+impl_constant_curve!(Vector2, Vector2, std::convert::identity);
+impl_constant_curve!(Vector3, Vector3, std::convert::identity);
+
 /// 2D parametric curve
 pub trait ParametricCurve2D: ParametricCurve<Point = Point2, Vector = Vector2> {}
 impl<C: ParametricCurve<Point = Point2, Vector = Vector2>> ParametricCurve2D for C {}

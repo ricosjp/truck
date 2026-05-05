@@ -8,7 +8,7 @@ where
     C: ParametricCurve3D,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     /// Calculate contact circle corresponding to the parameter `t`, i.e.
     /// - the circle contact to the surfaces, `surface0` and `surface1`,
@@ -531,7 +531,7 @@ where
     S1: ParametricSurface3D
         + SearchParameter<D2, Point = Point3>
         + SearchNearestParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     pub(super) fn search_contact_curve0_parameter(
         &self,
@@ -622,7 +622,7 @@ where
     S1: ParametricSurface3D
         + SearchNearestParameter<D2, Point = Point3>
         + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     type Point = Point3;
     fn search_parameter<H: Into<SPHint2D>>(
@@ -753,7 +753,7 @@ where
     C: ParametricCurve3D + SearchNearestParameter<D1, Point = Point3>,
     S0: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
     S1: ParametricSurface3D + SearchParameter<D2, Point = Point3>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
 {
     /// Returns the cross point of contact curve and other edge.
     pub fn search_contact_curve0_cross_point_with_adjacent_edge<C0>(
@@ -987,7 +987,7 @@ fn fillet_between_two_spheres_deralgo() {
 
     #[derive(Clone, Copy, Debug)]
     struct Radius;
-    impl RadiusFunction for Radius {
+    impl ScalarFunctionD1 for Radius {
         fn der_n(&self, n: usize, t: f64) -> f64 {
             let o = if n == 0 { 1.0 } else { 0.0 };
             let x = match n % 4 {

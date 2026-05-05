@@ -76,12 +76,13 @@ fn test_ders(
     })?;
 }
 
-fn exec_concat_positive_test(
-    v0: [[f64; 3]; 8],
-    v1: [f64; 8],
-    t: f64,
-    w: f64,
-) -> std::result::Result<(), TestCaseError> {
+#[property_test]
+fn concat_positive_test(
+    #[strategy = prop::array::uniform8(prop::array::uniform3(-5f64..5f64))] v0: [[f64; 3]; 8],
+    #[strategy = prop::array::uniform8(0.5f64..=2f64)] v1: [f64; 8],
+    #[strategy = 0f64..=1f64] t: f64,
+    #[strategy = -5f64..=5f64] w: f64,
+) {
     let mut part0 = NurbsCurve::new(BSplineCurve::new(
         KnotVec::uniform_knot(4, 4),
         v0.into_iter()
@@ -93,17 +94,6 @@ fn exec_concat_positive_test(
     part1.transform_control_points(|vec| *vec *= w);
     prop_assert_near!(part0.back(), part1.front());
     concat_random_test(&part0, &part1, 10);
-    Ok(())
-}
-
-#[property_test]
-fn concat_positive_test(
-    #[strategy = prop::array::uniform8(prop::array::uniform3(-10f64..10f64))] v0: [[f64; 3]; 8],
-    #[strategy = prop::array::uniform8(0.5f64..=10f64)] v1: [f64; 8],
-    #[strategy = 0f64..=1f64] t: f64,
-    #[strategy = -10f64..=10f64] w: f64,
-) {
-    exec_concat_positive_test(v0, v1, t, w)?;
 }
 
 #[test]

@@ -597,6 +597,193 @@ impl<V> SurfaceDers<V> {
         }
     }
 
+    /// Returns the multi-orders derivations of the magnitude of the surface of vector.
+    /// # Examples
+    /// ```
+    /// use truck_base::{assert_near, cgmath64::*};
+    ///
+    /// let (u, v) = (0.2, 0.3);
+    ///
+    /// // s(u, v) = (2u, 2v, 1 - u^2 - v^2) -> |s(u, v)| = 1 + u^2 + v^2
+    /// let raw_ders: &[&[Vector3]] = &[
+    ///     &[
+    ///         (2.0 * u, 2.0 * v, 1.0 - u * u - v * v).into(),
+    ///         (0.0, 2.0, -2.0 * v).into(),
+    ///         (0.0, 0.0, -2.0).into(),
+    ///     ],
+    ///     &[
+    ///         (2.0, 0.0, -2.0 * u).into(),
+    ///         (0.0, 0.0, 0.0).into(),
+    ///     ],
+    ///     &[(0.0, 0.0, -2.0).into()],
+    /// ];
+    /// let ders = SurfaceDers::try_from(raw_ders).unwrap();
+    /// let abs_ders = ders.abs_ders();
+    ///
+    /// assert_near!(abs_ders[0][0], 1.0 + u * u + v * v);
+    /// assert_near!(abs_ders[0][1], 2.0 * v);
+    /// assert_near!(abs_ders[0][2], 2.0);
+    /// assert_near!(abs_ders[1][0], 2.0 * u);
+    /// assert_near!(abs_ders[1][1], 0.0);
+    /// assert_near!(abs_ders[2][0], 2.0);
+    /// ```
+    pub fn abs_ders(&self) -> SurfaceDers<V::Scalar>
+    where
+        V: InnerSpace,
+        V::Scalar: BaseFloat, {
+        let mut evals = [[V::Scalar::zero(); MAX_DER_ORDER + 1]; MAX_DER_ORDER + 1];
+        evals[0][0] = self[0][0].magnitude();
+        for m in 0..=self.max_order {
+            for n in 0..=self.max_order - m {
+                if m == 0 && n == 0 {
+                    continue;
+                }
+
+                // Differentiate |s|^2 = s.dot(s) by u^m v^n and solve the
+                // two terms containing |s|_{m,n}; all other |s| derivatives
+                // are already known because they have lower total order.
+                let mut ders_sum = V::Scalar::zero();
+                let mut evals_sum = V::Scalar::zero();
+                let mut c0 = 1;
+                for i in 0..=m {
+                    let mut c1 = 1;
+                    for j in 0..=n {
+                        let c_float = <V::Scalar as NumCast>::from(c0 * c1).unwrap();
+                        ders_sum += self[i][j].dot(self[m - i][n - j]) * c_float;
+                        if !(i == 0 && j == 0 || i == m && j == n) {
+                            evals_sum += evals[i][j] * evals[m - i][n - j] * c_float;
+                        }
+                        c1 = c1 * (n - j) / (j + 1);
+                    }
+                    c0 = c0 * (m - i) / (i + 1);
+                }
+                evals[m][n] = (ders_sum - evals_sum) / (evals[0][0] + evals[0][0]);
+            }
+        }
+        SurfaceDers {
+            array: evals,
+            max_order: self.max_order,
+        }
+    }
+
+    /// Returns the `(u_order, v_order)`-order derivation of multiple function.
+    /// # Examples
+    /// ```
+    /// use truck_base::{assert_near2, cgmath64::*};
+    ///
+    /// let (u, v) = (1.5, 2.0);
+    ///
+    /// // surface0(u, v) = (u^2, v^2)
+    /// let raw_ders0: &[&[Vector2]] = &[
+    ///     &[
+    ///         (u * u, v * v).into(),
+    ///         (0.0, 2.0 * v).into(),
+    ///         (0.0, 2.0).into(),
+    ///     ],
+    ///     &[(2.0 * u, 0.0).into(), (0.0, 0.0).into()],
+    ///     &[(2.0, 0.0).into()],
+    /// ];
+    /// let ders0 = SurfaceDers::try_from(raw_ders0).unwrap();
+    ///
+    /// // surface1(u, v) = (v, u)
+    /// let raw_ders1: &[&[Vector2]] = &[
+    ///     &[(v, u).into(), (1.0, 0.0).into(), (0.0, 0.0).into()],
+    ///     &[(0.0, 1.0).into(), (0.0, 0.0).into()],
+    ///     &[(0.0, 0.0).into()],
+    /// ];
+    /// let ders1 = SurfaceDers::try_from(raw_ders1).unwrap();
+    ///
+    /// // surface0(u, v).dot(surface1(u, v)) = u^2 v + u v^2
+    /// let res = ders0.combinatorial_der(&ders1, Vector2::dot, 1, 1);
+    /// let ans = 2.0 * u + 2.0 * v;
+    ///
+    /// assert_near2!(res, ans);
+    /// ```
+    pub fn combinatorial_der<W, U, B>(
+        &self,
+        other: &SurfaceDers<W>,
+        binomial: B,
+        u_order: usize,
+        v_order: usize,
+    ) -> U
+    where
+        V: Copy,
+        W: Copy,
+        U: std::ops::Add + std::ops::Mul<f64, Output = U> + Zero,
+        B: Fn(V, W) -> U,
+    {
+        let mut c0 = 1;
+        (0..=u_order).fold(U::zero(), |sum, i| {
+            let mut c1 = 1;
+            let sum = (0..=v_order).fold(sum, |sum, j| {
+                let c_mult = (c0 * c1) as f64;
+                c1 = c1 * (v_order - j) / (j + 1);
+                sum + binomial(self[i][j], other[u_order - i][v_order - j]) * c_mult
+            });
+            c0 = c0 * (u_order - i) / (i + 1);
+            sum
+        })
+    }
+
+    /// Returns the ders of multiple function.
+    /// # Examples
+    /// ```
+    /// use truck_base::{assert_near2, cgmath64::*};
+    ///
+    /// let (u, v) = (1.5, 2.0);
+    ///
+    /// // surface0(u, v) = (u^2, v^2)
+    /// let raw_ders0: &[&[Vector2]] = &[
+    ///     &[
+    ///         (u * u, v * v).into(),
+    ///         (0.0, 2.0 * v).into(),
+    ///         (0.0, 2.0).into(),
+    ///     ],
+    ///     &[(2.0 * u, 0.0).into(), (0.0, 0.0).into()],
+    ///     &[(2.0, 0.0).into()],
+    /// ];
+    /// let ders0 = SurfaceDers::try_from(raw_ders0).unwrap();
+    ///
+    /// // surface1(u, v) = (v, u)
+    /// let raw_ders1: &[&[Vector2]] = &[
+    ///     &[(v, u).into(), (1.0, 0.0).into(), (0.0, 0.0).into()],
+    ///     &[(0.0, 1.0).into(), (0.0, 0.0).into()],
+    ///     &[(0.0, 0.0).into()],
+    /// ];
+    /// let ders1 = SurfaceDers::try_from(raw_ders1).unwrap();
+    ///
+    /// // surface0(u, v).dot(surface1(u, v)) = u^2 v + u v^2
+    /// let res = ders0.combinatorial_ders(&ders1, Vector2::dot);
+    /// let raw_ans: &[&[f64]] = &[
+    ///     &[u * u * v + u * v * v, u * u + 2.0 * u * v, 2.0 * u],
+    ///     &[2.0 * u * v + v * v, 2.0 * u + 2.0 * v],
+    ///     &[2.0 * v],
+    /// ];
+    /// let ans = SurfaceDers::try_from(raw_ans).unwrap();
+    ///
+    /// assert_near2!(res, ans);
+    /// ```
+    pub fn combinatorial_ders<W, U, B>(
+        &self,
+        other: &SurfaceDers<W>,
+        binomial: B,
+    ) -> SurfaceDers<U>
+    where
+        V: Copy,
+        W: Copy,
+        U: std::ops::Add + std::ops::Mul<f64, Output = U> + Zero + Copy,
+        B: Fn(V, W) -> U,
+    {
+        let max_order = self.max_order.min(other.max_order);
+        let mut res = SurfaceDers::new(max_order);
+        for m in 0..=max_order {
+            for n in 0..=max_order - m {
+                res[m][n] = self.combinatorial_der(other, &binomial, m, n);
+            }
+        }
+        res
+    }
+
     /// Returns the derivation of composite curve.
     /// # Example
     /// ```

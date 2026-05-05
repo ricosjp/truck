@@ -1,6 +1,6 @@
 use algo::curve::search_intersection_parameter;
 use itertools::Itertools;
-use truck_geometry::prelude::{rbf_surface::*, *};
+use truck_geometry::prelude::*;
 use truck_topology::*;
 
 /// condition of curves to attach fillet
@@ -186,7 +186,7 @@ pub fn simple_fillet<C, S, R>(
 where
     C: FilletedCurve<S>,
     S: FilletedSurface<C>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
     PCurve<BSplineCurve<Point2>, S>: ToSameGeometry<C>,
     ApproxFilletSurface<S, S>: ToSameGeometry<S>,
 {
@@ -348,7 +348,7 @@ pub fn fillet_with_side<C, S, R>(
 where
     C: FilletedCurve<S>,
     S: FilletedSurface<C>,
-    R: RadiusFunction,
+    R: ScalarFunctionD1,
     PCurve<BSplineCurve<Point2>, S>: ToSameGeometry<C>,
     IntersectionCurve<C, S, S>: ToSameGeometry<C>,
     ApproxFilletSurface<S, S>: ToSameGeometry<S>,
