@@ -357,7 +357,7 @@ where
     ) -> Option<Self>
     where
         C: ParametricCurve3D,
-        R: RadiusFunction,
+        R: ScalarFunctionD1,
     {
         let (v0, v1) = edge_parameter_range;
         let v_5 = (v0 + v1) / 2.0;

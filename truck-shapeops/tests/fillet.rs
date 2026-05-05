@@ -211,7 +211,7 @@ fn create_fillet_with_side() {
 
     #[derive(Clone, Copy, Debug)]
     struct Radius;
-    impl RadiusFunction for Radius {
+    impl ScalarFunctionD1 for Radius {
         fn der_n(&self, n: usize, t: f64) -> f64 {
             match n {
                 0 => 0.3 + 0.3 * t,
