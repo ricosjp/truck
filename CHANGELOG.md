@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Update the deterministic hash function.
 - Implement `Offset` geometry.
 - Remove render object by `RenderID`.
 - Fix example pages for working on Mac.
