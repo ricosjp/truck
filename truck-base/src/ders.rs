@@ -4,7 +4,7 @@ use num_traits::NumCast;
 use std::fmt::Debug;
 
 /// Maximum order that guarantees differential calculations
-pub const MAX_DER_ORDER: usize = 31;
+pub const MAX_DER_ORDER: usize = 10;
 
 /// Calculation results of curve differentiation
 #[derive(Clone, Copy, PartialEq)]
