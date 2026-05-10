@@ -173,7 +173,7 @@ pub fn write<I: IntoStlIterator, W: Write>(
 /// Writes ASCII STL data.
 fn write_ascii<I: IntoStlIterator, W: Write>(iter: I, writer: &mut W) -> Result<()> {
     let mut iter = iter.into_iter();
-    writer.write_all(b"solid\n")?;
+    writer.write_all(b"solid \n")?;
     iter.try_for_each::<_, Result<()>>(|face| {
         writer.write_fmt(format_args!(
             "  facet normal {:e} {:e} {:e}\n",
