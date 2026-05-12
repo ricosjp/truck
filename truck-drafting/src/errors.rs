@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 /// Drafting errors
-#[derive(Debug, PartialEq, Eq, Error)]
+#[derive(Debug, PartialEq, Error)]
 pub enum Error {
     /// cannot construct a circle arc from collinear points.
     #[error("cannot construct a circle arc from collinear points.")]
@@ -9,9 +9,9 @@ pub enum Error {
     /// cannot construct a circle arc when the tangent is parallel to the chord.
     #[error("cannot construct a circle arc when the tangent is parallel to the chord.")]
     ParallelArcTangent,
-    /// the fillet radius must be positive.
-    #[error("the fillet radius must be positive.")]
-    NonPositiveFilletRadius,
+    /// the radius of circle must be positive.
+    #[error("the radius of circle must be positive.")]
+    NonPositiveRadius,
     /// the tangent vector at the specified parameter vanished.
     #[error("the tangent vector vanished near the specified corner.")]
     DegenerateTangent,
@@ -33,4 +33,18 @@ pub enum Error {
     /// corner operations require a continuous wire.
     #[error("corner operations require a continuous wire.")]
     NonContinuousWire,
+    /// error from `truck_geometry::errors::Error`.
+    #[error("{0}")]
+    GeometricError(truck_geometry::errors::Error),
+    /// error from `truck_topology::errors::Error`.
+    #[error("{0}")]
+    TopologicalError(truck_topology::errors::Error),
+}
+
+impl From<truck_geometry::errors::Error> for Error {
+    fn from(value: truck_geometry::errors::Error) -> Self { Self::GeometricError(value) }
+}
+
+impl From<truck_topology::errors::Error> for Error {
+    fn from(value: truck_topology::errors::Error) -> Self { Self::TopologicalError(value) }
 }

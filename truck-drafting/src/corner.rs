@@ -253,7 +253,8 @@ where
 /// ```
 /// use truck_drafting::*;
 ///
-/// let wire: Wire = draw::polyline([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]);
+/// let vertices = draw::vertices([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]);
+/// let wire: Wire = draw::polyline(&vertices);
 /// let filleted = corner::fillet_all(&wire, |_| 0.2).unwrap();
 /// assert_eq!(filleted.len(), 3);
 /// # assert_near!(filleted[0].back().point(), Point2::new(0.8, 0.0));
@@ -265,14 +266,8 @@ where
 /// ```
 /// use truck_drafting::*;
 ///
-/// let v0 = draw::vertex((0.0, 0.0));
-/// let v1 = draw::vertex((1.0, 0.0));
-/// let v2 = draw::vertex((1.0, 1.0));
-/// let wire: Wire = wire![
-///     draw::line(&v0, &v1),
-///     draw::line(&v1, &v2),
-///     draw::line(&v2, &v0),
-/// ];
+/// let v = draw::vertices([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]);
+/// let wire: Wire = draw::polyline([&v[0], &v[1], &v[2], &v[0]]);
 /// let radius = 0.1;
 /// let filleted = corner::fillet_all(&wire, |_| radius).unwrap();
 /// # let tangent_length_at_v0 = radius * (f64::sqrt(2.0) + 1.0);
@@ -303,7 +298,8 @@ where
 /// ```
 /// use truck_drafting::*;
 ///
-/// let wire: Wire = draw::polyline([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]);
+/// let vertices = draw::vertices([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]);
+/// let wire: Wire = draw::polyline(&vertices);
 /// let chamfered = corner::chamfer_all(&wire, |_| (0.2, 0.3)).unwrap();
 /// assert_eq!(chamfered.len(), 3);
 /// # assert_near!(chamfered[0].back().point(), Point2::new(0.8, 0.0));
@@ -315,14 +311,8 @@ where
 /// ```
 /// use truck_drafting::*;
 ///
-/// let v0 = draw::vertex((0.0, 0.0));
-/// let v1 = draw::vertex((1.0, 0.0));
-/// let v2 = draw::vertex((1.0, 1.0));
-/// let wire: Wire = wire![
-///     draw::line(&v0, &v1),
-///     draw::line(&v1, &v2),
-///     draw::line(&v2, &v0),
-/// ];
+/// let v = draw::vertices([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]);
+/// let wire: Wire = draw::polyline([&v[0], &v[1], &v[2], &v[0]]);
 /// let chamfered = corner::chamfer_all(&wire, |_| (0.1, 0.1)).unwrap();
 /// assert_eq!(chamfered.len(), 6);
 /// assert!(chamfered.is_closed());
