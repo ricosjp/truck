@@ -2,11 +2,13 @@ use crate::{errors::Error, *};
 use std::{f64::consts::PI, ops::RangeBounds};
 use truck_base::newton::{self, CalcOutput};
 
+type CircleArc = Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3>;
+
 pub fn circle_arc_by_three_points(
     point0: Point2,
     point1: Point2,
     transit: Point2,
-) -> Result<Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3>, Error> {
+) -> Result<CircleArc, Error> {
     let origin = circum_center(point0, point1, transit)?;
     let Rad(circum_angle) = (point1 - transit).angle(point0 - transit);
     let direction = circum_angle.signum();
@@ -18,13 +20,12 @@ pub fn circle_arc_by_tangent0(
     point0: Point2,
     point1: Point2,
     tangent0: Vector2,
-) -> Result<Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3>, Error> {
+) -> Result<CircleArc, Error> {
     let chord = point1 - point0;
     if tangent0.so_small() {
         return Err(Error::DegenerateTangent);
     }
-    let tangent0 = tangent0.normalize();
-    let to_origin = Vector2::new(-tangent0.y, tangent0.x);
+    let to_origin = rot_4(tangent0.normalize());
     let denom = 2.0 * chord.dot(to_origin);
     if denom.so_small() {
         return Err(Error::ParallelArcTangent);
@@ -56,14 +57,9 @@ fn circum_center(point0: Point2, point1: Point2, point2: Point2) -> Result<Point
     Ok(point0 + u)
 }
 
-fn circle_arc(
-    point: Point2,
-    origin: Point2,
-    angle: f64,
-    direction: f64,
-) -> Processor<TrimmedCurve<UnitCircle<Point2>>, Matrix3> {
+fn circle_arc(point: Point2, origin: Point2, angle: f64, direction: f64) -> CircleArc {
     let x_axis = point - origin;
-    let y_axis = direction * Vector2::new(-x_axis.y, x_axis.x);
+    let y_axis = direction * rot_4(x_axis);
     let transform = Matrix3::from_cols(
         x_axis.extend(0.0),
         y_axis.extend(0.0),
@@ -71,6 +67,188 @@ fn circle_arc(
     );
     let unit_arc = TrimmedCurve::new(UnitCircle::new(), (0.0, angle));
     Processor::with_transform(unit_arc, transform)
+}
+
+pub fn lines_crossing_point(
+    point0: Point2,
+    point1: Point2,
+    direction0: Vector2,
+    direction1: Vector2,
+) -> Result<Point2, Error> {
+    let matrix = Matrix2::from_cols(direction0, -direction1);
+    if matrix.determinant().so_small() {
+        return Err(Error::ParallelLineDirections);
+    }
+    let params = matrix.invert().unwrap() * (point1 - point0);
+    Ok((point0 + params.x * direction0).midpoint(point1 + params.y * direction1))
+}
+
+pub fn arc_arc_transit(
+    point0: Point2,
+    point1: Point2,
+    tangent0: Vector2,
+    radius0: f64,
+    tangent1: Vector2,
+) -> Result<Point2, Error> {
+    if radius0 <= 0.0 {
+        return Err(Error::NonPositiveRadius);
+    }
+    if tangent0.so_small() || tangent1.so_small() {
+        return Err(Error::DegenerateTangent);
+    }
+
+    let normal0 = rot_4(tangent0.normalize());
+    let normal1 = rot_4(tangent1.normalize());
+    let delta = point1 - point0;
+
+    let delta2 = delta.magnitude2();
+    let n0del = normal0.dot(delta);
+    let n1del = normal1.dot(delta);
+    let n01 = normal0.dot(normal1);
+    let signs = [-1.0, 1.0];
+    itertools::iproduct!(signs, signs, signs)
+        .filter_map(|(s0, s1, s2)| {
+            let numerator = delta2 / 2.0 - s0 * radius0 * n0del;
+            let denominator = s2 * radius0 - s1 * n1del + s0 * s1 * radius0 * n01;
+            if numerator * denominator < TOLERANCE {
+                return None;
+            }
+            let radius1 = numerator / denominator;
+
+            let center0 = point0 + s0 * radius0 * normal0;
+            let center1 = point1 + s1 * radius1 * normal1;
+
+            if center0.near(&center1) {
+                return by_one_arc(point0, point1, tangent0, radius0);
+            }
+
+            let k = radius0 / (radius0 + s2 * radius1);
+            let transit = center0 + k * (center1 - center0);
+
+            let transit_tangent0 = s0 * rot_4(transit - center0);
+            let transit_tangent1 = s1 * rot_4(transit - center1);
+
+            if transit_tangent0.dot(transit_tangent1) < 0.0 {
+                return None;
+            }
+
+            let angle0 = 2.0 * tangent0.angle(transit - point0).0.abs();
+            let angle1 = 2.0 * (-tangent1).angle(transit - point1).0.abs();
+
+            if (radius0 * angle0).so_small() || (radius1 * angle1).so_small() {
+                return by_one_arc(point0, point1, tangent0, radius0);
+            }
+
+            Some((transit, radius0 * angle0 + radius1 * angle1))
+        })
+        .min_by(|(_, l0), (_, l1)| l0.partial_cmp(l1).unwrap())
+        .map(|(point, _)| point)
+        .ok_or(Error::NoConnection)
+}
+
+fn by_one_arc(
+    point0: Point2,
+    point1: Point2,
+    tangent0: Vector2,
+    radius0: f64,
+) -> Option<(Point2, f64)> {
+    let arc = circle_arc_by_tangent0(point0, point1, tangent0).ok()?;
+    let (t0, t1) = arc.range_tuple();
+    let transit = arc.subs((t0 + t1) / 2.0);
+    Some((transit, radius0 * (t1 - t0)))
+}
+
+pub fn line_arc_line_transit(
+    point0: Point2,
+    point1: Point2,
+    direction0: Vector2,
+    radius: f64,
+    direction1: Vector2,
+) -> Result<(Point2, Point2), Error> {
+    if radius <= 0.0 {
+        return Err(Error::NonPositiveRadius);
+    }
+    if direction0.so_small() || direction1.so_small() {
+        return Err(Error::DegenerateTangent);
+    }
+    let crossing = lines_crossing_point(point0, point1, direction0, direction1)?;
+    if point0.near(&crossing) || point1.near(&crossing) {
+        return Err(Error::DegenerateConnectionCorner);
+    }
+    let direction0 = (point0 - crossing).normalize();
+    let direction1 = (point1 - crossing).normalize();
+    let cos = direction0.dot(direction1);
+    let tan_2 = ((1.0 - cos) / (1.0 + cos)).sqrt();
+    let length = radius / tan_2;
+    Ok((
+        crossing + length * direction0,
+        crossing + length * direction1,
+    ))
+}
+
+pub fn arc_line_arc_transit(
+    point0: Point2,
+    point1: Point2,
+    tangent0: Vector2,
+    tangent1: Vector2,
+    radius0: f64,
+    radius1: f64,
+) -> Result<(Point2, Point2), Error> {
+    if radius0 <= 0.0 || radius1 <= 0.0 {
+        return Err(Error::NonPositiveRadius);
+    }
+    if tangent0.so_small() || tangent1.so_small() {
+        return Err(Error::DegenerateTangent);
+    }
+
+    let normal0 = rot_4(tangent0.normalize());
+    let normal1 = rot_4(tangent1.normalize());
+
+    let signs = [-1.0, 1.0];
+    itertools::iproduct!(signs, signs, signs, signs)
+        .filter_map(|(s0, s1, s2, s3)| {
+            let center0 = point0 + s0 * radius0 * normal0;
+            let center1 = point1 + s1 * radius1 * normal1;
+
+            if center0.near(&center1) {
+                return None;
+            }
+
+            let delta = center1 - center0;
+            let delta_length = delta.magnitude();
+            let radius_sum = radius0 + s2 * radius1;
+
+            if radius_sum.abs() > delta_length + TOLERANCE {
+                return None;
+            }
+
+            let x_axis = delta.normalize();
+            let cos = f64::clamp(radius_sum / delta_length, -1.0, 1.0);
+            let sin = s3 * (1.0 - cos * cos).sqrt();
+            let rotation = Matrix2::new(cos, sin, -sin, cos);
+
+            let transit0 = center0 + rotation * x_axis * radius0;
+            let transit_tangent0 = s0 * rot_4(transit0 - center0);
+            let transit1 = transit0
+                + ((center1 - transit0).dot(transit_tangent0) / transit_tangent0.magnitude2())
+                    * transit_tangent0;
+            let transit_tangent1 = s1 * rot_4(transit1 - center1);
+
+            if transit_tangent0.dot(transit1 - transit0) < 0.0
+                || transit_tangent1.dot(transit1 - transit0) < 0.0
+            {
+                return None;
+            }
+
+            let angle0 = 2.0 * tangent0.angle(transit0 - point0).0.abs();
+            let angle1 = 2.0 * (-tangent1).angle(transit1 - point1).0.abs();
+            let length = radius0 * angle0 + (transit0 - transit1).magnitude() + radius1 * angle1;
+
+            Some(((transit0, transit1), length))
+        })
+        .min_by(|(_, length0), (_, length1)| length0.partial_cmp(length1).unwrap())
+        .map(|(pair, _)| pair)
+        .ok_or(Error::NoConnection)
 }
 
 #[allow(dead_code)]
@@ -92,7 +270,7 @@ where
     C: ParametricCurve2D + SearchNearestParameter<D1, Point = Point2>,
 {
     if radius <= 0.0 {
-        return Err(Error::NonPositiveFilletRadius);
+        return Err(Error::NonPositiveRadius);
     }
     let der0 = curve0.der(t0);
     let der1 = curve1.der(t1);
@@ -226,6 +404,9 @@ where
     }
 }
 
+#[inline]
+fn rot_4(vec: Vector2) -> Vector2 { Vector2::new(-vec.y, vec.x) }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -233,10 +414,10 @@ mod tests {
 
     #[property_test]
     fn test_circle_arc(
-        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] origin: [f64; 2],
-        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] direction0: [f64; 2],
-        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] direction1: [f64; 2],
-        #[strategy = 0.5f64..=10.0f64] radius: f64,
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] origin: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] direction0: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] direction1: [f64; 2],
+        #[strategy = 0.5f64..=10.0] radius: f64,
         #[strategy = 0.05f64..=0.95f64] sample_ratio: f64,
     ) {
         let origin = Point2::from(origin);
@@ -264,11 +445,11 @@ mod tests {
 
     #[property_test]
     fn test_circle_arc_by_three_points(
-        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] origin: [f64; 2],
-        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] direction0: [f64; 2],
-        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] direction1: [f64; 2],
-        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] transit_direction: [f64; 2],
-        #[strategy = 0.5f64..=10.0f64] radius: f64,
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] origin: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] direction0: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] direction1: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] transit_direction: [f64; 2],
+        #[strategy = 0.5f64..=10.0] radius: f64,
         #[strategy = 0.05f64..=0.95f64] sample_ratio: f64,
     ) {
         let origin = Point2::from(origin);
@@ -287,7 +468,7 @@ mod tests {
         prop_assume!((transit - point1).magnitude() > 0.05);
         prop_assume!((point1 - point0).perp_dot(transit - point0).abs() > 0.05);
 
-        let curve = circle_arc_by_three_points(point0, point1, transit).unwrap();
+        let curve = circle_arc_by_three_points(point0, point1, transit)?;
         let (t0, t1) = curve.range_tuple();
         let sample = curve.subs(t0 + sample_ratio * (t1 - t0));
 
@@ -301,9 +482,9 @@ mod tests {
 
     #[property_test]
     fn circle_arc_by_tangent0_has_no_excess_or_shortage(
-        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] point0: [f64; 2],
-        #[strategy = prop::array::uniform2(-10.0f64..=10.0f64)] point1: [f64; 2],
-        #[strategy = 0f64..2.0 * PI] tangent_angle: f64,
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] point0: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] point1: [f64; 2],
+        #[strategy = 0.0..2.0 * PI] tangent_angle: f64,
         #[strategy = 0.05f64..=0.95f64] sample_ratio: f64,
     ) {
         let point0 = Point2::from(point0);
@@ -311,7 +492,7 @@ mod tests {
         let tangent0 = Vector2::new(tangent_angle.cos(), tangent_angle.sin());
         prop_assume!(!(point0 - point1).perp_dot(tangent0).so_small());
 
-        let curve = circle_arc_by_tangent0(point0, point1, tangent0).unwrap();
+        let curve = circle_arc_by_tangent0(point0, point1, tangent0)?;
         let (t0, t1) = curve.range_tuple();
         let sample = curve.subs(t0 + sample_ratio * (t1 - t0));
 
@@ -369,6 +550,140 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(error, Error::ParallelArcTangent);
+    }
+
+    #[property_test]
+    fn arc_arc_transit_test(
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] point0: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] point1: [f64; 2],
+        #[strategy = 0.0..2.0 * PI] tangent_angle0: f64,
+        #[strategy = 1.0..8.0] radius0: f64,
+        #[strategy = 0.0..2.0 * PI] tangent_angle1: f64,
+    ) {
+        let point0 = Point2::from(point0);
+        let point1 = Point2::from(point1);
+        let tangent0 = Vector2::new(tangent_angle0.cos(), tangent_angle0.sin());
+        let tangent1 = Vector2::new(tangent_angle1.cos(), tangent_angle1.sin());
+
+        let transit = arc_arc_transit(point0, point1, tangent0, radius0, tangent1)
+            .map_err(|e| TestCaseError::Reject(e.to_string().into()))?;
+
+        prop_assume!(!tangent0.perp_dot(point0 - transit).so_small());
+        prop_assume!(!tangent1.perp_dot(point1 - transit).so_small());
+        let arc0 = circle_arc_by_tangent0(point0, transit, tangent0)?;
+        let arc1 = circle_arc_by_tangent0(point1, transit, -tangent1)?;
+
+        let (_, t0) = arc0.range_tuple();
+        let (_, t1) = arc1.range_tuple();
+        let der0 = arc0.der(t0);
+        let der1 = -arc1.der(t1);
+        prop_assert!(der0.perp_dot(der1).so_small());
+        prop_assert!(der0.dot(der1) > 0.0);
+    }
+
+    #[test]
+    fn arc_arc_transit_specific0() {
+        let point0 = Point2::new(1.0, 0.0);
+        let tangent0 = Vector2::new(2.0, 0.0);
+        let radius0 = 1.0;
+        let point1 = Point2::new(0.0, 3.0);
+        let tangent1 = Vector2::new(-2.0, 0.0);
+
+        let transit = arc_arc_transit(point0, point1, tangent0, radius0, tangent1).unwrap();
+        assert_near!(transit, Point2::new(2.0, 1.0));
+    }
+    #[test]
+    fn arc_arc_transit_specific1() {
+        let point0 = Point2::new(0.0, 0.0);
+        let tangent0 = Vector2::new(1.5, 0.0);
+        let radius0 = 1.0;
+        let point1 = Point2::new(2.0, 2.0);
+        let tangent1 = Vector2::new(1.23, 0.0);
+
+        let transit = arc_arc_transit(point0, point1, tangent0, radius0, tangent1).unwrap();
+        assert_near!(transit, Point2::new(1.0, 1.0));
+    }
+    #[test]
+    fn arc_arc_transit_one_arc_case() {
+        let point0 = Point2::new(0.0, -1.0);
+        let tangent0 = Vector2::new(1.0, 0.0);
+        let radius0 = 1.0;
+        let point1 = Point2::new(-1.0, 0.0);
+        let tangent1 = Vector2::new(0.0, -1.0);
+
+        let transit = arc_arc_transit(point0, point1, tangent0, radius0, tangent1).unwrap();
+        assert_near!(transit, Point2::new(f64::sqrt(0.5), f64::sqrt(0.5)));
+    }
+
+    #[property_test]
+    fn line_arc_line_transit_test(
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] point0: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] point1: [f64; 2],
+        #[strategy = 0.0..2.0 * PI] tangent_angle0: f64,
+        #[strategy = 1.0..8.0] radius: f64,
+        #[strategy = 0.0..2.0 * PI] tangent_angle1: f64,
+    ) {
+        let point0 = Point2::from(point0);
+        let point1 = Point2::from(point1);
+        let tangent0 = Vector2::new(tangent_angle0.cos(), tangent_angle0.sin());
+        let tangent1 = Vector2::new(tangent_angle1.cos(), tangent_angle1.sin());
+
+        let (transit0, transit1) =
+            line_arc_line_transit(point0, point1, tangent0, radius, tangent1)
+                .map_err(|e| TestCaseError::Reject(e.to_string().into()))?;
+
+        prop_assert!(tangent0.perp_dot(point0 - transit0).so_small());
+        prop_assert!(tangent1.perp_dot(point1 - transit1).so_small());
+
+        prop_assume!(!(transit0 - transit1).perp_dot(transit0 - point0).so_small());
+        let arc = circle_arc_by_tangent0(transit0, transit1, transit0 - point0)?;
+        let matrix = arc.transform();
+        let center = Point2::new(matrix[2][0] / matrix[2][2], matrix[2][1] / matrix[2][2]);
+        prop_assert_near!(transit0.distance(center), radius);
+        prop_assert_near!(transit1.distance(center), radius);
+        let (_, t1) = arc.range_tuple();
+        prop_assert!(tangent1.perp_dot(arc.der(t1)).so_small());
+    }
+
+    #[property_test]
+    fn arc_line_arc_transit_test(
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] point0: [f64; 2],
+        #[strategy = prop::array::uniform2(-10.0..=10.0)] point1: [f64; 2],
+        #[strategy = 0.0..2.0 * PI] direction_angle0: f64,
+        #[strategy = 0.0..2.0 * PI] direction_angle1: f64,
+        #[strategy = 1.0..8.0] radius0: f64,
+        #[strategy = 1.0..8.0] radius1: f64,
+    ) {
+        let point0 = Point2::from(point0);
+        let point1 = Point2::from(point1);
+        let tangent0 = Vector2::new(direction_angle0.cos(), direction_angle0.sin());
+        let tangent1 = Vector2::new(direction_angle1.cos(), direction_angle1.sin());
+
+        let (transit0, transit1) =
+            arc_line_arc_transit(point0, point1, tangent0, tangent1, radius0, radius1)
+                .map_err(|e| TestCaseError::Reject(e.to_string().into()))?;
+
+        prop_assume!(!tangent0.perp_dot(point0 - transit0).so_small());
+        prop_assume!(!tangent1.perp_dot(point1 - transit1).so_small());
+        let arc0 = circle_arc_by_tangent0(point0, transit0, tangent0)?;
+        let arc1 = circle_arc_by_tangent0(point1, transit1, -tangent1)?;
+
+        let matrix0 = arc0.transform();
+        let center0 = Point2::new(matrix0[2][0] / matrix0[2][2], matrix0[2][1] / matrix0[2][2]);
+        let matrix1 = arc1.transform();
+        let center1 = Point2::new(matrix1[2][0] / matrix1[2][2], matrix1[2][1] / matrix1[2][2]);
+
+        prop_assert_near!(transit0.distance(center0), radius0);
+        prop_assert_near!(transit1.distance(center1), radius1);
+
+        let (_, t0) = arc0.range_tuple();
+        let (_, t1) = arc1.range_tuple();
+
+        let delta = transit1 - transit0;
+        prop_assert!(delta.perp_dot(arc0.der(t0)).so_small());
+        prop_assert!(delta.dot(arc0.der(t0)) > 0.0);
+        prop_assert!(delta.perp_dot(arc1.der(t1)).so_small());
+        prop_assert!(delta.dot(arc1.der(t1)) < 0.0);
     }
 
     #[test]
