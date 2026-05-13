@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add multi edge connectors in `truck-drafting::draw`.
 - Add a space after "solid" in STL ASCII format.
 - Fix `truck_geotrait::algo::surface::parameter_division`.
 - Make `MAX_DER_ORDER = 10`.

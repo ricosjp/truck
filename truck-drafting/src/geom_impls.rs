@@ -141,7 +141,7 @@ pub fn arc_arc_transit(
 
             Some((transit, radius0 * angle0 + radius1 * angle1))
         })
-        .min_by(|(_, l0), (_, l1)| l0.partial_cmp(&l1).unwrap())
+        .min_by(|(_, l0), (_, l1)| l0.partial_cmp(l1).unwrap())
         .map(|(point, _)| point)
         .ok_or(Error::NoConnection)
 }
@@ -246,7 +246,7 @@ pub fn arc_line_arc_transit(
 
             Some(((transit0, transit1), length))
         })
-        .min_by(|(_, length0), (_, length1)| length0.partial_cmp(&length1).unwrap())
+        .min_by(|(_, length0), (_, length1)| length0.partial_cmp(length1).unwrap())
         .map(|(pair, _)| pair)
         .ok_or(Error::NoConnection)
 }
