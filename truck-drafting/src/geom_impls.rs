@@ -566,7 +566,7 @@ mod tests {
         let tangent1 = Vector2::new(tangent_angle1.cos(), tangent_angle1.sin());
 
         let transit = arc_arc_transit(point0, point1, tangent0, radius0, tangent1)
-                .map_err(|e| TestCaseError::Reject(e.to_string().into()))?;
+            .map_err(|e| TestCaseError::Reject(e.to_string().into()))?;
 
         prop_assume!(!tangent0.perp_dot(point0 - transit).so_small());
         prop_assume!(!tangent1.perp_dot(point1 - transit).so_small());
