@@ -246,7 +246,27 @@ where BSplineCurve<Point2>: ToSameGeometry<C> {
     Edge::new(vertex0, vertex1, curve.to_same_geometry())
 }
 
-/// connect two vertices by two lines
+/// Tries to connect two vertices with two line segments.
+///
+/// The first segment starts at `vertex0` with `direction0`, and the second
+/// segment ends at `vertex1` with `direction1`.
+///
+/// # Examples
+/// ```
+/// use truck_drafting::*;
+///
+/// let vertex0 = draw::vertex((0.0, 0.0));
+/// let vertex1 = draw::vertex((1.0, 1.0));
+/// let wire: Wire = draw::try_line_line(&vertex0, &vertex1, Vector2::unit_x(), Vector2::unit_y())
+///     .unwrap();
+///
+/// assert!(wire.is_continuous());
+/// let v = wire.vertex_iter().collect::<Vec<_>>();
+/// assert_eq!(v.len(), 3); // three vertices, two edges
+/// assert_near!(v[0].point(), (0.0, 0.0).into());
+/// assert_near!(v[1].point(), (1.0, 0.0).into());
+/// assert_near!(v[2].point(), (1.0, 1.0).into());
+/// ```
 pub fn try_line_line<C>(
     vertex0: &Vertex,
     vertex1: &Vertex,
@@ -260,14 +280,33 @@ where
     let transit = &vertex(geom_impls::lines_crossing_point(
         point0, point1, direction0, direction1,
     )?);
-    
+
     Ok(wire![
         try_line(vertex0, transit)?,
         try_line(transit, vertex1)?
     ])
 }
 
-/// connect two vertices by two lines.
+/// Connects two vertices with two line segments.
+///
+/// The first segment starts at `vertex0` with `direction0`, and the second
+/// segment ends at `vertex1` with `direction1`.
+///
+/// # Examples
+/// ```
+/// use truck_drafting::*;
+///
+/// let vertex0 = draw::vertex((0.0, 0.0));
+/// let vertex1 = draw::vertex((1.0, 1.0));
+/// let wire: Wire = draw::line_line(&vertex0, &vertex1, Vector2::unit_x(), Vector2::unit_y());
+///
+/// assert!(wire.is_continuous());
+/// let v = wire.vertex_iter().collect::<Vec<_>>();
+/// assert_eq!(v.len(), 3); // three vertices, two edges
+/// assert_near!(v[0].point(), (0.0, 0.0).into());
+/// assert_near!(v[1].point(), (1.0, 0.0).into());
+/// assert_near!(v[2].point(), (1.0, 1.0).into());
+/// ```
 pub fn line_line<C>(
     vertex0: &Vertex,
     vertex1: &Vertex,
@@ -280,7 +319,33 @@ where
     try_line_line(vertex0, vertex1, direction0, direction1).unwrap()
 }
 
-/// Tries to connect vertices by two circle arcs.
+/// Tries to connect two vertices with two tangent circle arcs.
+///
+/// The first arc starts at `vertex0` with `tangent0` and radius `radius0`.
+/// The second arc ends at `vertex1` with `tangent1`.
+///
+/// # Examples
+/// ```
+/// use truck_drafting::*;
+///
+/// let vertex0 = draw::vertex((1.0, 0.0));
+/// let vertex1 = draw::vertex((0.0, 3.0));
+/// let wire: Wire = draw::try_arc_arc(
+///     &vertex0,
+///     &vertex1,
+///     Vector2::new(2.0, 0.0),
+///     1.0,
+///     Vector2::new(-2.0, 0.0),
+/// )
+/// .unwrap();
+///
+/// assert!(wire.is_continuous());
+/// let v = wire.vertex_iter().collect::<Vec<_>>();
+/// assert_eq!(v.len(), 3); // three vertices, two edges
+/// assert_near!(v[0].point(), (1.0, 0.0).into());
+/// assert_near!(v[1].point(), (2.0, 1.0).into());
+/// assert_near!(v[2].point(), (0.0, 3.0).into());
+/// ```
 pub fn try_arc_arc<C>(
     vertex0: &Vertex,
     vertex1: &Vertex,
@@ -295,13 +360,38 @@ where
     let transit = &vertex(geom_impls::arc_arc_transit(
         point0, point1, tangent0, radius0, tangent1,
     )?);
-    let edge0 = circle_arc(vertex0, transit, tangent0);
-    let mut edge1 = circle_arc(vertex1, transit, -tangent1);
+    let edge0 = try_circle_arc(vertex0, transit, tangent0)?;
+    let mut edge1 = try_circle_arc(vertex1, transit, -tangent1)?;
     edge1.invert();
     Ok(wire![edge0, edge1])
 }
 
-/// connect vertices by two circle arcs.
+/// Connects two vertices with two tangent circle arcs.
+///
+/// The first arc starts at `vertex0` with `tangent0` and radius `radius0`.
+/// The second arc ends at `vertex1` with `tangent1`.
+///
+/// # Examples
+/// ```
+/// use truck_drafting::*;
+///
+/// let vertex0 = draw::vertex((1.0, 0.0));
+/// let vertex1 = draw::vertex((0.0, 3.0));
+/// let wire: Wire = draw::arc_arc(
+///     &vertex0,
+///     &vertex1,
+///     Vector2::new(2.0, 0.0),
+///     1.0,
+///     Vector2::new(-2.0, 0.0),
+/// );
+///
+/// assert!(wire.is_continuous());
+/// let v = wire.vertex_iter().collect::<Vec<_>>();
+/// assert_eq!(v.len(), 3); // three vertices, two edges
+/// assert_near!(v[0].point(), (1.0, 0.0).into());
+/// assert_near!(v[1].point(), (2.0, 1.0).into());
+/// assert_near!(v[2].point(), (0.0, 3.0).into());
+/// ```
 pub fn arc_arc<C>(
     vertex0: &Vertex,
     vertex1: &Vertex,
@@ -315,7 +405,29 @@ where
     try_arc_arc(vertex0, vertex1, tangent0, radius0, tangent1).unwrap()
 }
 
-/// 2つの頂点を2直線と間の円弧で滑らかに接続する
+/// Tries to connect two vertices with a line, a tangent circle arc, and a line.
+///
+/// The first line starts at `vertex0` with `tangent0`, and the last line ends
+/// at `vertex1` with `tangent1`.
+///
+/// # Examples
+/// ```
+/// use truck_drafting::*;
+///
+/// let vertex0 = draw::vertex((0.0, 0.0));
+/// let vertex1 = draw::vertex((1.0, 1.0));
+/// let wire: Wire =
+///     draw::try_line_arc_line(&vertex0, &vertex1, Vector2::unit_x(), 0.2, Vector2::unit_y())
+///         .unwrap();
+///
+/// assert!(wire.is_continuous());
+/// let v = wire.vertex_iter().collect::<Vec<_>>();
+/// assert_eq!(v.len(), 4); // four vertices, three edges
+/// assert_near!(v[0].point(), (0.0, 0.0).into());
+/// assert_near!(v[1].point(), (0.8, 0.0).into());
+/// assert_near!(v[2].point(), (1.0, 0.2).into());
+/// assert_near!(v[3].point(), (1.0, 1.0).into());
+/// ```
 pub fn try_line_arc_line<C>(
     vertex0: &Vertex,
     vertex1: &Vertex,
@@ -338,7 +450,28 @@ where
     ])
 }
 
-/// 2つの頂点を2直線と間の円弧で滑らかに接続する
+/// Connects two vertices with a line, a tangent circle arc, and a line.
+///
+/// The first line starts at `vertex0` with `tangent0`, and the last line ends
+/// at `vertex1` with `tangent1`.
+///
+/// # Examples
+/// ```
+/// use truck_drafting::*;
+///
+/// let vertex0 = draw::vertex((0.0, 0.0));
+/// let vertex1 = draw::vertex((1.0, 1.0));
+/// let wire: Wire =
+///     draw::line_arc_line(&vertex0, &vertex1, Vector2::unit_x(), 0.2, Vector2::unit_y());
+///
+/// assert!(wire.is_continuous());
+/// let v = wire.vertex_iter().collect::<Vec<_>>();
+/// assert_eq!(v.len(), 4); // four vertices, three edges
+/// assert_near!(v[0].point(), (0.0, 0.0).into());
+/// assert_near!(v[1].point(), (0.8, 0.0).into());
+/// assert_near!(v[2].point(), (1.0, 0.2).into());
+/// assert_near!(v[3].point(), (1.0, 1.0).into());
+/// ```
 pub fn line_arc_line<C>(
     vertex0: &Vertex,
     vertex1: &Vertex,
@@ -353,7 +486,35 @@ where
     try_line_arc_line(vertex0, vertex1, tangent0, radius, tangent1).unwrap()
 }
 
-/// 2つの頂点を2円と間の接線で滑らかに接続する
+/// Tries to connect two vertices with a circle arc, a tangent line, and a circle arc.
+///
+/// The first arc starts at `vertex0` with `tangent0` and radius `radius0`.
+/// The second arc ends at `vertex1` with `tangent1` and radius `radius1`.
+///
+/// # Examples
+/// ```
+/// use truck_drafting::*;
+///
+/// let vertex0 = draw::vertex((0.0, 0.0));
+/// let vertex1 = draw::vertex((3.0, 0.0));
+/// let wire: Wire = draw::try_arc_line_arc(
+///     &vertex0,
+///     &vertex1,
+///     Vector2::unit_y(),
+///     -Vector2::unit_y(),
+///     0.5,
+///     0.5,
+/// )
+/// .unwrap();
+///
+/// assert!(wire.is_continuous());
+/// let v = wire.vertex_iter().collect::<Vec<_>>();
+/// assert_eq!(v.len(), 4); // four vertices, three edges
+/// assert_near!(v[0].point(), (0.0, 0.0).into());
+/// assert_near!(v[1].point(), (0.5, 0.5).into());
+/// assert_near!(v[2].point(), (2.5, 0.5).into());
+/// assert_near!(v[3].point(), (3.0, 0.0).into());
+/// ```
 pub fn try_arc_line_arc<C>(
     vertex0: &Vertex,
     vertex1: &Vertex,
@@ -370,14 +531,41 @@ where
     let (transit_point0, transit_point1) =
         geom_impls::arc_line_arc_transit(point0, point1, tangent0, tangent1, radius0, radius1)?;
     let (transit0, transit1) = (&vertex(transit_point0), &vertex(transit_point1));
-    Ok(wire![
-        try_circle_arc(vertex0, transit0, tangent0)?,
-        try_line(transit0, transit1)?,
-        try_circle_arc(transit1, vertex1, tangent1)?,
-    ])
+    let edge0 = try_circle_arc(vertex0, transit0, tangent0)?;
+    let edge1 = try_line(transit0, transit1)?;
+    let mut edge2 = try_circle_arc(vertex1, transit1, -tangent1)?;
+    edge2.invert();
+    Ok(wire![edge0, edge1, edge2])
 }
 
-/// 2つの頂点を2円と間の接線で滑らかに接続する
+/// Connects two vertices with a circle arc, a tangent line, and a circle arc.
+///
+/// The first arc starts at `vertex0` with `tangent0` and radius `radius0`.
+/// The second arc ends at `vertex1` with `tangent1` and radius `radius1`.
+///
+/// # Examples
+/// ```
+/// use truck_drafting::*;
+///
+/// let vertex0 = draw::vertex((0.0, 0.0));
+/// let vertex1 = draw::vertex((3.0, 0.0));
+/// let wire: Wire = draw::arc_line_arc(
+///     &vertex0,
+///     &vertex1,
+///     Vector2::unit_y(),
+///     -Vector2::unit_y(),
+///     0.5,
+///     0.5,
+/// );
+///
+/// assert!(wire.is_continuous());
+/// let v = wire.vertex_iter().collect::<Vec<_>>();
+/// assert_eq!(v.len(), 4); // four vertices, three edges
+/// assert_near!(v[0].point(), (0.0, 0.0).into());
+/// assert_near!(v[1].point(), (0.5, 0.5).into());
+/// assert_near!(v[2].point(), (2.5, 0.5).into());
+/// assert_near!(v[3].point(), (3.0, 0.0).into());
+/// ```
 pub fn arc_line_arc<C>(
     vertex0: &Vertex,
     vertex1: &Vertex,

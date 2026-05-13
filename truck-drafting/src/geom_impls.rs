@@ -77,7 +77,7 @@ pub fn lines_crossing_point(
 ) -> Result<Point2, Error> {
     let matrix = Matrix2::from_cols(direction0, -direction1);
     if matrix.determinant().so_small() {
-        panic!("directions are parallel");
+        return Err(Error::ParallelLineDirections);
     }
     let params = matrix.invert().unwrap() * (point1 - point0);
     Ok((point0 + params.x * direction0).midpoint(point1 + params.y * direction1))
@@ -143,7 +143,7 @@ pub fn arc_arc_transit(
         })
         .min_by(|(_, l0), (_, l1)| l0.partial_cmp(&l1).unwrap())
         .map(|(point, _)| point)
-        .ok_or_else(|| panic!("there is no circle connection"))
+        .ok_or(Error::NoConnection)
 }
 
 fn by_one_arc(
@@ -173,7 +173,7 @@ pub fn line_arc_line_transit(
     }
     let crossing = lines_crossing_point(point0, point1, direction0, direction1)?;
     if point0.near(&crossing) || point1.near(&crossing) {
-        panic!("crossing point is near vertices");
+        return Err(Error::DegenerateConnectionCorner);
     }
     let direction0 = (point0 - crossing).normalize();
     let direction1 = (point1 - crossing).normalize();
@@ -248,7 +248,7 @@ pub fn arc_line_arc_transit(
         })
         .min_by(|(_, length0), (_, length1)| length0.partial_cmp(&length1).unwrap())
         .map(|(pair, _)| pair)
-        .ok_or_else(|| panic!("there is no connection"))
+        .ok_or(Error::NoConnection)
 }
 
 #[allow(dead_code)]
@@ -468,7 +468,7 @@ mod tests {
         prop_assume!((transit - point1).magnitude() > 0.05);
         prop_assume!((point1 - point0).perp_dot(transit - point0).abs() > 0.05);
 
-        let curve = circle_arc_by_three_points(point0, point1, transit).unwrap();
+        let curve = circle_arc_by_three_points(point0, point1, transit)?;
         let (t0, t1) = curve.range_tuple();
         let sample = curve.subs(t0 + sample_ratio * (t1 - t0));
 
@@ -492,7 +492,7 @@ mod tests {
         let tangent0 = Vector2::new(tangent_angle.cos(), tangent_angle.sin());
         prop_assume!(!(point0 - point1).perp_dot(tangent0).so_small());
 
-        let curve = circle_arc_by_tangent0(point0, point1, tangent0).unwrap();
+        let curve = circle_arc_by_tangent0(point0, point1, tangent0)?;
         let (t0, t1) = curve.range_tuple();
         let sample = curve.subs(t0 + sample_ratio * (t1 - t0));
 
@@ -565,12 +565,13 @@ mod tests {
         let tangent0 = Vector2::new(tangent_angle0.cos(), tangent_angle0.sin());
         let tangent1 = Vector2::new(tangent_angle1.cos(), tangent_angle1.sin());
 
-        let opt = arc_arc_transit(point0, point1, tangent0, radius0, tangent1);
-        prop_assume!(opt.is_ok());
-        let transit = opt.unwrap();
+        let transit = arc_arc_transit(point0, point1, tangent0, radius0, tangent1)
+                .map_err(|e| TestCaseError::Reject(e.to_string().into()))?;
 
-        let arc0 = circle_arc_by_tangent0(point0, transit, tangent0).unwrap();
-        let arc1 = circle_arc_by_tangent0(point1, transit, -tangent1).unwrap();
+        prop_assume!(!tangent0.perp_dot(point0 - transit).so_small());
+        prop_assume!(!tangent1.perp_dot(point1 - transit).so_small());
+        let arc0 = circle_arc_by_tangent0(point0, transit, tangent0)?;
+        let arc1 = circle_arc_by_tangent0(point1, transit, -tangent1)?;
 
         let (_, t0) = arc0.range_tuple();
         let (_, t1) = arc1.range_tuple();
@@ -627,14 +628,15 @@ mod tests {
         let tangent0 = Vector2::new(tangent_angle0.cos(), tangent_angle0.sin());
         let tangent1 = Vector2::new(tangent_angle1.cos(), tangent_angle1.sin());
 
-        let opt = line_arc_line_transit(point0, point1, tangent0, radius, tangent1);
-        prop_assume!(opt.is_ok());
-        let (transit0, transit1) = opt.unwrap();
+        let (transit0, transit1) =
+            line_arc_line_transit(point0, point1, tangent0, radius, tangent1)
+                .map_err(|e| TestCaseError::Reject(e.to_string().into()))?;
 
         prop_assert!(tangent0.perp_dot(point0 - transit0).so_small());
         prop_assert!(tangent1.perp_dot(point1 - transit1).so_small());
 
-        let arc = circle_arc_by_tangent0(transit0, transit1, transit0 - point0).unwrap();
+        prop_assume!(!(transit0 - transit1).perp_dot(transit0 - point0).so_small());
+        let arc = circle_arc_by_tangent0(transit0, transit1, transit0 - point0)?;
         let matrix = arc.transform();
         let center = Point2::new(matrix[2][0] / matrix[2][2], matrix[2][1] / matrix[2][2]);
         prop_assert_near!(transit0.distance(center), radius);
@@ -657,12 +659,14 @@ mod tests {
         let tangent0 = Vector2::new(direction_angle0.cos(), direction_angle0.sin());
         let tangent1 = Vector2::new(direction_angle1.cos(), direction_angle1.sin());
 
-        let opt = arc_line_arc_transit(point0, point1, tangent0, tangent1, radius0, radius1);
-        prop_assume!(opt.is_ok());
-        let (transit0, transit1) = opt.unwrap();
+        let (transit0, transit1) =
+            arc_line_arc_transit(point0, point1, tangent0, tangent1, radius0, radius1)
+                .map_err(|e| TestCaseError::Reject(e.to_string().into()))?;
 
-        let arc0 = circle_arc_by_tangent0(point0, transit0, tangent0).unwrap();
-        let arc1 = circle_arc_by_tangent0(point1, transit1, -tangent1).unwrap();
+        prop_assume!(!tangent0.perp_dot(point0 - transit0).so_small());
+        prop_assume!(!tangent1.perp_dot(point1 - transit1).so_small());
+        let arc0 = circle_arc_by_tangent0(point0, transit0, tangent0)?;
+        let arc1 = circle_arc_by_tangent0(point1, transit1, -tangent1)?;
 
         let matrix0 = arc0.transform();
         let center0 = Point2::new(matrix0[2][0] / matrix0[2][2], matrix0[2][1] / matrix0[2][2]);

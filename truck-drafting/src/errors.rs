@@ -15,6 +15,17 @@ pub enum Error {
     /// the tangent vector at the specified parameter vanished.
     #[error("the tangent vector vanished near the specified corner.")]
     DegenerateTangent,
+    /// two line directions are parallel and cannot determine a crossing point.
+    #[error("two line directions are parallel and cannot determine a crossing point.")]
+    ParallelLineDirections,
+    /// the connection corner is too close to one of the vertices.
+    #[error("the connection corner is too close to one of the vertices.")]
+    DegenerateConnectionCorner,
+    /// the requested vertices and tangents cannot be connected by the selected primitive sequence.
+    #[error(
+        "the requested vertices and tangents cannot be connected by the selected primitive sequence."
+    )]
+    NoConnection,
     /// the specified corner is degenerate and cannot define a fillet direction.
     #[error("the specified corner is degenerate and cannot define a fillet direction.")]
     DegenerateCorner,
