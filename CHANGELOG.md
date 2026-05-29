@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Using `hint` of `UnitCircle::search_{nearest}_parameter`.
 - Add multi edge connectors in `truck-drafting::draw`.
 - Add a space after "solid" in STL ASCII format.
 - Fix `truck_geotrait::algo::surface::parameter_division`.

@@ -1,28 +1,77 @@
 use proptest::{prelude::*, property_test};
-use std::f64::consts::PI;
+use std::f64::consts::{PI, TAU};
 use truck_geometry::prelude::*;
 
 #[property_test]
-fn search_parameter(#[strategy = 0f64..=(2.0 * PI)] t: f64) {
+fn search_parameter(#[strategy = 0.0..=TAU] t: f64) {
     let circle = UnitCircle::<Point2>::new();
     let p = circle.subs(t);
     let s = circle.search_nearest_parameter(p, None, 1).unwrap();
-    prop_assert_near!(s, t);
-}
-#[property_test]
-fn search_nearest_parameter(
-    #[strategy = 0f64..=(2.0 * PI)] t: f64,
-    #[strategy = 0.1f64..=5f64] a: f64,
-) {
-    let circle = UnitCircle::<Point2>::new();
-    let p = a * circle.subs(t);
-    let s = circle.search_nearest_parameter(p, None, 1).unwrap();
-    let q = a * circle.subs(s);
-    prop_assert_near!(p, q);
+    prop_assert_near2!(s, t);
 }
 
 #[property_test]
-fn to_nurbs(#[strategy = 0f64..=PI] t0: f64, #[strategy = PI..=(2.0 * PI)] t1: f64) {
+fn search_nearest_parameter(#[strategy = 0.0..=TAU] t: f64, #[strategy = 0.1..=5f64] a: f64) {
+    let circle = UnitCircle::<Point2>::new();
+    let p = a * circle.subs(t);
+    let s = circle.search_nearest_parameter(p, None, 1).unwrap();
+    prop_assert_near2!(s, t);
+}
+
+#[property_test]
+fn search_parameter_with_parameter_hint(
+    #[strategy = -100.0..=100.0] t: f64,
+    #[strategy = -0.2..=0.2] d: f64,
+) {
+    let circle = UnitCircle::<Point2>::new();
+    let p = circle.subs(t);
+    let s = circle.search_nearest_parameter(p, t + d, 1).unwrap();
+    prop_assert_near2!(s, t);
+}
+
+#[property_test]
+fn search_nearest_parameter_with_parameter_hint(
+    #[strategy = -100.0..=100.0] t: f64,
+    #[strategy = -0.2..=0.2] d: f64,
+    #[strategy = 0.1..=5.0] a: f64,
+) {
+    let circle = UnitCircle::<Point2>::new();
+    let p = a * circle.subs(t);
+    let s = circle.search_nearest_parameter(p, t + d, 1).unwrap();
+    prop_assert_near2!(s, t);
+}
+
+#[property_test]
+fn search_parameter_with_range(
+    #[strategy = -100.0..=100.0] start: f64,
+    #[strategy = 0.01..=PI] length: f64,
+    #[strategy = -0.1..=1.1] lerp_ratio: f64,
+) {
+    let circle = UnitCircle::<Point2>::new();
+    let range = (start, start + length);
+    let t = start + lerp_ratio * length;
+    let p = circle.subs(t);
+    let s = circle.search_nearest_parameter(p, range, 1).unwrap();
+    prop_assert_near2!(s, t);
+}
+
+#[property_test]
+fn search_nearest_parameter_with_range(
+    #[strategy = -100.0..=100.0] start: f64,
+    #[strategy = 0.01..=PI] length: f64,
+    #[strategy = -0.1..=1.1] lerp_ratio: f64,
+    #[strategy = 0.1..=5.0] a: f64,
+) {
+    let circle = UnitCircle::<Point2>::new();
+    let range = (start, start + length);
+    let t = start + lerp_ratio * length;
+    let p = a * circle.subs(t);
+    let s = circle.search_nearest_parameter(p, range, 1).unwrap();
+    prop_assert_near2!(s, t);
+}
+
+#[property_test]
+fn to_nurbs(#[strategy = 0.0..=PI] t0: f64, #[strategy = PI..=TAU] t1: f64) {
     let circle = UnitCircle::<Point2>::new();
     let arc = TrimmedCurve::new(circle, (t0, t1));
     let bsp: NurbsCurve<_> = arc.to_same_geometry();

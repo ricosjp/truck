@@ -33,7 +33,7 @@ pub trait ParametricCurve: Clone {
     #[inline(always)]
     fn try_range_tuple(&self) -> Option<(f64, f64)> {
         let (x, y) = self.parameter_range();
-        bound2opt(x).and_then(move |x| bound2opt(y).map(move |y| (x, y)))
+        bound2opt(x).zip(bound2opt(y))
     }
     /// `None` in default implementation; `Some(period)` if periodic.
     #[inline(always)]
