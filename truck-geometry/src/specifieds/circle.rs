@@ -121,15 +121,14 @@ fn round_theta(theta: f64, hint: SPHint1D) -> f64 {
         SPHint1D::None => theta,
         SPHint1D::Parameter(hint) => {
             let floor = (hint / TAU).floor() * TAU;
-            let theta = [theta + floor - TAU, theta + floor, theta + floor + TAU]
+            [theta + floor - TAU, theta + floor, theta + floor + TAU]
                 .into_iter()
                 .fold(theta, |theta0, theta| {
                     match (theta - hint).abs() < (theta0 - hint).abs() {
                         true => theta,
                         false => theta0,
                     }
-                });
-            theta
+                })
         }
         SPHint1D::Range(hint0, hint1) => {
             let floor = (hint0 / TAU).floor() * TAU;
