@@ -1,5 +1,5 @@
 use super::*;
-use std::f64::consts::PI;
+use std::f64::consts::TAU;
 
 impl<P> UnitCircle<P> {
     /// constructor
@@ -26,9 +26,7 @@ impl ParametricCurve for UnitCircle<Point2> {
     #[inline]
     fn der2(&self, t: f64) -> Vector2 { self.der_n(2, t) }
     #[inline]
-    fn parameter_range(&self) -> ParameterRange {
-        (Bound::Included(0.0), Bound::Excluded(2.0 * PI))
-    }
+    fn parameter_range(&self) -> ParameterRange { (Bound::Included(0.0), Bound::Excluded(TAU)) }
 }
 
 impl BoundedCurve for UnitCircle<Point2> {}
@@ -52,11 +50,9 @@ impl ParametricCurve for UnitCircle<Point3> {
     #[inline]
     fn der2(&self, t: f64) -> Vector3 { self.der_n(2, t) }
     #[inline]
-    fn period(&self) -> Option<f64> { Some(2.0 * PI) }
+    fn period(&self) -> Option<f64> { Some(TAU) }
     #[inline]
-    fn parameter_range(&self) -> ParameterRange {
-        (Bound::Included(0.0), Bound::Excluded(2.0 * PI))
-    }
+    fn parameter_range(&self) -> ParameterRange { (Bound::Included(0.0), Bound::Excluded(TAU)) }
 }
 
 impl BoundedCurve for UnitCircle<Point3> {}
@@ -86,7 +82,7 @@ impl SearchNearestParameter<D1> for UnitCircle<Point2> {
     fn search_nearest_parameter<H: Into<SPHint1D>>(
         &self,
         pt: Point2,
-        _: H,
+        hint: H,
         _: usize,
     ) -> Option<f64> {
         let v = pt.to_vec();
@@ -97,15 +93,15 @@ impl SearchNearestParameter<D1> for UnitCircle<Point2> {
         let theta = f64::acos(f64::clamp(v.x, -1.0, 1.0));
         let theta = match v.y > 0.0 {
             true => theta,
-            false => 2.0 * PI - theta,
+            false => TAU - theta,
         };
-        Some(theta)
+        Some(round_theta(theta, hint.into()))
     }
 }
 
 impl SearchParameter<D1> for UnitCircle<Point2> {
     type Point = Point2;
-    fn search_parameter<H: Into<SPHint1D>>(&self, pt: Point2, _: H, _: usize) -> Option<f64> {
+    fn search_parameter<H: Into<SPHint1D>>(&self, pt: Point2, hint: H, _: usize) -> Option<f64> {
         let v = pt.to_vec();
         if !v.magnitude().near(&1.0) {
             return None;
@@ -114,9 +110,42 @@ impl SearchParameter<D1> for UnitCircle<Point2> {
         let theta = f64::acos(f64::clamp(v.x, -1.0, 1.0));
         let theta = match v.y > 0.0 {
             true => theta,
-            false => 2.0 * PI - theta,
+            false => TAU - theta,
         };
-        Some(theta)
+        Some(round_theta(theta, hint.into()))
+    }
+}
+
+fn round_theta(theta: f64, hint: SPHint1D) -> f64 {
+    match hint {
+        SPHint1D::None => theta,
+        SPHint1D::Parameter(hint) => {
+            let floor = (hint / TAU).floor() * TAU;
+            let theta = [theta + floor - TAU, theta + floor, theta + floor + TAU]
+                .into_iter()
+                .fold(theta, |theta0, theta| {
+                    match (theta - hint).abs() < (theta0 - hint).abs() {
+                        true => theta,
+                        false => theta0,
+                    }
+                });
+            theta
+        }
+        SPHint1D::Range(hint0, hint1) => {
+            let floor = (hint0 / TAU).floor() * TAU;
+            let theta = match theta + floor > hint0 {
+                true => theta + floor,
+                false => theta + floor + TAU,
+            };
+            if theta < hint1 {
+                return theta;
+            }
+            let theta0 = theta - TAU;
+            match hint0 - theta0 < theta - hint1 {
+                true => theta0,
+                false => theta,
+            }
+        }
     }
 }
 
