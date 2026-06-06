@@ -42,6 +42,82 @@ impl<C0, S0, C1, S1, F0, F1> EdgeBlendSurface<C0, S0, F0, C1, S1, F1> {
     pub fn magnitude1_mut(&mut self) -> &mut F1 { &mut self.magnitude1 }
 }
 
+const fn bezier_3rd_basis(n: usize, u: f64) -> [f64; 4] {
+    let _1subu = 1.0 - u;
+    match n {
+        0 => [
+            _1subu * _1subu * _1subu,
+            3.0 * _1subu * _1subu * u,
+            3.0 * _1subu * u * u,
+            u * u * u,
+        ],
+        1 => [
+            -3.0 * _1subu * _1subu,
+            3.0 * _1subu * (1.0 - 3.0 * u),
+            3.0 * u * (2.0 - 3.0 * u),
+            3.0 * u * u,
+        ],
+        2 => [
+            6.0 * _1subu,
+            -6.0 * (2.0 - 3.0 * u),
+            6.0 * (1.0 - 3.0 * u),
+            6.0 * u,
+        ],
+        3 => [-6.0, 18.0, -18.0, 6.0],
+        _ => [0.0; 4],
+    }
+}
+
+fn normalized_ders(ders: &CurveDers<Vector3>) -> CurveDers<Vector3> {
+    ders.element_wise_ders(&ders.abs_ders(), Vector3::extend)
+        .rat_ders()
+}
+
+fn pcurve_normal_ders<C, S>(
+    pcurve: &PCurve<C, S>,
+    max_order: usize,
+    u: f64,
+) -> (CurveDers<Vector3>, CurveDers<Vector3>)
+where
+    C: ParametricCurve2D,
+    S: ParametricSurface3D,
+{
+    let cders = pcurve.curve().ders(max_order + 1, u);
+    let Vector2 { x, y } = cders[0];
+    let sders = pcurve.surface().ders(max_order + 1, x, y);
+    let pders = sders.composite_ders(&cders);
+    let uders = sders.uder().composite_ders(&cders);
+    let vders = sders.vder().composite_ders(&cders);
+    let normal_ders = uders.combinatorial_ders(&vders, Vector3::cross);
+    (pders, normal_ders)
+}
+
+fn tangent_ders(
+    pders: &CurveDers<Vector3>,
+    normal_ders: &CurveDers<Vector3>,
+    magnitude_ders: &CurveDers<f64>,
+) -> CurveDers<Vector3> {
+    let axis_ders = pders.der().combinatorial_ders(normal_ders, Vector3::cross);
+    normalized_ders(&axis_ders)
+        .combinatorial_ders(magnitude_ders, |axis, magnitude| axis * magnitude)
+}
+
+fn edge_control_point_ders<C, S, F>(
+    pcurve: &PCurve<C, S>,
+    magnitude: &F,
+    max_order: usize,
+    u: f64,
+) -> (CurveDers<Vector3>, CurveDers<Vector3>)
+where
+    C: ParametricCurve2D,
+    S: ParametricSurface3D,
+    F: ScalarFunctionD1,
+{
+    let (pders, normal_ders) = pcurve_normal_ders(pcurve, max_order, u);
+    let tangent_ders = tangent_ders(&pders, &normal_ders, &magnitude.ders(max_order, u)) / 3.0;
+    (pders, tangent_ders)
+}
+
 impl<C0, S0, F0, C1, S1, F1> ParametricSurface for EdgeBlendSurface<C0, S0, F0, C1, S1, F1>
 where
     C0: ParametricCurve2D,
@@ -53,33 +129,40 @@ where
 {
     type Point = Point3;
     type Vector = Vector3;
-    fn subs(&self, u: f64, v: f64) -> Self::Point {
-        let cders0 = self.pcurve0.curve().ders(1, u);
-        let Vector2 { x: u0, y: v0 } = cders0[0];
-        let ders0 = self.pcurve0.surface().ders(1, u0, v0);
-        let pcder0 = ders0.composite_der(&cders0, 1);
-        let normal0 = ders0[1][0].cross(ders0[0][1]);
-        let tangent0 = pcder0.cross(normal0).normalize() * self.magnitude0.subs(u);
-
-        let cders1 = self.pcurve1.curve().ders(1, u);
-        let Vector2 { x: u1, y: v1 } = cders1[0];
-        let ders1 = self.pcurve1.surface().ders(1, u1, v1);
-        let pcder1 = ders1.composite_der(&cders1, 1);
-        let normal1 = ders1[1][0].cross(ders1[0][1]);
-        let tangent1 = pcder1.cross(normal1).normalize() * self.magnitude1.subs(u);
-
-        let p0 = pcder0;
-        let p1 = pcder0 + tangent0 / 3.0;
-        let p2 = pcder1 - tangent1 / 3.0;
-        let p3 = pcder1;
-        Point3::from_vec(
-            p0 * (1.0 - v).powi(3)
-                + p1 * 3.0 * (1.0 - v) * (1.0 - v) * v
-                + p2 * 3.0 * (1.0 - v) * v * v
-                + p3 * v.powi(3),
-        )
+    fn ders(&self, max_order: usize, u: f64, v: f64) -> SurfaceDers<Self::Vector> {
+        let (pders0, tangent_ders0) =
+            edge_control_point_ders(&self.pcurve0, &self.magnitude0, max_order, u);
+        let (pders1, tangent_ders1) =
+            edge_control_point_ders(&self.pcurve1, &self.magnitude1, max_order, u);
+        let mut ders = SurfaceDers::new(max_order);
+        ders.slice_iter_mut().enumerate().for_each(|(m, ders)| {
+            ders.iter_mut().enumerate().for_each(|(n, der)| {
+                let basis = bezier_3rd_basis(n, v);
+                let q0 = pders0[m];
+                let q1 = pders0[m] + tangent_ders0[m];
+                let q2 = pders1[m] - tangent_ders1[m];
+                let q3 = pders1[m];
+                *der = q0 * basis[0] + q1 * basis[1] + q2 * basis[2] + q3 * basis[3];
+            });
+        });
+        ders
     }
-    
+    #[inline]
+    fn der_mn(&self, m: usize, n: usize, u: f64, v: f64) -> Self::Vector {
+        self.ders(m + n, u, v)[m][n]
+    }
+    #[inline]
+    fn subs(&self, u: f64, v: f64) -> Self::Point { Point3::from_vec(self.ders(0, u, v)[0][0]) }
+    #[inline]
+    fn uder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(1, 0, u, v) }
+    #[inline]
+    fn vder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(0, 1, u, v) }
+    #[inline]
+    fn uuder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(2, 0, u, v) }
+    #[inline]
+    fn uvder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(1, 1, u, v) }
+    #[inline]
+    fn vvder(&self, u: f64, v: f64) -> Self::Vector { self.der_mn(0, 2, u, v) }
     #[inline]
     fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
         let range0 = self.pcurve0.parameter_range();
@@ -87,4 +170,26 @@ where
         let range = range_common_part(&range0, &range1);
         (range, (Bound::Included(0.0), Bound::Included(1.0)))
     }
+}
+
+impl<C0, S0, F0, C1, S1, F1> ParametricSurface3D for EdgeBlendSurface<C0, S0, F0, C1, S1, F1>
+where
+    C0: ParametricCurve2D,
+    S0: ParametricSurface3D,
+    F0: ScalarFunctionD1,
+    C1: ParametricCurve2D,
+    S1: ParametricSurface3D,
+    F1: ScalarFunctionD1,
+{
+}
+
+impl<C0, S0, F0, C1, S1, F1> BoundedSurface for EdgeBlendSurface<C0, S0, F0, C1, S1, F1>
+where
+    C0: BoundedCurve + ParametricCurve2D,
+    S0: ParametricSurface3D,
+    F0: ScalarFunctionD1,
+    C1: BoundedCurve + ParametricCurve2D,
+    S1: ParametricSurface3D,
+    F1: ScalarFunctionD1,
+{
 }

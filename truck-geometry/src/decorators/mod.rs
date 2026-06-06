@@ -475,3 +475,34 @@ where
     };
     (t0.cloned(), t1.cloned())
 }
+
+#[test]
+fn test_range_common_part() {
+    use std::ops::RangeBounds;
+    fn to_parameter_range<R: RangeBounds<f64>>(x: &R) -> ParameterRange {
+        (x.start_bound().cloned(), x.end_bound().cloned())
+    }
+    fn compare<R0, R1, R2>(range0: R0, range1: R1, range2: R2)
+    where
+        R0: RangeBounds<f64>,
+        R1: RangeBounds<f64>,
+        R2: RangeBounds<f64>, {
+        assert_eq!(
+            range_common_part(&range0, &range1),
+            to_parameter_range(&range2),
+        );
+        assert_eq!(
+            range_common_part(&range1, &range0),
+            to_parameter_range(&range2),
+        );
+    }
+    compare(0.0..2.0, -1.0..1.0, 0.0..1.0);
+    compare(0.0..=2.0, -1.0..2.0, 0.0..2.0);
+    compare(..=2.0, 0.0.., 0.0..=2.0);
+    compare(
+        (Bound::Excluded(0.0), Bound::Included(1.0)),
+        0.0..1.0,
+        (Bound::Excluded(0.0), Bound::Excluded(1.0)),
+    );
+    compare(0.0..1.0, 2.0..3.0, 2.0..1.0)
+}
