@@ -277,8 +277,8 @@ impl SearchNearestParameter<D2> for Surface {
 
 impl ToSameGeometry<Surface> for HomotopySurface<Curve, Curve> {
     fn to_same_geometry(&self) -> Surface {
-        let curve0 = self.first_curve().clone().lift_up();
-        let curve1 = self.second_curve().clone().lift_up();
+        let curve0 = self.curve0().clone().lift_up();
+        let curve1 = self.curve1().clone().lift_up();
         NurbsSurface::new(BSplineSurface::homotopy(curve0, curve1)).into()
     }
 }

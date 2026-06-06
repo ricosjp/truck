@@ -224,6 +224,15 @@ pub struct PCurve<C, S> {
     surface: S,
 }
 
+/// A surface for smoothly connecting the edges of two surfaces.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
+pub struct EdgeBlendSurface<C0, S0, F0, C1, S1, F1> {
+    pcurve0: PCurve<C0, S0>,
+    magnitude0: F0,
+    pcurve1: PCurve<C1, S1>,
+    magnitude1: F1,
+}
+
 /// Intersection curve between two surfaces.
 ///
 /// # Examples
@@ -412,6 +421,7 @@ pub trait ScalarFunctionD2: Clone {
 }
 
 mod af_surface;
+mod edge_blend;
 mod extruded_curve;
 mod homotopy;
 mod intersection_curve;

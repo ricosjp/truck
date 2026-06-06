@@ -9,16 +9,16 @@ impl<C0, C1> HomotopySurface<C0, C1> {
     pub fn new(curve0: C0, curve1: C1) -> Self { Self { curve0, curve1 } }
     /// Returns the first curve.
     #[inline(always)]
-    pub fn first_curve(&self) -> &C0 { &self.curve0 }
+    pub fn curve0(&self) -> &C0 { &self.curve0 }
     /// Returns the second curve.
     #[inline(always)]
-    pub fn second_curve(&self) -> &C1 { &self.curve1 }
+    pub fn curve1(&self) -> &C1 { &self.curve1 }
     /// Returns the first curve.
     #[inline(always)]
-    pub fn first_curve_mut(&mut self) -> &mut C0 { &mut self.curve0 }
+    pub fn curve0_mut(&mut self) -> &mut C0 { &mut self.curve0 }
     /// Returns the second curve.
     #[inline(always)]
-    pub fn second_curve_mut(&mut self) -> &mut C1 { &mut self.curve1 }
+    pub fn curve1_mut(&mut self) -> &mut C1 { &mut self.curve1 }
 }
 
 impl<C0, C1> ParametricSurface for HomotopySurface<C0, C1>
