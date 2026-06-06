@@ -1,7 +1,6 @@
 use super::*;
 use algo::surface::{SsnpVector, SspVector};
 use control_point::ControlPoint;
-use std::ops::RangeBounds;
 
 impl<C0, C1> HomotopySurface<C0, C1> {
     /// constructor
@@ -189,48 +188,6 @@ where P: ControlPoint<f64> + Tolerance
         }
         BSplineSurface::new_unchecked((uknot_vec, vknot_vec), control_points)
     }
-}
-
-fn bound2opt<T>(x: Bound<T>) -> Option<T> {
-    match x {
-        Bound::Included(x) => Some(x),
-        Bound::Excluded(x) => Some(x),
-        Bound::Unbounded => None,
-    }
-}
-
-fn range_common_part<R0, R1>(range0: &R0, range1: &R1) -> ParameterRange
-where
-    R0: RangeBounds<f64>,
-    R1: RangeBounds<f64>, {
-    use std::cmp::Ordering;
-    let (t00, t01) = (range0.start_bound(), range0.end_bound());
-    let (t10, t11) = (range1.start_bound(), range1.end_bound());
-    let t0 = match (bound2opt(t00), bound2opt(t10)) {
-        (Some(x), Some(y)) => match x.partial_cmp(y).unwrap() {
-            Ordering::Greater => t00,
-            Ordering::Less => t10,
-            Ordering::Equal => match matches!(t00, Bound::Excluded(_)) {
-                true => t00,
-                false => t10,
-            },
-        },
-        (_, None) => t00,
-        (None, _) => t10,
-    };
-    let t1 = match (bound2opt(t01), bound2opt(t11)) {
-        (Some(x), Some(y)) => match x.partial_cmp(y).unwrap() {
-            Ordering::Less => t01,
-            Ordering::Greater => t11,
-            Ordering::Equal => match matches!(t01, Bound::Excluded(_)) {
-                true => t01,
-                false => t11,
-            },
-        },
-        (_, None) => t01,
-        (None, _) => t11,
-    };
-    (t0.cloned(), t1.cloned())
 }
 
 #[test]

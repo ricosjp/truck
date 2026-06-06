@@ -79,4 +79,12 @@ where
                 + p3 * v.powi(3),
         )
     }
+    
+    #[inline]
+    fn parameter_range(&self) -> (ParameterRange, ParameterRange) {
+        let range0 = self.pcurve0.parameter_range();
+        let range1 = self.pcurve1.parameter_range();
+        let range = range_common_part(&range0, &range1);
+        (range, (Bound::Included(0.0), Bound::Included(1.0)))
+    }
 }
