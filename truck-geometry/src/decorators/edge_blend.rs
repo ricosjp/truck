@@ -193,3 +193,79 @@ where
     F1: ScalarFunctionD1,
 {
 }
+
+impl<C0, S0, F0, C1, S1, F1> ParameterDivision2D for EdgeBlendSurface<C0, S0, F0, C1, S1, F1>
+where
+    C0: ParametricCurve2D,
+    S0: ParametricSurface3D,
+    F0: ScalarFunctionD1,
+    C1: ParametricCurve2D,
+    S1: ParametricSurface3D,
+    F1: ScalarFunctionD1,
+{
+    fn parameter_division(
+        &self,
+        range: ((f64, f64), (f64, f64)),
+        tol: f64,
+    ) -> (Vec<f64>, Vec<f64>) {
+        algo::surface::parameter_division(self, range, tol)
+    }
+}
+
+impl<C0, S0, F0, C1, S1, F1> SearchNearestParameter<D2> for EdgeBlendSurface<C0, S0, F0, C1, S1, F1>
+where
+    C0: BoundedCurve + ParametricCurve2D,
+    S0: ParametricSurface3D,
+    F0: ScalarFunctionD1,
+    C1: BoundedCurve + ParametricCurve2D,
+    S1: ParametricSurface3D,
+    F1: ScalarFunctionD1,
+{
+    type Point = Point3;
+    fn search_nearest_parameter<H: Into<SPHint2D>>(
+        &self,
+        point: Self::Point,
+        hint: H,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
+            }
+        };
+        algo::surface::search_nearest_parameter(self, point, hint, trials)
+    }
+}
+
+impl<C0, S0, F0, C1, S1, F1> SearchParameter<D2> for EdgeBlendSurface<C0, S0, F0, C1, S1, F1>
+where
+    C0: BoundedCurve + ParametricCurve2D,
+    S0: ParametricSurface3D,
+    F0: ScalarFunctionD1,
+    C1: BoundedCurve + ParametricCurve2D,
+    S1: ParametricSurface3D,
+    F1: ScalarFunctionD1,
+{
+    type Point = Point3;
+    fn search_parameter<H: Into<SPHint2D>>(
+        &self,
+        point: Self::Point,
+        hint: H,
+        trials: usize,
+    ) -> Option<(f64, f64)> {
+        let hint = match hint.into() {
+            SPHint2D::Parameter(x, y) => (x, y),
+            SPHint2D::Range(range0, range1) => {
+                algo::surface::presearch(self, point, (range0, range1), PRESEARCH_DIVISION)
+            }
+            SPHint2D::None => {
+                algo::surface::presearch(self, point, self.range_tuple(), PRESEARCH_DIVISION)
+            }
+        };
+        algo::surface::search_parameter(self, point, hint, trials)
+    }
+}
