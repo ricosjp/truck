@@ -2,45 +2,67 @@ use prop::array::*;
 use proptest::{prelude::*, property_test};
 use truck_geometry::prelude::*;
 
-#[test]
-fn test_edge_blend_ders_by_line_and_plane() {
-    let knot_vec = KnotVec::bezier_knot(3);
-    let plane = Plane::xy();
-    let pcurve0 = Line(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0));
-    let pcurve1 = Line(Point2::new(0.0, 1.0), Point2::new(1.0, 1.0));
-    let edge_blend = EdgeBlendSurface::new(
-        PCurve::new(pcurve0, plane.clone()),
-        0.6,
-        PCurve::new(pcurve1, plane),
-        0.3,
+#[property_test]
+fn test_edge_blend_ders_by_bspline_surface(
+    #[strategy = uniform5(-1.0..=1.0)] z0: [f64; 5],
+    #[strategy = uniform5(0.01..=1.0)] tangent0: [f64; 5],
+    #[strategy = uniform5(-1.0..=1.0)] z1: [f64; 5],
+    #[strategy = uniform5(0.01..=1.0)] tangent1: [f64; 5],
+    #[strategy = uniform2(0.0..=1.0)] [u, v]: [f64; 2],
+    #[strategy = uniform2(0usize..=3)] [m, n]: [usize; 2],
+) {
+    let control_points0 = (0..=4)
+        .map(|i| {
+            vec![
+                Point3::new(-tangent0[i] / 4.0, 0.25 * i as f64, z0[i]),
+                Point3::new(0.0, 0.25 * i as f64, z0[i]),
+            ]
+        })
+        .collect();
+    let surface0 = BSplineSurface::new(
+        (KnotVec::bezier_knot(4), KnotVec::bezier_knot(1)),
+        control_points0,
     );
 
-    let expected = BSplineSurface::new(
-        (knot_vec.clone(), knot_vec),
-        (0..4)
-            .map(|i| {
-                let x = i as f64 / 3.0;
-                vec![
-                    Point3::new(x, 0.0, 0.0),
-                    Point3::new(x, -0.2, 0.0),
-                    Point3::new(x, 1.1, 0.0),
-                    Point3::new(x, 1.0, 0.0),
-                ]
-            })
-            .collect::<Vec<_>>(),
+    let control_points1 = (0..=4)
+        .map(|i| {
+            vec![
+                Point3::new(1.0, 0.25 * i as f64, z1[i]),
+                Point3::new(1.0 + tangent1[i] / 4.0, 0.25 * i as f64, z1[i]),
+            ]
+        })
+        .collect();
+    let surface1 = BSplineSurface::new(
+        (KnotVec::bezier_knot(4), KnotVec::bezier_knot(1)),
+        control_points1,
     );
 
-    for u in [0.0, 0.23, 0.71, 1.0] {
-        for v in [0.0, 0.31, 0.79, 1.0] {
-            assert_near!(edge_blend.subs(u, v), expected.subs(u, v));
-            assert_near!(edge_blend.ders(2, u, v), expected.ders(2, u, v));
-            assert_near!(edge_blend.uder(u, v), expected.uder(u, v));
-            assert_near!(edge_blend.vder(u, v), expected.vder(u, v));
-            assert_near!(edge_blend.uuder(u, v), expected.uuder(u, v));
-            assert_near!(edge_blend.uvder(u, v), expected.uvder(u, v));
-            assert_near!(edge_blend.vvder(u, v), expected.vvder(u, v));
-        }
-    }
+    let pcurve0 = PCurve::new(Line(Point2::new(1.0, 1.0), Point2::new(0.0, 1.0)), surface0);
+    let pcurve1 = PCurve::new(Line(Point2::new(1.0, 0.0), Point2::new(0.0, 0.0)), surface1);
+
+    let tangent_controls0 = (0..=4).rev().map(|i| Vector1::new(tangent0[i])).collect();
+    let tangent_curve0 = BSplineCurve::new(KnotVec::bezier_knot(4), tangent_controls0);
+    let tangent_controls1 = (0..=4).rev().map(|i| Vector1::new(tangent1[i])).collect();
+    let tangent_curve1 = BSplineCurve::new(KnotVec::bezier_knot(4), tangent_controls1);
+
+    let surface = EdgeBlendSurface::new(pcurve0, tangent_curve0, pcurve1, tangent_curve1);
+
+    let control_points = (0..=4)
+        .rev()
+        .map(|i| {
+            vec![
+                Point3::new(0.0, 0.25 * i as f64, z0[i]),
+                Point3::new(tangent0[i] / 3.0, 0.25 * i as f64, z0[i]),
+                Point3::new(1.0 - tangent1[i] / 3.0, 0.25 * i as f64, z1[i]),
+                Point3::new(1.0, 0.25 * i as f64, z1[i]),
+            ]
+        })
+        .collect();
+    let bsp_surface = BSplineSurface::new(
+        (KnotVec::bezier_knot(4), KnotVec::bezier_knot(3)),
+        control_points,
+    );
+    prop_assert_near!(surface.der_mn(m, n, u, v), bsp_surface.der_mn(m, n, u, v));
 }
 
 #[property_test]
