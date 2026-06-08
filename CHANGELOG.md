@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Add `EdgeBlendSurface`.
 - Using `hint` of `UnitCircle::search_{nearest}_parameter`.
 - Add multi edge connectors in `truck-drafting::draw`.
 - Add a space after "solid" in STL ASCII format.
@@ -23,7 +24,7 @@ The version is of the bottom crate `truck-rendimpl`.
 - Create 2D-handling crate `truck-drafting`.
 - Fix implementation of `ToSameGeometry<Surface>` for `RevolutedCurve<Curve3D>`. 
 - Add tangent-based constraint support to circular arc construction in `truck-modeling`
-- Added `BasisWindow` to simplify and centralize basis-function range handling.
+- Add `BasisWindow` to simplify and centralize basis-function range handling.
 - Fix non intersect bboxes has invalid intersects.
 - Fix syntax error when reading binary STL > 8192b.
 - Fillet for a single edge.

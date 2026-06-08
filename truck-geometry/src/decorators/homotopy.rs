@@ -1,7 +1,6 @@
 use super::*;
 use algo::surface::{SsnpVector, SspVector};
 use control_point::ControlPoint;
-use std::ops::RangeBounds;
 
 impl<C0, C1> HomotopySurface<C0, C1> {
     /// constructor
@@ -9,16 +8,16 @@ impl<C0, C1> HomotopySurface<C0, C1> {
     pub fn new(curve0: C0, curve1: C1) -> Self { Self { curve0, curve1 } }
     /// Returns the first curve.
     #[inline(always)]
-    pub fn first_curve(&self) -> &C0 { &self.curve0 }
+    pub fn curve0(&self) -> &C0 { &self.curve0 }
     /// Returns the second curve.
     #[inline(always)]
-    pub fn second_curve(&self) -> &C1 { &self.curve1 }
+    pub fn curve1(&self) -> &C1 { &self.curve1 }
     /// Returns the first curve.
     #[inline(always)]
-    pub fn first_curve_mut(&mut self) -> &mut C0 { &mut self.curve0 }
+    pub fn curve0_mut(&mut self) -> &mut C0 { &mut self.curve0 }
     /// Returns the second curve.
     #[inline(always)]
-    pub fn second_curve_mut(&mut self) -> &mut C1 { &mut self.curve1 }
+    pub fn curve1_mut(&mut self) -> &mut C1 { &mut self.curve1 }
 }
 
 impl<C0, C1> ParametricSurface for HomotopySurface<C0, C1>
@@ -189,76 +188,4 @@ where P: ControlPoint<f64> + Tolerance
         }
         BSplineSurface::new_unchecked((uknot_vec, vknot_vec), control_points)
     }
-}
-
-fn bound2opt<T>(x: Bound<T>) -> Option<T> {
-    match x {
-        Bound::Included(x) => Some(x),
-        Bound::Excluded(x) => Some(x),
-        Bound::Unbounded => None,
-    }
-}
-
-fn range_common_part<R0, R1>(range0: &R0, range1: &R1) -> ParameterRange
-where
-    R0: RangeBounds<f64>,
-    R1: RangeBounds<f64>, {
-    use std::cmp::Ordering;
-    let (t00, t01) = (range0.start_bound(), range0.end_bound());
-    let (t10, t11) = (range1.start_bound(), range1.end_bound());
-    let t0 = match (bound2opt(t00), bound2opt(t10)) {
-        (Some(x), Some(y)) => match x.partial_cmp(y).unwrap() {
-            Ordering::Greater => t00,
-            Ordering::Less => t10,
-            Ordering::Equal => match matches!(t00, Bound::Excluded(_)) {
-                true => t00,
-                false => t10,
-            },
-        },
-        (_, None) => t00,
-        (None, _) => t10,
-    };
-    let t1 = match (bound2opt(t01), bound2opt(t11)) {
-        (Some(x), Some(y)) => match x.partial_cmp(y).unwrap() {
-            Ordering::Less => t01,
-            Ordering::Greater => t11,
-            Ordering::Equal => match matches!(t01, Bound::Excluded(_)) {
-                true => t01,
-                false => t11,
-            },
-        },
-        (_, None) => t01,
-        (None, _) => t11,
-    };
-    (t0.cloned(), t1.cloned())
-}
-
-#[test]
-fn test_range_common_part() {
-    fn to_parameter_range<R: RangeBounds<f64>>(x: &R) -> ParameterRange {
-        (x.start_bound().cloned(), x.end_bound().cloned())
-    }
-    fn compare<R0, R1, R2>(range0: R0, range1: R1, range2: R2)
-    where
-        R0: RangeBounds<f64>,
-        R1: RangeBounds<f64>,
-        R2: RangeBounds<f64>, {
-        assert_eq!(
-            range_common_part(&range0, &range1),
-            to_parameter_range(&range2),
-        );
-        assert_eq!(
-            range_common_part(&range1, &range0),
-            to_parameter_range(&range2),
-        );
-    }
-    compare(0.0..2.0, -1.0..1.0, 0.0..1.0);
-    compare(0.0..=2.0, -1.0..2.0, 0.0..2.0);
-    compare(..=2.0, 0.0.., 0.0..=2.0);
-    compare(
-        (Bound::Excluded(0.0), Bound::Included(1.0)),
-        0.0..1.0,
-        (Bound::Excluded(0.0), Bound::Excluded(1.0)),
-    );
-    compare(0.0..1.0, 2.0..3.0, 2.0..1.0)
 }

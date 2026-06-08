@@ -224,6 +224,15 @@ pub struct PCurve<C, S> {
     surface: S,
 }
 
+/// A surface for smoothly connecting the edges of two surfaces.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, SelfSameGeometry)]
+pub struct EdgeBlendSurface<C0, S0, F0, C1, S1, F1> {
+    pcurve0: PCurve<C0, S0>,
+    magnitude0: F0,
+    pcurve1: PCurve<C1, S1>,
+    magnitude1: F1,
+}
+
 /// Intersection curve between two surfaces.
 ///
 /// # Examples
@@ -412,6 +421,7 @@ pub trait ScalarFunctionD2: Clone {
 }
 
 mod af_surface;
+mod edge_blend;
 mod extruded_curve;
 mod homotopy;
 mod intersection_curve;
@@ -423,3 +433,76 @@ pub mod rbf_surface;
 mod revolved_curve;
 mod scalar_function;
 mod trimmied_curve;
+
+fn bound2opt<T>(x: Bound<T>) -> Option<T> {
+    match x {
+        Bound::Included(x) => Some(x),
+        Bound::Excluded(x) => Some(x),
+        Bound::Unbounded => None,
+    }
+}
+
+fn range_common_part<R0, R1>(range0: &R0, range1: &R1) -> ParameterRange
+where
+    R0: std::ops::RangeBounds<f64>,
+    R1: std::ops::RangeBounds<f64>, {
+    use std::cmp::Ordering;
+    let (t00, t01) = (range0.start_bound(), range0.end_bound());
+    let (t10, t11) = (range1.start_bound(), range1.end_bound());
+    let t0 = match (bound2opt(t00), bound2opt(t10)) {
+        (Some(x), Some(y)) => match x.partial_cmp(y).unwrap() {
+            Ordering::Greater => t00,
+            Ordering::Less => t10,
+            Ordering::Equal => match matches!(t00, Bound::Excluded(_)) {
+                true => t00,
+                false => t10,
+            },
+        },
+        (_, None) => t00,
+        (None, _) => t10,
+    };
+    let t1 = match (bound2opt(t01), bound2opt(t11)) {
+        (Some(x), Some(y)) => match x.partial_cmp(y).unwrap() {
+            Ordering::Less => t01,
+            Ordering::Greater => t11,
+            Ordering::Equal => match matches!(t01, Bound::Excluded(_)) {
+                true => t01,
+                false => t11,
+            },
+        },
+        (_, None) => t01,
+        (None, _) => t11,
+    };
+    (t0.cloned(), t1.cloned())
+}
+
+#[test]
+fn test_range_common_part() {
+    use std::ops::RangeBounds;
+    fn to_parameter_range<R: RangeBounds<f64>>(x: &R) -> ParameterRange {
+        (x.start_bound().cloned(), x.end_bound().cloned())
+    }
+    fn compare<R0, R1, R2>(range0: R0, range1: R1, range2: R2)
+    where
+        R0: RangeBounds<f64>,
+        R1: RangeBounds<f64>,
+        R2: RangeBounds<f64>, {
+        assert_eq!(
+            range_common_part(&range0, &range1),
+            to_parameter_range(&range2),
+        );
+        assert_eq!(
+            range_common_part(&range1, &range0),
+            to_parameter_range(&range2),
+        );
+    }
+    compare(0.0..2.0, -1.0..1.0, 0.0..1.0);
+    compare(0.0..=2.0, -1.0..2.0, 0.0..2.0);
+    compare(..=2.0, 0.0.., 0.0..=2.0);
+    compare(
+        (Bound::Excluded(0.0), Bound::Included(1.0)),
+        0.0..1.0,
+        (Bound::Excluded(0.0), Bound::Excluded(1.0)),
+    );
+    compare(0.0..1.0, 2.0..3.0, 2.0..1.0)
+}
