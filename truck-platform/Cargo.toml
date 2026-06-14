@@ -36,7 +36,7 @@ pollster = "0.4.0"
 log = "0.4.32"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-wasm-bindgen-futures = "0.4.72"
+wasm-bindgen-futures = "0.4.75"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 gloo-utils = "0.3.0"
