@@ -22,7 +22,7 @@ thiserror = "2.0.18"
 truck-derivers = { version = "0.1.0", path = "../truck-derivers", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.4.2", features = ["wasm_js"] }
+getrandom = { version = "0.4.3", features = ["wasm_js"] }
 
 [dev-dependencies]
 proptest = { version = "1.11.0", features = ["attr-macro"] }
