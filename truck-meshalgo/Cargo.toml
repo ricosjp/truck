@@ -21,7 +21,7 @@ default = ["analyzers", "filters", "tessellation", "vtk"]
 derive_more = { version = "2.1.1", features = ["full"] }
 rustc-hash = "2.1.2"
 array-macro = "2.1.8"
-itertools = "0.14.0"
+itertools = "0.15.0"
 spade = { version = "2.15.1", optional = true }
 truck-base = { version = "0.5.0", path = "../truck-base" }
 truck-geometry = { version = "0.5.0", path = "../truck-geometry" }
@@ -39,4 +39,4 @@ proptest = { version = "1.11.0", features = ["attr-macro"] }
 truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-getrandom = { version = "0.4.2", features = ["wasm_js"] }
+getrandom = { version = "0.4.3", features = ["wasm_js"] }

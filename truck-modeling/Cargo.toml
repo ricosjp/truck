@@ -13,7 +13,7 @@ categories = ["graphics"]
 
 [dependencies]
 derive_more = { version = "2.1.1", features = ["full"] }
-itertools = "0.14.0"
+itertools = "0.15.0"
 rustc-hash = "2.1.2"
 serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2.0.18"

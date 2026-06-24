@@ -17,7 +17,7 @@ default = []
 webgl = ["truck-platform/webgl"]
 
 [dependencies]
-itertools = "0.14.0"
+itertools = "0.15.0"
 bytemuck = { version = "1.25.0", features = ["derive"] }
 image = "0.25.10"
 truck-platform = { version = "0.6.0", path = "../truck-platform" }
