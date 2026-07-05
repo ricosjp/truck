@@ -14,7 +14,7 @@ categories = ["graphics"]
 [dependencies]
 derive_more = { version = "2.1.1", features = ["full"] }
 itertools = "0.15.0"
-rustc-hash = "2.1.2"
+rustc-hash = "2.1.3"
 serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2.0.18"
 truck-base = { version = "0.5.0", path = "../truck-base" }
