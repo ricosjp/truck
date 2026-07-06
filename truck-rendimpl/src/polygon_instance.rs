@@ -139,7 +139,7 @@ impl Rendered for PolygonInstance {
             vertex: VertexState {
                 module: &self.shaders.vertex_module,
                 entry_point: Some(self.shaders.vertex_entry),
-                buffers: &[VertexBufferLayout {
+                buffers: &[Some(VertexBufferLayout {
                     array_stride: size_of::<AttrVertex>() as BufferAddress,
                     step_mode: VertexStepMode::Vertex,
                     attributes: &[
@@ -159,7 +159,7 @@ impl Rendered for PolygonInstance {
                             shader_location: 2,
                         },
                     ],
-                }],
+                })],
                 compilation_options: Default::default(),
             },
             fragment: Some(FragmentState {
