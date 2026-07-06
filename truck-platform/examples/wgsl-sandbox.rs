@@ -173,7 +173,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
                         vertex: VertexState {
                             module: &self.module,
                             entry_point: Some("vs_main"),
-                            buffers: &[VertexBufferLayout {
+                            buffers: &[Some(VertexBufferLayout {
                                 array_stride: std::mem::size_of::<u32>() as BufferAddress,
                                 step_mode: VertexStepMode::Vertex,
                                 attributes: &[VertexAttribute {
@@ -181,7 +181,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
                                     offset: 0,
                                     shader_location: 0,
                                 }],
-                            }],
+                            })],
                             compilation_options: Default::default(),
                         },
                         fragment: Some(FragmentState {

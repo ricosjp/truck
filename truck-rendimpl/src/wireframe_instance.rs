@@ -101,7 +101,7 @@ impl Rendered for WireFrameInstance {
             vertex: VertexState {
                 module: &self.shaders.vertex_module,
                 entry_point: Some(self.shaders.vertex_entry),
-                buffers: &[VertexBufferLayout {
+                buffers: &[Some(VertexBufferLayout {
                     array_stride: size_of::<[f32; 3]>() as BufferAddress,
                     step_mode: VertexStepMode::Vertex,
                     attributes: &[VertexAttribute {
@@ -109,7 +109,7 @@ impl Rendered for WireFrameInstance {
                         offset: 0,
                         shader_location: 0,
                     }],
-                }],
+                })],
                 compilation_options: Default::default(),
             },
             fragment: Some(FragmentState {

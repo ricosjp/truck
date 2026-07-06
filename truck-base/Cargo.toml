@@ -15,7 +15,7 @@ categories = ["graphics"]
 cgmath = { version = "0.18.0", features = ["serde"] }
 matext4cgmath = "0.1.0"
 serde = { version = "1.0.228", features = ["derive"] }
-rustc-hash = "2.1.2"
+rustc-hash = "2.1.3"
 
 [dev-dependencies]
 proptest = { version = "1.11.0", features = ["attr-macro"] }

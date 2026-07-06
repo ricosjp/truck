@@ -42,6 +42,7 @@ async fn init_default_device(
             power_preference: PowerPreference::LowPower,
             compatible_surface: surface.as_ref(),
             force_fallback_adapter: false,
+            apply_limit_buckets: false,
         })
         .await
         .expect("Failed to find an appropriate adapter");
@@ -136,6 +137,7 @@ impl RenderTextureConfig {
             present_mode: PresentMode::Fifo,
             view_formats: Vec::new(),
             desired_maximum_frame_latency: 2,
+            color_space: Default::default(),
         }
     }
 }
@@ -802,7 +804,10 @@ impl Scene {
         };
         device.poll(poll_type).unwrap();
         match receiver.receive().await {
-            Some(Ok(_)) => buffer_slice.get_mapped_range().iter().copied().collect(),
+            Some(Ok(_)) => match buffer_slice.get_mapped_range() {
+                Ok(view) => view.iter().copied().collect(),
+                Err(e) => panic!("{}", e),
+            },
             Some(Err(e)) => panic!("{}", e),
             None => panic!("Asynchronous processing fails"),
         }
@@ -878,6 +883,6 @@ impl WindowScene {
             .texture
             .create_view(&TextureViewDescriptor::default());
         self.render(&view);
-        surface_texture.present();
+        self.queue().present(surface_texture);
     }
 }

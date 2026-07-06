@@ -73,7 +73,7 @@ impl Rendered for Plane<'_> {
                     vertex: VertexState {
                         module: &module,
                         entry_point: Some(self.vs_entpt),
-                        buffers: &[VertexBufferLayout {
+                        buffers: &[Some(VertexBufferLayout {
                             array_stride: std::mem::size_of::<u32>() as BufferAddress,
                             step_mode: VertexStepMode::Vertex,
                             attributes: &[VertexAttribute {
@@ -81,7 +81,7 @@ impl Rendered for Plane<'_> {
                                 offset: 0,
                                 shader_location: 0,
                             }],
-                        }],
+                        })],
                         compilation_options: Default::default(),
                     },
                     fragment: Some(FragmentState {
@@ -135,6 +135,7 @@ pub fn init_device(backends: Backends) -> DeviceHandler {
                 power_preference: PowerPreference::HighPerformance,
                 compatible_surface: None,
                 force_fallback_adapter: false,
+                apply_limit_buckets: false,
             })
             .await
             .unwrap();
