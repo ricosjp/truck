@@ -536,7 +536,7 @@ impl<P, C, S> Shell<P, C, S> {
         vert_wise_adjacency
             .into_iter()
             .filter_map(|(vertex, adjacency)| {
-                Some(vertex).filter(|_| !check_connectivity(&mut adjacency.into()))
+                (!check_connectivity(&mut adjacency.into())).then_some(vertex)
             })
             .collect()
     }
