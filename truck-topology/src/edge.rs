@@ -622,7 +622,7 @@ impl<P: Debug, C: Debug> Debug for DebugDisplay<'_, Edge<P, C>, EdgeDisplayForma
                 self.entity.back().display(vertex_format),
             )),
             EdgeDisplayFormat::AsCurve => {
-                f.write_fmt(format_args!("{:?}", &MutexFmt(&self.entity.curve)))
+                f.write_fmt(format_args!("{:?}", MutexFmt(&self.entity.curve)))
             }
         }
     }

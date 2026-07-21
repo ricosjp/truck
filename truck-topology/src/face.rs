@@ -1255,7 +1255,7 @@ impl<P: Debug, C: Debug, S: Debug> Debug for DebugDisplay<'_, Face<P, C, S>, Fac
                 )
                 .finish(),
             FaceDisplayFormat::AsSurface => {
-                f.write_fmt(format_args!("{:?}", &MutexFmt(&self.entity.surface)))
+                f.write_fmt(format_args!("{:?}", MutexFmt(&self.entity.surface)))
             }
         }
     }

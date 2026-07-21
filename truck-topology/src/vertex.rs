@@ -188,7 +188,7 @@ impl<P: Debug> Debug for DebugDisplay<'_, Vertex<P>, VertexDisplayFormat> {
                 .field(&MutexFmt(&self.entity.point))
                 .finish(),
             VertexDisplayFormat::AsPoint => {
-                f.write_fmt(format_args!("{:?}", &MutexFmt(&self.entity.point)))
+                f.write_fmt(format_args!("{:?}", MutexFmt(&self.entity.point)))
             }
         }
     }
