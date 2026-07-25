@@ -179,72 +179,33 @@ where
     if !wire.is_continuous() {
         return Err(Error::NonContinuousWire);
     }
-    let len = wire.len();
-    if len < 2 {
+    if wire.len() < 2 {
         return Ok(wire.clone());
     }
 
-    let cyclic = wire.is_cyclic();
-    let corner_count = match cyclic {
-        true => len,
-        false => len - 1,
-    };
-    let edges = wire.edge_iter().collect::<Vec<_>>();
-    let corners = (0..corner_count)
-        .map(|idx| ops(edges[idx], edges[(idx + 1) % len]))
-        .collect::<Result<Vec<_>, _>>()?;
-
-    let mut new_edges = Vec::with_capacity(len + corner_count);
-    if cyclic {
-        for idx in 0..len {
-            let prev = (idx + corner_count - 1) % corner_count;
-            new_edges.push(trimmed_middle_edge(
-                edges[idx],
-                &corners[prev],
-                &corners[idx],
-            )?);
-            new_edges.push(corners[idx].connector.clone());
-        }
-    } else {
-        new_edges.push(corners[0].edge0.clone());
-        new_edges.push(corners[0].connector.clone());
-        for idx in 1..corner_count {
-            new_edges.push(trimmed_middle_edge(
-                edges[idx],
-                &corners[idx - 1],
-                &corners[idx],
-            )?);
-            new_edges.push(corners[idx].connector.clone());
-        }
-        new_edges.push(corners[corner_count - 1].edge1.clone());
-    }
-    Ok(new_edges.into())
-}
-
-fn trimmed_middle_edge<C>(
-    edge: &Edge<C>,
-    prev: &CornerResult<C>,
-    next: &CornerResult<C>,
-) -> Result<Edge<C>, Error>
-where
-    C: TrimmableCurve2D,
-{
-    let (start, _) = prev.edge1.curve().range_tuple();
-    let (_, end) = next.edge0.curve().range_tuple();
-    if start > end + TOLERANCE {
-        return Err(Error::CurveLengthOutOfRange);
+    let mut res_wire = wire![wire[0].clone()];
+    for edge1 in wire.iter().skip(1) {
+        let edge0 = res_wire.pop_back().unwrap();
+        let CornerResult {
+            edge0,
+            connector,
+            edge1,
+        } = ops(&edge0, edge1)?;
+        res_wire.extend([edge0, connector, edge1]);
     }
 
-    let mut curve = edge.oriented_curve();
-    let (front, back) = curve.range_tuple();
-    if end < back - TOLERANCE {
-        curve.cut(end);
+    if res_wire.is_cyclic() {
+        let edge0 = res_wire.pop_back().unwrap();
+        let edge1 = res_wire.pop_front().unwrap();
+        let CornerResult {
+            edge0,
+            connector,
+            edge1,
+        } = ops(&edge0, &edge1)?;
+        res_wire.push_front(edge1);
+        res_wire.extend([edge0, connector]);
     }
-    if start > front + TOLERANCE {
-        curve = curve.cut(start);
-    }
-
-    Ok(Edge::new(prev.edge1.front(), next.edge0.back(), curve))
+    Ok(res_wire)
 }
 
 /// Creates fillets at all corners in a continuous wire.
