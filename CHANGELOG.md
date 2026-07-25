@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Fix `corner_ops_all`.
 - Add `EdgeBlendSurface`.
 - Using `hint` of `UnitCircle::search_{nearest}_parameter`.
 - Add multi edge connectors in `truck-drafting::draw`.
