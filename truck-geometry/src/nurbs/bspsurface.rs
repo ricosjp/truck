@@ -511,6 +511,117 @@ impl<P: ControlPoint<f64>> BSplineSurface<P> {
         }
         true
     }
+
+    /// Approximates the given points using the least-squares method.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::prelude::*;
+    /// use std::f64::consts::TAU;
+    ///
+    /// // torus closure
+    /// fn torus(u: f64, v: f64) -> Point3 {
+    ///     let r = 2.0 + f64::cos(TAU * v);
+    ///     Point3::new(
+    ///         r * f64::cos(TAU * u),
+    ///         r * f64::sin(TAU * u),
+    ///         f64::sin(TAU * v),
+    ///     )
+    /// }
+    ///
+    /// // Approximate a torus using the least-squares method.
+    /// const SAMPLES: usize = 20;
+    /// let parameter_points = (0..=SAMPLES).flat_map(move |i| {
+    ///     let u = i as f64 / SAMPLES as f64;
+    ///     (0..=SAMPLES).map(move |j| {
+    ///         let v = j as f64 / SAMPLES as f64;
+    ///         let r = 2.0 + f64::cos(TAU * v);
+    ///         ((u, v), torus(u, v))
+    ///     })
+    /// })
+    /// .collect::<Vec<_>>();
+    ///
+    /// let degree = 3;
+    /// let knot_vec = KnotVec::uniform_knot(degree, 5);
+    /// let bspsurface = BSplineSurface::least_square(
+    ///     (knot_vec.clone(), knot_vec),
+    ///     (degree, degree),
+    ///     &parameter_points,
+    /// )
+    /// .unwrap();
+    ///
+    /// const N: usize = 10;
+    /// for i in 0..=N {
+    ///     for j in 0..=N {
+    ///         let u = i as f64 / N as f64;
+    ///         let v = j as f64 / N as f64;
+    ///         let p = bspsurface.subs(u, v);
+    ///         let q = torus(u, v);
+    ///         assert!(p.distance(q) < 0.02, "{}", p.distance(q));
+    ///     }
+    /// }
+    /// ```
+    pub fn least_square(
+        (uknot_vec, vknot_vec): (KnotVec, KnotVec),
+        (udegree, vdegree): (usize, usize),
+        parameter_points: &[((f64, f64), P)],
+    ) -> Result<Self> {
+        let ubasis = parameter_points
+            .iter()
+            .map(|&((u, _), _)| {
+                uknot_vec
+                    .bspline_basis_functions(udegree, 0, u)
+                    .to_full_array()
+            })
+            .collect::<Vec<_>>();
+        let vbasis = parameter_points
+            .iter()
+            .map(|&((_, v), _)| {
+                vknot_vec
+                    .bspline_basis_functions(vdegree, 0, v)
+                    .to_full_array()
+            })
+            .collect::<Vec<_>>();
+
+        let ucontrol_count = uknot_vec.len() - udegree - 1;
+        let vcontrol_count = vknot_vec.len() - vdegree - 1;
+        let size = ucontrol_count * vcontrol_count;
+        let basis = ubasis
+            .iter()
+            .zip(vbasis)
+            .map(|(ubs, vbs)| {
+                ubs.iter()
+                    .flat_map(|&ub| vbs.iter().map(move |&vb| ub * vb))
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        let matrix = (0..size)
+            .map(|i| {
+                (0..size)
+                    .map(|j| basis.iter().map(|bs| bs[i] * bs[j]).sum::<f64>())
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        let mut control_points = vec![vec![P::origin(); vcontrol_count]; ucontrol_count];
+
+        for d in 0..P::DIM {
+            let mut matrix = matrix.clone();
+            for i in 0..size {
+                let new_value = basis
+                    .iter()
+                    .zip(parameter_points)
+                    .map(|(bs, (_, point))| bs[i] * point[d])
+                    .sum::<f64>();
+                matrix[i].push(new_value);
+            }
+            let ans = gaussian_elimination::gaussian_elimination(&mut matrix)
+                .ok_or(Error::GaussianEliminationFailure)?;
+            for (point, value) in control_points.iter_mut().flatten().zip(ans) {
+                point[d] = value;
+            }
+        }
+
+        Ok(Self::new_unchecked((uknot_vec, vknot_vec), control_points))
+    }
 }
 
 impl<V: Homogeneous> BSplineSurface<V> {

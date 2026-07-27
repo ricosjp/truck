@@ -295,7 +295,7 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
     /// ```
     /// use truck_geometry::prelude::*;
     /// use std::f64::consts::TAU;
-    /// 
+    ///
     /// // Approximate a circle using the least-squares method.
     /// const SAMPLES: usize = 20;
     /// let parameter_points = (0..=SAMPLES).map(|i| {
@@ -303,11 +303,11 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
     ///     (t, Point2::new(f64::cos(TAU * t), f64::sin(TAU * t)))
     /// })
     /// .collect::<Vec<_>>();
-    /// 
+    ///
     /// let degree = 3;
     /// let knot_vec = KnotVec::uniform_knot(degree, 5);
     /// let bspcurve = BSplineCurve::least_square(knot_vec, degree, &parameter_points).unwrap();
-    /// 
+    ///
     /// const N: usize = 10;
     /// for i in 0..=N {
     ///     let t = i as f64 / N as f64;
@@ -316,7 +316,11 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
     ///     assert!(p.distance(q) < 0.01);
     /// }
     /// ```
-    pub fn least_square(knot_vec: KnotVec, degree: usize, parameter_points: &[(f64, P)]) -> Result<Self> {
+    pub fn least_square(
+        knot_vec: KnotVec,
+        degree: usize,
+        parameter_points: &[(f64, P)],
+    ) -> Result<Self> {
         let basis = parameter_points
             .iter()
             .map(|&(t, _)| {
