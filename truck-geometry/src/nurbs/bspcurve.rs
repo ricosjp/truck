@@ -289,6 +289,76 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
     pub fn interpole(knot_vec: KnotVec, parameter_points: impl AsMut<[(f64, P)]>) -> Self {
         Self::try_interpole(knot_vec, parameter_points).unwrap()
     }
+
+    /// Approximates the given points using the least-squares method.
+    /// # Examples
+    /// ```
+    /// use truck_geometry::prelude::*;
+    /// use std::f64::consts::TAU;
+    ///
+    /// // Approximate a circle using the least-squares method.
+    /// const SAMPLES: usize = 20;
+    /// let parameter_points = (0..=SAMPLES).map(|i| {
+    ///     let t = i as f64 / SAMPLES as f64;
+    ///     (t, Point2::new(f64::cos(TAU * t), f64::sin(TAU * t)))
+    /// })
+    /// .collect::<Vec<_>>();
+    ///
+    /// let degree = 3;
+    /// let knot_vec = KnotVec::uniform_knot(degree, 5);
+    /// let bspcurve = BSplineCurve::least_square(knot_vec, degree, &parameter_points).unwrap();
+    ///
+    /// const N: usize = 10;
+    /// for i in 0..=N {
+    ///     let t = i as f64 / N as f64;
+    ///     let p = bspcurve.subs(t);
+    ///     let q = Point2::new(f64::cos(TAU * t), f64::sin(TAU * t));
+    ///     assert!(p.distance(q) < 0.01);
+    /// }
+    /// ```
+    pub fn least_square(
+        knot_vec: KnotVec,
+        degree: usize,
+        parameter_points: &[(f64, P)],
+    ) -> Result<Self> {
+        let basis = parameter_points
+            .iter()
+            .map(|&(t, _)| {
+                knot_vec
+                    .bspline_basis_functions(degree, 0, t)
+                    .to_full_array()
+            })
+            .collect::<Vec<_>>();
+
+        let n = knot_vec.len() - degree - 1;
+        let matrix = (0..n)
+            .map(|i| {
+                (0..n)
+                    .map(|j| basis.iter().map(|bs| bs[i] * bs[j]).sum::<f64>())
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        let mut control_points = vec![P::origin(); n];
+
+        for d in 0..P::DIM {
+            let mut matrix = matrix.clone();
+            for i in 0..n {
+                let new_value = basis
+                    .iter()
+                    .zip(parameter_points)
+                    .map(|(bs, (_, vs))| bs[i] * vs[d])
+                    .sum::<f64>();
+                matrix[i].push(new_value);
+            }
+            let ans = gaussian_elimination::gaussian_elimination(&mut matrix)
+                .ok_or(Error::GaussianEliminationFailure)?;
+            for (v, a) in control_points.iter_mut().zip(ans) {
+                v[d] = a;
+            }
+        }
+
+        Ok(Self::new_unchecked(knot_vec, control_points))
+    }
 }
 
 impl<P> BSplineCurve<P>
