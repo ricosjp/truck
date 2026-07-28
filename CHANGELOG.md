@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Improve `BSplineXXX::least_square`.
 - Add `BSplineXXX::least_square`.
 - Fix `corner_ops_all`.
 - Add `EdgeBlendSurface`.

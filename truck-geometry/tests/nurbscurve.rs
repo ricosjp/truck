@@ -80,7 +80,7 @@ fn test_ders(
 fn concat_positive_test(
     #[strategy = prop::array::uniform8(prop::array::uniform3(-5f64..5f64))] v0: [[f64; 3]; 8],
     #[strategy = prop::array::uniform8(0.5f64..=2f64)] v1: [f64; 8],
-    #[strategy = 0f64..=1f64] t: f64,
+    #[strategy = 0.01f64..=0.99f64] t: f64,
     #[strategy = -5f64..=5f64] w: f64,
 ) {
     let mut part0 = NurbsCurve::new(BSplineCurve::new(

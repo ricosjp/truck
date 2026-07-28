@@ -321,34 +321,33 @@ impl<P: ControlPoint<f64>> BSplineCurve<P> {
         degree: usize,
         parameter_points: &[(f64, P)],
     ) -> Result<Self> {
-        let basis = parameter_points
-            .iter()
-            .map(|&(t, _)| {
-                knot_vec
-                    .bspline_basis_functions(degree, 0, t)
-                    .to_full_array()
-            })
-            .collect::<Vec<_>>();
-
         let n = knot_vec.len() - degree - 1;
-        let matrix = (0..n)
-            .map(|i| {
-                (0..n)
-                    .map(|j| basis.iter().map(|bs| bs[i] * bs[j]).sum::<f64>())
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
+        let mut matrix = vec![vec![0.0; n]; n];
+        let mut rhs = vec![P::origin(); n];
+        for &(t, point) in parameter_points {
+            let basis = knot_vec.bspline_basis_functions(degree, 0, t);
+            let base = basis.base();
+            for (local_i, &basis_i) in basis.as_slice().iter().enumerate() {
+                let i = base + local_i;
+                for (local_j, &basis_j) in basis.as_slice().iter().enumerate().skip(local_i) {
+                    let j = base + local_j;
+                    let value = basis_i * basis_j;
+                    matrix[i][j] += value;
+                    if i != j {
+                        matrix[j][i] += value;
+                    }
+                }
+                for d in 0..P::DIM {
+                    rhs[i][d] += basis_i * point[d];
+                }
+            }
+        }
         let mut control_points = vec![P::origin(); n];
 
         for d in 0..P::DIM {
             let mut matrix = matrix.clone();
             for i in 0..n {
-                let new_value = basis
-                    .iter()
-                    .zip(parameter_points)
-                    .map(|(bs, (_, vs))| bs[i] * vs[d])
-                    .sum::<f64>();
-                matrix[i].push(new_value);
+                matrix[i].push(rhs[i][d]);
             }
             let ans = gaussian_elimination::gaussian_elimination(&mut matrix)
                 .ok_or(Error::GaussianEliminationFailure)?;
