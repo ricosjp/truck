@@ -541,7 +541,7 @@ impl<P: ControlPoint<f64>> BSplineSurface<P> {
     /// .collect::<Vec<_>>();
     ///
     /// let degree = 3;
-    /// let knot_vec = KnotVec::uniform_knot(degree, 5);
+    /// let knot_vec = KnotVec::uniform_knot(degree, 8);
     /// let bspsurface = BSplineSurface::least_square(
     ///     (knot_vec.clone(), knot_vec),
     ///     (degree, degree),
@@ -556,15 +556,18 @@ impl<P: ControlPoint<f64>> BSplineSurface<P> {
     ///         let v = j as f64 / N as f64;
     ///         let p = bspsurface.subs(u, v);
     ///         let q = torus(u, v);
-    ///         assert!(p.distance(q) < 0.02, "{}", p.distance(q));
+    ///         assert!(p.distance(q) < 0.01);
     ///     }
     /// }
     /// ```
     pub fn least_square(
-        (uknot_vec, vknot_vec): (KnotVec, KnotVec),
-        (udegree, vdegree): (usize, usize),
+        knot_vecs: (KnotVec, KnotVec),
+        degrees: (usize, usize),
         parameter_points: &[((f64, f64), P)],
     ) -> Result<Self> {
+        let (uknot_vec, vknot_vec) = knot_vecs;
+        let (udegree, vdegree) = degrees;
+
         let ubasis = parameter_points
             .iter()
             .map(|&((u, _), _)| {
