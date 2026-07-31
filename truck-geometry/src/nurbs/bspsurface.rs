@@ -568,53 +568,46 @@ impl<P: ControlPoint<f64>> BSplineSurface<P> {
         let (uknot_vec, vknot_vec) = knot_vecs;
         let (udegree, vdegree) = degrees;
 
-        let ubasis = parameter_points
-            .iter()
-            .map(|&((u, _), _)| {
-                uknot_vec
-                    .bspline_basis_functions(udegree, 0, u)
-                    .to_full_array()
-            })
-            .collect::<Vec<_>>();
-        let vbasis = parameter_points
-            .iter()
-            .map(|&((_, v), _)| {
-                vknot_vec
-                    .bspline_basis_functions(vdegree, 0, v)
-                    .to_full_array()
-            })
-            .collect::<Vec<_>>();
-
         let ucontrol_count = uknot_vec.len() - udegree - 1;
         let vcontrol_count = vknot_vec.len() - vdegree - 1;
         let size = ucontrol_count * vcontrol_count;
-        let basis = ubasis
-            .iter()
-            .zip(vbasis)
-            .map(|(ubs, vbs)| {
-                ubs.iter()
-                    .flat_map(|&ub| vbs.iter().map(move |&vb| ub * vb))
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
-        let matrix = (0..size)
-            .map(|i| {
-                (0..size)
-                    .map(|j| basis.iter().map(|bs| bs[i] * bs[j]).sum::<f64>())
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
+        let mut matrix = vec![vec![0.0; size]; size];
+        let mut rhs = vec![P::origin(); size];
+        for &((u, v), point) in parameter_points {
+            let ubasis = uknot_vec.bspline_basis_functions(udegree, 0, u);
+            let vbasis = vknot_vec.bspline_basis_functions(vdegree, 0, v);
+            for (local_ui, &ubasis_i) in ubasis.as_slice().iter().enumerate() {
+                for (local_vi, &vbasis_i) in vbasis.as_slice().iter().enumerate() {
+                    let i = (ubasis.base() + local_ui) * vcontrol_count + vbasis.base() + local_vi;
+                    let basis_i = ubasis_i * vbasis_i;
+                    for (local_uj, &ubasis_j) in ubasis.as_slice().iter().enumerate().skip(local_ui)
+                    {
+                        let vstart = if local_uj == local_ui { local_vi } else { 0 };
+                        for (local_vj, &vbasis_j) in
+                            vbasis.as_slice().iter().enumerate().skip(vstart)
+                        {
+                            let j = (ubasis.base() + local_uj) * vcontrol_count
+                                + vbasis.base()
+                                + local_vj;
+                            let value = basis_i * ubasis_j * vbasis_j;
+                            matrix[i][j] += value;
+                            if i != j {
+                                matrix[j][i] += value;
+                            }
+                        }
+                    }
+                    for d in 0..P::DIM {
+                        rhs[i][d] += basis_i * point[d];
+                    }
+                }
+            }
+        }
         let mut control_points = vec![vec![P::origin(); vcontrol_count]; ucontrol_count];
 
         for d in 0..P::DIM {
             let mut matrix = matrix.clone();
             for i in 0..size {
-                let new_value = basis
-                    .iter()
-                    .zip(parameter_points)
-                    .map(|(bs, (_, point))| bs[i] * point[d])
-                    .sum::<f64>();
-                matrix[i].push(new_value);
+                matrix[i].push(rhs[i][d]);
             }
             let ans = gaussian_elimination::gaussian_elimination(&mut matrix)
                 .ok_or(Error::GaussianEliminationFailure)?;

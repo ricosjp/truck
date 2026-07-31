@@ -227,7 +227,7 @@ mod gaussian_elimination {
 
     fn echelon<S: BaseFloat>(matrix: &mut [Vec<S>], i: usize, j: usize) {
         let size = matrix.len();
-        if matrix[i][i] != S::zero() {
+        if matrix[i][i] != S::zero() && matrix[j + 1][i] != S::zero() {
             let factor = matrix[j + 1][i] / matrix[i][i];
             (i..size + 1).for_each(|k| {
                 matrix[j + 1][k] = matrix[j + 1][k] - factor * matrix[i][k];
@@ -239,9 +239,11 @@ mod gaussian_elimination {
         let size = matrix.len();
         if matrix[i][i] != S::zero() {
             for j in (1..i + 1).rev() {
-                let factor = matrix[j - 1][i] / matrix[i][i];
-                for k in (0..size + 1).rev() {
-                    matrix[j - 1][k] = matrix[j - 1][k] - factor * matrix[i][k];
+                if matrix[j - 1][i] != S::zero() {
+                    let factor = matrix[j - 1][i] / matrix[i][i];
+                    for k in (i..size + 1).rev() {
+                        matrix[j - 1][k] = matrix[j - 1][k] - factor * matrix[i][k];
+                    }
                 }
             }
         }

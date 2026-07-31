@@ -67,7 +67,7 @@ fn search_nearest_parameter_with_range(
     let t = start + lerp_ratio * length;
     let p = a * circle.subs(t);
     let s = circle.search_nearest_parameter(p, range, 1).unwrap();
-    prop_assert_near2!(s, t);
+    prop_assert_near!(s, t);
 }
 
 #[property_test]
