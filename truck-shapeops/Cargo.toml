@@ -24,7 +24,7 @@ truck-geotrait = { version = "0.4.0", path = "../truck-geotrait" }
 truck-stepio = { version = "0.3.0", path = "../truck-stepio", optional = true }
 
 [dev-dependencies]
-rand = "0.10.2"
+rand = "0.10.3"
 serde_json = "1.0.151"
 truck-modeling = { path = "../truck-modeling" }
 proptest = { version = "1.11.0", features = ["attr-macro"] }
