@@ -62,7 +62,12 @@ where
     let mut map = HashMap::default();
     loops.iter().try_for_each(|wire| {
         let poly = create_parameter_boundary(face, wire, &mut map, tol)?;
-        match poly.area() > 0.0 {
+        let area = poly.area();
+        if area.abs() < tol {
+            // eprintln!("Ignored small area loop: {:?}", area);
+            return Some(());
+        }
+        match area > 0.0 {
             true => pre_faces.push(vec![WireChunk { poly, wire }]),
             false => negative_wires.push(WireChunk { poly, wire }),
         }
@@ -70,12 +75,24 @@ where
     })?;
     negative_wires.into_iter().try_for_each(|chunk| {
         let pt = chunk.poly.front();
-        let op = pre_faces.iter_mut().find(|face| face[0].poly.include(pt))?;
-        op.push(chunk);
+        let idx = pre_faces.iter().position(|face| face[0].poly.include(pt));
+        if let Some(i) = idx {
+            let outer_area = pre_faces[i][0].poly.area();
+            let chunk_area = chunk.poly.area();
+            // access to the same area with opposite orientation
+            // if the sum of areas is zero, the face is canceled.
+            // This happens when an intersection loop exactly matches the face boundary.
+            if (outer_area + chunk_area).abs() < tol {
+                pre_faces[i].clear();
+            } else {
+                pre_faces[i].push(chunk);
+            }
+        }
         Some(())
     })?;
     let vec: Vec<_> = pre_faces
         .into_iter()
+        .filter(|pre_face| !pre_face.is_empty())
         .map(|pre_face| {
             let surface = face.surface();
             let op = pre_face

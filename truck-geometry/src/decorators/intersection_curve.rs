@@ -31,7 +31,26 @@ where
     };
     let (x, y) = hint0.or_else(|| surface0.search_nearest_parameter(plane_point, hint0, trials))?;
     let (z, w) = hint1.or_else(|| surface1.search_nearest_parameter(plane_point, hint1, trials))?;
-    let Vector4 { x, y, z, w } = newton::solve(function, Vector4 { x, y, z, w }, trials).ok()?;
+    let res = newton::solve(function, Vector4 { x, y, z, w }, trials);
+    let Vector4 { x, y, z, w } = match res {
+        Ok(res) => res,
+        Err(_) => {
+            let pt0 = surface0.subs(x, y);
+            let pt1 = surface1.subs(z, w);
+            let n0 = surface0.normal(x, y);
+            let n1 = surface1.normal(z, w);
+            // Newton's method may fail when the Jacobian is singular, which happens
+            // when surfaces are coplanar or tangent.
+            // If the points are close enough and normals are parallel (indicating coplanarity),
+            // we accept the initial guess as a valid intersection point.
+            if pt0.near(&pt1) && n0.cross(n1).magnitude() < TOLERANCE {
+                let point = pt0.midpoint(pt1);
+                return Some((point, Point2::new(x, y), Point2::new(z, w)));
+            } else {
+                return None;
+            }
+        }
+    };
     let point = surface0.subs(x, y).midpoint(surface1.subs(z, w));
     Some((point, Point2::new(x, y), Point2::new(z, w)))
 }
