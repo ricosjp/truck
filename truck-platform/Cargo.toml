@@ -42,4 +42,4 @@ console_log = "1.1.0"
 gloo-utils = "0.3.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-proptest = { version = "1.11.0", features = ["attr-macro"] }
+proptest = { version = "1.12.0", features = ["attr-macro"] }
