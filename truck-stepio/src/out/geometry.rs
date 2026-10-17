@@ -402,7 +402,7 @@ where
         ))?;
         self.leader().fmt(curve_idx, f)?;
         self.surface0().fmt(surface0_idx, f)?;
-        self.surface1().fmt(surface0_idx, f)
+        self.surface1().fmt(surface1_idx, f)
     }
 }
 

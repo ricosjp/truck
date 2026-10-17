@@ -367,3 +367,59 @@ fn geometry() {
     13
     );
 }
+
+#[test]
+fn intersection_curve() {
+    // Each part of an intersection curve must be written at its own index. The
+    // second surface used to be written at the first one's, overwriting it and
+    // spilling into the ids reserved for itself.
+    //
+    // The two surfaces are deliberately different sizes -- a B-spline of length
+    // 7 and a plane of length 5 -- so that `surface1_idx` has to be reached by
+    // adding the *first* surface's length. Two surfaces of equal length would
+    // let that arithmetic be wrong and still pass.
+    let leader =
+        truck_polymesh::PolylineCurve(vec![Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0)]);
+    let surface0 = BSplineSurface::new(
+        (KnotVec::bezier_knot(1), KnotVec::bezier_knot(2)),
+        vec![
+            vec![
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(0.0, 1.0, 0.0),
+                Point3::new(0.0, 2.0, 0.0),
+            ],
+            vec![
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(1.0, 1.0, 0.0),
+                Point3::new(1.0, 2.0, 0.0),
+            ],
+        ],
+    );
+    let surface1 = Plane::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(1.0, 0.0, 0.0),
+        Point3::new(0.0, 0.0, 1.0),
+    );
+    step_test::<
+        IntersectionCurve<truck_polymesh::PolylineCurve<Point3>, BSplineSurface<Point3>, Plane>,
+    >(
+        IntersectionCurve::new(surface0, surface1, leader),
+        "#1 = INTERSECTION_CURVE('', #2, (#5, #12), .CURVE_3D.);
+#2 = POLYLINE('', (#3, #4));
+#3 = CARTESIAN_POINT('', (0.0, 0.0, 0.0));
+#4 = CARTESIAN_POINT('', (1.0, 0.0, 0.0));
+#5 = B_SPLINE_SURFACE_WITH_KNOTS('', 1, 2, ((#6, #7, #8), (#9, #10, #11)), .UNSPECIFIED., .U., .U., .U., (2, 2), (3, 3), (0.0, 1.0), (0.0, 1.0), .UNSPECIFIED.);
+#6 = CARTESIAN_POINT('', (0.0, 0.0, 0.0));
+#7 = CARTESIAN_POINT('', (0.0, 1.0, 0.0));
+#8 = CARTESIAN_POINT('', (0.0, 2.0, 0.0));
+#9 = CARTESIAN_POINT('', (1.0, 0.0, 0.0));
+#10 = CARTESIAN_POINT('', (1.0, 1.0, 0.0));
+#11 = CARTESIAN_POINT('', (1.0, 2.0, 0.0));
+#12 = PLANE('', #13);
+#13 = AXIS2_PLACEMENT_3D('', #14, #15, #16);
+#14 = CARTESIAN_POINT('', (0.0, 0.0, 0.0));
+#15 = DIRECTION('', (0.0, -1.0, 0.0));
+#16 = DIRECTION('', (1.0, 0.0, 0.0));\n",
+        16,
+    );
+}
