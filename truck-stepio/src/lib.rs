@@ -41,6 +41,9 @@
 /// assert_eq!(cgmath_point, Point3::new(0.0, 10.0, 0.0));
 /// ```
 #[cfg(feature = "in")]
+// Workaround for a Clippy false positive.
+// cf. https://github.com/rust-lang/rust-clippy/issues/17525
+#[allow(clippy::redundant_field_names)]
 pub mod r#in;
 /// STEP output module
 pub mod out;

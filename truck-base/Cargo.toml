@@ -18,4 +18,4 @@ serde = { version = "1.0.229", features = ["derive"] }
 rustc-hash = "2.1.3"
 
 [dev-dependencies]
-proptest = { version = "1.11.0", features = ["attr-macro"] }
+proptest = { version = "1.12.0", features = ["attr-macro"] }
