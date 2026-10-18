@@ -195,15 +195,27 @@ impl IncludeCurve<Curve> for Surface {
                 Curve::IntersectionCurve(_) => unimplemented!(),
             },
             Surface::RevolutedCurve(surface) => match surface.entity_curve() {
-                &Curve::Line(curve) => {
-                    self.include(&Curve::BSplineCurve(BSplineCurve::from(curve)))
+                &Curve::Line(entity_curve) => {
+                    let rev = RevolutedCurve::by_revolution(
+                        BSplineCurve::from(entity_curve),
+                        surface.origin(),
+                        surface.axis(),
+                    );
+                    let surface = Processor::with_transform(rev, *surface.transform());
+                    match curve {
+                        &Curve::Line(curve) => surface.include(&BSplineCurve::from(curve)),
+                        Curve::BSplineCurve(curve) => surface.include(curve),
+                        Curve::NurbsCurve(curve) => surface.include(curve),
+                        Curve::IntersectionCurve(_) => unimplemented!(),
+                    }
                 }
                 Curve::BSplineCurve(entity_curve) => {
-                    let surface = RevolutedCurve::by_revolution(
+                    let rev = RevolutedCurve::by_revolution(
                         entity_curve,
                         surface.origin(),
                         surface.axis(),
                     );
+                    let surface = Processor::with_transform(rev, *surface.transform());
                     match curve {
                         &Curve::Line(curve) => surface.include(&BSplineCurve::from(curve)),
                         Curve::BSplineCurve(curve) => surface.include(curve),
@@ -212,11 +224,12 @@ impl IncludeCurve<Curve> for Surface {
                     }
                 }
                 Curve::NurbsCurve(entity_curve) => {
-                    let surface = RevolutedCurve::by_revolution(
+                    let rev = RevolutedCurve::by_revolution(
                         entity_curve,
                         surface.origin(),
                         surface.axis(),
                     );
+                    let surface = Processor::with_transform(rev, *surface.transform());
                     match curve {
                         &Curve::Line(curve) => surface.include(&BSplineCurve::from(curve)),
                         Curve::BSplineCurve(curve) => surface.include(curve),
