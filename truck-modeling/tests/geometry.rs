@@ -746,33 +746,68 @@ fn extrusion_to_same_geometry(
     }
 }
 
-#[property_test]
-fn intersection_unsupported_operations(#[strategy = 0.0f64..1.0] offset: f64) {
-    // These APIs explicitly use unimplemented! today. Keep this separate from
-    // the supported intersection operations tested above.
+// Unsupported operations do not depend on generated inputs. Keep each panic
+// to a single ordinary test: property testing would repeat panic-hook output
+// hundreds of times under the CI runner's --nocapture setting.
+#[test]
+#[should_panic(expected = "intersection curve cannot connect by homotopy")]
+fn intersection_lift_up_is_unsupported() {
     let curve: Curve = intersection().into();
-    let curve = curve.transformed(Matrix4::from_translation(Vector3::unit_x() * offset));
-    prop_assert!(std::panic::catch_unwind(|| curve.lift_up()).is_err());
-    prop_assert!(
-        std::panic::catch_unwind(|| -> Surface {
-            ExtrudedCurve::by_extrusion(curve.clone(), Vector3::unit_z()).to_same_geometry()
-        })
-        .is_err(),
-        "intersection conversion is unsupported"
-    );
-    prop_assert!(
-        std::panic::catch_unwind(|| -> Surface {
-            HomotopySurface::new(curve.clone(), curve.clone()).to_same_geometry()
-        })
-        .is_err(),
-        "intersection conversion is unsupported"
-    );
-    for surface in surfaces(0.7, 1.3) {
-        prop_assert!(std::panic::catch_unwind(|| surface.include(&curve)).is_err());
-    }
-    let surface = cylinder(curve);
+    curve.lift_up();
+}
+
+#[test]
+#[should_panic(expected = "not implemented")]
+fn intersection_extrusion_is_unsupported() {
+    let curve: Curve = intersection().into();
+    let _: Surface = ExtrudedCurve::by_extrusion(curve, Vector3::unit_z()).to_same_geometry();
+}
+
+#[test]
+#[should_panic(expected = "intersection curve cannot connect by homotopy")]
+fn intersection_homotopy_is_unsupported() {
+    let curve: Curve = intersection().into();
+    let _: Surface = HomotopySurface::new(curve.clone(), curve).to_same_geometry();
+}
+
+#[test]
+#[should_panic(expected = "not implemented")]
+fn intersection_plane_include_is_unsupported() {
+    let curve: Curve = intersection().into();
+    let surface = Surface::Plane(plane_xy());
+    surface.include(&curve);
+}
+
+#[test]
+#[should_panic(expected = "not implemented")]
+fn intersection_bspline_surface_include_is_unsupported() {
+    let curve: Curve = intersection().into();
+    let surface = planar_surfaces(1.3)[1].clone();
+    surface.include(&curve);
+}
+
+#[test]
+#[should_panic(expected = "not implemented")]
+fn intersection_nurbs_surface_include_is_unsupported() {
+    let curve: Curve = intersection().into();
+    let surface = planar_surfaces(1.3)[2].clone();
+    surface.include(&curve);
+}
+
+#[test]
+#[should_panic(expected = "not implemented")]
+fn intersection_revolved_surface_include_is_unsupported() {
+    let curve: Curve = intersection().into();
+    let surface = cylinder(Line(Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 1.0)).into());
+    surface.include(&curve);
+}
+
+#[test]
+#[should_panic(expected = "not implemented")]
+fn intersection_revolved_generatrix_is_unsupported() {
+    let surface = cylinder(intersection().into());
     let query: Curve = Line(Point3::origin(), Point3::new(1.0, 0.0, 0.0)).into();
-    prop_assert!(std::panic::catch_unwind(|| surface.include(&query)).is_err());
+    surface.include(&query);
 }
 
 #[property_test]
