@@ -2378,10 +2378,10 @@ impl EdgeCurve {
                         .ok_or_else(|| "Failed to convert Parabola".to_string())?;
                     let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
                     let (u, v) = (
-                        UnitHyperbola::<Point2>::new()
+                        UnitParabola::<Point2>::new()
                             .search_nearest_parameter(p, None, 0)
                             .ok_or_else(|| "the point is not on parabola".to_string())?,
-                        UnitHyperbola::<Point2>::new()
+                        UnitParabola::<Point2>::new()
                             .search_nearest_parameter(q, None, 0)
                             .ok_or_else(|| "the point is not on parabola".to_string())?,
                     );
@@ -2502,17 +2502,17 @@ impl EdgeCurve {
                         .ok_or_else(|| "Failed to convert Parabola".to_string())?;
                     let (p, q) = (inv_mat.transform_point(p), inv_mat.transform_point(q));
                     let (u, v) = (
-                        UnitHyperbola::<Point3>::new()
+                        UnitParabola::<Point3>::new()
                             .search_nearest_parameter(p, None, 0)
                             .ok_or_else(|| "the point is not on parabola".to_string())?,
-                        UnitHyperbola::<Point3>::new()
+                        UnitParabola::<Point3>::new()
                             .search_nearest_parameter(q, None, 0)
                             .ok_or_else(|| "the point is not on parabola".to_string())?,
                     );
-                    let unit = TrimmedCurve::new(UnitHyperbola::<Point3>::new(), (u, v));
+                    let unit = TrimmedCurve::new(UnitParabola::<Point3>::new(), (u, v));
                     let mut parabola = Processor::new(unit);
                     parabola.transform_by(mat);
-                    Curve3D::Conic(Conic3D::Hyperbola(parabola))
+                    Curve3D::Conic(Conic3D::Parabola(parabola))
                 }
             },
             CurveAny::Pcurve(c) => {
