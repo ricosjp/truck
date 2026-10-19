@@ -884,6 +884,346 @@ fn parabola(
     exec_parabola(org_coord, dir_array, ref_dir_array, focal_dist)
 }
 
+fn edge_curve_from_step<P>(
+    geometry: &str,
+    placement: &str,
+    points: [P; 2],
+    same_sense: bool,
+) -> EdgeCurve
+where
+    for<'a> StepDataDisplay<&'a P>: std::fmt::Display,
+{
+    let sense = if same_sense { ".T." } else { ".F." };
+    step_to_entity::<EdgeCurveHolder>(&format!(
+        "DATA;
+#1 = EDGE_CURVE('', #7, #8, #6, {sense});
+{placement}
+#6 = {geometry};
+#7 = VERTEX_POINT('', #9);
+#8 = VERTEX_POINT('', #10);
+{}{}ENDSEC;",
+        StepDataDisplay::new(&points[0], 9),
+        StepDataDisplay::new(&points[1], 10),
+    ))
+}
+
+fn conic_edge_placement2d(org_coord: [f64; 2], angle: f64) -> (String, Matrix3) {
+    let origin = Point2::from(org_coord);
+    let x = Vector2::new(f64::cos(angle), f64::sin(angle));
+    let y = Vector2::new(-x.y, x.x);
+    let step = format!(
+        "#2 = AXIS2_PLACEMENT_2D('', #3, #4);\n{}{}",
+        StepDataDisplay::new(origin, 3),
+        StepDataDisplay::new(VectorAsDirection(x), 4),
+    );
+    let mat = Matrix3::from_cols(x.extend(0.0), y.extend(0.0), origin.to_vec().extend(1.0));
+    (step, mat)
+}
+
+fn conic_edge_placement3d(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+) -> Option<(String, Matrix4)> {
+    let origin = Point3::from(org_coord);
+    let z = dir_from_array(dir_array);
+    let ref_dir = dir_from_array(ref_dir_array);
+    let v = z.cross(ref_dir);
+    if v.so_small() {
+        return None;
+    }
+    let y = v.normalize();
+    let x = y.cross(z).normalize();
+    let step = format!(
+        "#2 = AXIS2_PLACEMENT_3D('', #3, #4, #5);\n{}{}{}",
+        StepDataDisplay::new(origin, 3),
+        StepDataDisplay::new(VectorAsDirection(z), 4),
+        StepDataDisplay::new(VectorAsDirection(ref_dir.normalize()), 5),
+    );
+    let mat = Matrix4::from_cols(
+        x.extend(0.0),
+        y.extend(0.0),
+        z.extend(0.0),
+        origin.to_vec().extend(1.0),
+    );
+    Some((step, mat))
+}
+
+fn exec_edge_samples<C>(
+    curve: &C,
+    params: (f64, f64),
+    same_sense: bool,
+    point: impl Fn(f64) -> C::Point,
+) where
+    C: BoundedCurve,
+    C::Point: std::fmt::Debug + Tolerance,
+{
+    let (a, b) = curve.range_tuple();
+    let range = if same_sense {
+        params
+    } else {
+        (params.1, params.0)
+    };
+    assert_near!(a, range.0);
+    assert_near!(b, range.1);
+    // Check both endpoints and the interior against the analytic conic.
+    (0..=10).for_each(|i| {
+        let s = i as f64 / 10.0;
+        assert_near!(
+            curve.subs(a * (1.0 - s) + b * s),
+            point(params.0 * (1.0 - s) + params.1 * s)
+        );
+    });
+}
+
+fn exec_parabola_edge2d(org_coord: [f64; 2], angle: f64, focal_dist: f64) {
+    let (placement, mat) = conic_edge_placement2d(org_coord, angle);
+    let geometry = format!("PARABOLA('', #2, {})", FloatDisplay(focal_dist));
+    let point = |t: f64| mat.transform_point(Point2::new(focal_dist * t * t, 2.0 * focal_dist * t));
+    for params in [(-1.0, 1.0), (1.0, -1.0)] {
+        for same_sense in [true, false] {
+            let edge = edge_curve_from_step(
+                &geometry,
+                &placement,
+                [point(params.0), point(params.1)],
+                same_sense,
+            );
+            let Curve2D::Conic(Conic2D::Parabola(curve)) = edge.parse_curve2d().unwrap() else {
+                panic!("expected a 2D parabola edge");
+            };
+            exec_edge_samples(&curve, params, same_sense, point);
+        }
+    }
+}
+
+#[property_test]
+fn parabola_edge2d(
+    #[strategy = array::uniform2(-100.0f64..100.0f64)] org_coord: [f64; 2],
+    #[strategy = 0.0f64..2.0 * PI] angle: f64,
+    #[strategy = 0.1f64..10.0] focal_dist: f64,
+) {
+    exec_parabola_edge2d(org_coord, angle, focal_dist);
+}
+
+fn exec_parabola_edge3d(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    focal_dist: f64,
+) {
+    let Some((placement, mat)) = conic_edge_placement3d(org_coord, dir_array, ref_dir_array) else {
+        return;
+    };
+    let geometry = format!("PARABOLA('', #2, {})", FloatDisplay(focal_dist));
+    let point =
+        |t: f64| mat.transform_point(Point3::new(focal_dist * t * t, 2.0 * focal_dist * t, 0.0));
+    for params in [(-1.0, 1.0), (1.0, -1.0)] {
+        for same_sense in [true, false] {
+            let edge = edge_curve_from_step(
+                &geometry,
+                &placement,
+                [point(params.0), point(params.1)],
+                same_sense,
+            );
+            let Curve3D::Conic(Conic3D::Parabola(curve)) = edge.parse_curve3d().unwrap() else {
+                panic!("expected a 3D parabola edge");
+            };
+            exec_edge_samples(&curve, params, same_sense, point);
+        }
+    }
+}
+
+#[property_test]
+fn parabola_edge3d(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0)] ref_dir_array: [f64; 2],
+    #[strategy = 0.1f64..10.0] focal_dist: f64,
+) {
+    exec_parabola_edge3d(org_coord, dir_array, ref_dir_array, focal_dist);
+}
+
+fn exec_hyperbola_edge2d(org_coord: [f64; 2], angle: f64, radius: [f64; 2]) {
+    let (placement, mat) = conic_edge_placement2d(org_coord, angle);
+    let geometry = format!(
+        "HYPERBOLA('', #2, {}, {})",
+        FloatDisplay(radius[0]),
+        FloatDisplay(radius[1])
+    );
+    let point = |t: f64| {
+        mat.transform_point(Point2::new(
+            radius[0] * f64::cosh(t),
+            radius[1] * f64::sinh(t),
+        ))
+    };
+    for params in [(-1.0, 1.0), (1.0, -1.0)] {
+        for same_sense in [true, false] {
+            let edge = edge_curve_from_step(
+                &geometry,
+                &placement,
+                [point(params.0), point(params.1)],
+                same_sense,
+            );
+            let Curve2D::Conic(Conic2D::Hyperbola(curve)) = edge.parse_curve2d().unwrap() else {
+                panic!("expected a 2D hyperbola edge");
+            };
+            exec_edge_samples(&curve, params, same_sense, point);
+        }
+    }
+}
+
+#[property_test]
+fn hyperbola_edge2d(
+    #[strategy = array::uniform2(-100.0f64..100.0f64)] org_coord: [f64; 2],
+    #[strategy = 0.0f64..2.0 * PI] angle: f64,
+    #[strategy = array::uniform2(0.1f64..10.0)] radius: [f64; 2],
+) {
+    exec_hyperbola_edge2d(org_coord, angle, radius);
+}
+
+fn exec_hyperbola_edge3d(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    radius: [f64; 2],
+) {
+    let Some((placement, mat)) = conic_edge_placement3d(org_coord, dir_array, ref_dir_array) else {
+        return;
+    };
+    let geometry = format!(
+        "HYPERBOLA('', #2, {}, {})",
+        FloatDisplay(radius[0]),
+        FloatDisplay(radius[1])
+    );
+    let point = |t: f64| {
+        mat.transform_point(Point3::new(
+            radius[0] * f64::cosh(t),
+            radius[1] * f64::sinh(t),
+            0.0,
+        ))
+    };
+    for params in [(-1.0, 1.0), (1.0, -1.0)] {
+        for same_sense in [true, false] {
+            let edge = edge_curve_from_step(
+                &geometry,
+                &placement,
+                [point(params.0), point(params.1)],
+                same_sense,
+            );
+            let Curve3D::Conic(Conic3D::Hyperbola(curve)) = edge.parse_curve3d().unwrap() else {
+                panic!("expected a 3D hyperbola edge");
+            };
+            exec_edge_samples(&curve, params, same_sense, point);
+        }
+    }
+}
+
+#[property_test]
+fn hyperbola_edge3d(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0)] ref_dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.1f64..10.0)] radius: [f64; 2],
+) {
+    exec_hyperbola_edge3d(org_coord, dir_array, ref_dir_array, radius);
+}
+
+fn exec_periodic_conic_edge2d(org_coord: [f64; 2], angle: f64, radius: [f64; 2]) {
+    let (placement, mat) = conic_edge_placement2d(org_coord, angle);
+    let circle = format!("CIRCLE('', #2, {})", FloatDisplay(radius[0]));
+    let ellipse = format!(
+        "ELLIPSE('', #2, {}, {})",
+        FloatDisplay(radius[0]),
+        FloatDisplay(radius[1])
+    );
+    for (geometry, radii) in [(circle, [radius[0], radius[0]]), (ellipse, radius)] {
+        let point = |t: f64| {
+            mat.transform_point(Point2::new(radii[0] * f64::cos(t), radii[1] * f64::sin(t)))
+        };
+        // Preserve wrapping at 2π for circles and ellipses in both senses.
+        for same_sense in [true, false] {
+            let params = if same_sense {
+                (1.5 * PI, 2.5 * PI)
+            } else {
+                (2.5 * PI, 1.5 * PI)
+            };
+            let edge = edge_curve_from_step(
+                &geometry,
+                &placement,
+                [point(params.0), point(params.1)],
+                same_sense,
+            );
+            let Curve2D::Conic(Conic2D::Ellipse(curve)) = edge.parse_curve2d().unwrap() else {
+                panic!("expected a 2D ellipse edge");
+            };
+            exec_edge_samples(&curve, params, same_sense, point);
+        }
+    }
+}
+
+#[property_test]
+fn periodic_conic_edge2d(
+    #[strategy = array::uniform2(-100.0f64..100.0f64)] org_coord: [f64; 2],
+    #[strategy = 0.0f64..2.0 * PI] angle: f64,
+    #[strategy = array::uniform2(0.1f64..10.0)] radius: [f64; 2],
+) {
+    exec_periodic_conic_edge2d(org_coord, angle, radius);
+}
+
+fn exec_periodic_conic_edge3d(
+    org_coord: [f64; 3],
+    dir_array: [f64; 2],
+    ref_dir_array: [f64; 2],
+    radius: [f64; 2],
+) {
+    let Some((placement, mat)) = conic_edge_placement3d(org_coord, dir_array, ref_dir_array) else {
+        return;
+    };
+    let circle = format!("CIRCLE('', #2, {})", FloatDisplay(radius[0]));
+    let ellipse = format!(
+        "ELLIPSE('', #2, {}, {})",
+        FloatDisplay(radius[0]),
+        FloatDisplay(radius[1])
+    );
+    for (geometry, radii) in [(circle, [radius[0], radius[0]]), (ellipse, radius)] {
+        let point = |t: f64| {
+            mat.transform_point(Point3::new(
+                radii[0] * f64::cos(t),
+                radii[1] * f64::sin(t),
+                0.0,
+            ))
+        };
+        // Preserve wrapping at 2π for circles and ellipses in both senses.
+        for same_sense in [true, false] {
+            let params = if same_sense {
+                (1.5 * PI, 2.5 * PI)
+            } else {
+                (2.5 * PI, 1.5 * PI)
+            };
+            let edge = edge_curve_from_step(
+                &geometry,
+                &placement,
+                [point(params.0), point(params.1)],
+                same_sense,
+            );
+            let Curve3D::Conic(Conic3D::Ellipse(curve)) = edge.parse_curve3d().unwrap() else {
+                panic!("expected a 3D ellipse edge");
+            };
+            exec_edge_samples(&curve, params, same_sense, point);
+        }
+    }
+}
+
+#[property_test]
+fn periodic_conic_edge3d(
+    #[strategy = array::uniform3(-100.0f64..100.0f64)] org_coord: [f64; 3],
+    #[strategy = array::uniform2(0.0f64..1.0)] dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.0f64..1.0)] ref_dir_array: [f64; 2],
+    #[strategy = array::uniform2(0.1f64..10.0)] radius: [f64; 2],
+) {
+    exec_periodic_conic_edge3d(org_coord, dir_array, ref_dir_array, radius);
+}
+
 fn exec_plane(org_coord: [f64; 3], dir_array: [f64; 2], ref_dir_array: [f64; 2]) {
     let origin = Point3::from(org_coord);
     let z = dir_from_array(dir_array);
