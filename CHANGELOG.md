@@ -4,6 +4,7 @@ The version is of the bottom crate `truck-rendimpl`.
 
 ## Unreleased
 
+- Upgrade `cargo-doc`.
 - Fix some bugs reported on GitHub.
 - Remove `compression` feature from `vtkio`.
 - Improve `BSplineXXX::least_square`.
