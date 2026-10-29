@@ -256,6 +256,7 @@ impl PolyBoundaryPiece {
             .collect();
         bdry3d.push(bdry3d[0]);
         let mut previous = None;
+        let mut previous_point = None;
         let mut vec = bdry3d
             .into_iter()
             .flat_map(|pt| {
@@ -273,12 +274,12 @@ impl PolyBoundaryPiece {
                     if let Some((u0, v0)) = previous {
                         if !u0.near(&u) && surface.uder(u0, v0).so_small() {
                             return vec![
-                                Some((Point2::new(u, v0), pt).into()),
+                                Some((Point2::new(u, v0), previous_point.unwrap()).into()),
                                 Some((Point2::new(u, v), pt).into()),
                             ];
                         } else if !v0.near(&v) && surface.vder(u0, v0).so_small() {
                             return vec![
-                                Some((Point2::new(u0, v), pt).into()),
+                                Some((Point2::new(u0, v), previous_point.unwrap()).into()),
                                 Some((Point2::new(u, v), pt).into()),
                             ];
                         }
@@ -286,6 +287,7 @@ impl PolyBoundaryPiece {
                     vec![Some((Point2::new(u, v), pt).into())]
                 })();
                 previous = Some((u, v));
+                previous_point = Some(pt);
                 res
             })
             .collect::<Option<Vec<SurfacePoint>>>()?;
@@ -555,6 +557,7 @@ where S: PreMeshableSurface {
     let mut boundary_map = HashMap::<FixedVertexHandle, Point3>::default();
     polyboundary.insert_to(&mut triangulation, &mut boundary_map);
     insert_surface(&mut triangulation, surface, polyboundary, tol);
+    refine_triangulation(&mut triangulation, surface, polyboundary, tol);
     let mut mesh = triangulation_into_polymesh(
         triangulation.vertices(),
         triangulation.inner_faces(),
@@ -564,6 +567,75 @@ where S: PreMeshableSurface {
     );
     mesh.make_face_compatible_to_normal();
     mesh
+}
+
+fn refine_triangulation(
+    triangulation: &mut Cdt,
+    surface: &impl PreMeshableSurface,
+    boundary: &PolyBoundary,
+    tol: f64,
+) {
+    // Parameter divisions bound the error along isoparametric curves, but a
+    // trimmed domain can leave long diagonals between those curves. Refine in
+    // parameter space while retaining the boundary constraints. Bound this
+    // additional work, including for pathological or inconsistent boundaries.
+    let vertex_limit = triangulation.num_vertices().saturating_add(100_000);
+    // Insertion keeps vertex indices stable, but face slots can be reused.
+    // Validate a cached face by its vertices rather than its slot alone.
+    let mut checked = vec![None; triangulation.num_all_faces()];
+    let mut vertex_positions = vec![None; triangulation.num_vertices()];
+    for _ in 0..64 {
+        checked.resize(triangulation.num_all_faces(), None);
+        let points: Vec<_> = triangulation
+            .inner_faces()
+            .filter_map(|face| {
+                let vertices = face.vertices();
+                let mut key = vertices.map(|v| v.fix().index());
+                key.sort_unstable();
+                if checked[face.index()] == Some(key) {
+                    return None;
+                }
+                let uv = vertices.map(|v| Point2::new(v.position().x, v.position().y));
+                let center = uv[0] + ((uv[1] - uv[0]) + (uv[2] - uv[0])) / 3.0;
+                let positions = vertices.map(|v| {
+                    let p = v.position();
+                    *vertex_positions[v.index()]
+                        .get_or_insert_with(|| surface.subs(p.x, p.y))
+                });
+                let chord = Point3::from_vec(
+                    (positions[0].to_vec() + positions[1].to_vec() + positions[2].to_vec()) / 3.0,
+                );
+                let sample = surface.subs(center.x, center.y);
+                let error = chord.distance2(sample);
+                // Accepted triangles need no domain query: they insert no
+                // point, and final clipping already classifies the mesh.
+                if (error.is_finite() && error <= tol * tol) || !boundary.include(center) {
+                    checked[face.index()] = Some(key);
+                    return None;
+                }
+                assert!(
+                    error.is_finite(),
+                    "surface refinement encountered a nonfinite sample"
+                );
+                Some((SPoint2::new(center.x, center.y), sample))
+            })
+            .collect();
+        if points.is_empty() {
+            return;
+        }
+        if triangulation.num_vertices() + points.len() > vertex_limit {
+            return;
+        }
+        let count = triangulation.num_vertices();
+        for (point, sample) in points {
+            let index = triangulation.insert(point).unwrap().index();
+            vertex_positions.resize(triangulation.num_vertices(), None);
+            vertex_positions[index] = Some(sample);
+        }
+        if triangulation.num_vertices() == count {
+            return;
+        }
+    }
 }
 
 /// Inserts parameter divisions into triangulation.
