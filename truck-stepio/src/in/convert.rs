@@ -348,7 +348,7 @@ impl Table {
         let attrs = PartAttrs {
             id: product.id.clone(),
             name: product.name.clone(),
-            description: product.description.clone(),
+            description: product.description.clone().unwrap_or_default(),
         };
 
         let Some(sdr) = self.shape_definition_representation.values().find(|sdr| {
@@ -402,7 +402,7 @@ impl Table {
         let attrs = PartAttrs {
             id: next_assy.id.clone(),
             name: next_assy.name.clone(),
-            description: next_assy.description.clone(),
+            description: next_assy.description.clone().unwrap_or_default(),
         };
 
         let Some(cdsr) = self
