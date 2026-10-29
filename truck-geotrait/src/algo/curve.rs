@@ -73,11 +73,16 @@ where
 /// # Panics
 ///
 /// `tol` must be greater than or equal to `TOLERANCE`.
+/// Panics if the parameter range or a sampled chord error is not finite.
 pub fn parameter_division<C>(curve: &C, range: (f64, f64), tol: f64) -> (Vec<f64>, Vec<C::Point>)
 where
     C: ParametricCurve,
     C::Point: EuclideanSpace<Scalar = f64> + MetricSpace<Metric = f64> + HashGen<f64>, {
     nonpositive_tolerance!(tol);
+    assert!(
+        range.0.is_finite() && range.1.is_finite(),
+        "curve subdivision requires a finite parameter range"
+    );
     sub_parameter_division(
         curve,
         range,
@@ -103,6 +108,10 @@ where
     let t = range.0 * (1.0 - p) + range.1 * p;
     let mid = ends.0 + (ends.1 - ends.0) * p;
     let dist2 = curve.subs(t).distance2(mid);
+    assert!(
+        dist2.is_finite(),
+        "curve subdivision encountered a nonfinite sample"
+    );
     if dist2 < tol * tol || trials == 0 {
         (vec![range.0, range.1], vec![ends.0, ends.1])
     } else {
