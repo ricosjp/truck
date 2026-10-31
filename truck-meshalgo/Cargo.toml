@@ -44,3 +44,7 @@ truck-modeling = { version = "0.6.0", path = "../truck-modeling" }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 getrandom = { version = "0.4.3", features = ["wasm_js"] }
+
+[[bench]]
+name = "cpu_vs_gpu"
+harness = false
