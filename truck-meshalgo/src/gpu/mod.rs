@@ -7,6 +7,11 @@ use truck_platform::wgpu::*;
 use truck_platform::*;
 use truck_polymesh::PolygonMesh;
 
+#[cfg(feature = "cuda")]
+pub mod cuda;
+#[cfg(feature = "cuda")]
+pub use cuda::*;
+
 /// GPU representation of a 3D triangle with 16-byte aligned vertices.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]

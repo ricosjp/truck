@@ -302,3 +302,94 @@ fn test_gpu_large_scale_parity_and_timing() {
         );
     }
 }
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_distance_and_containment_parity() {
+    let cuda_analyzer = CudaMeshAnalyzer::new();
+    let cube = create_unit_cube();
+
+    let mut test_points = vec![
+        Point3::new(0.5, 0.5, 0.5),
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(1.0, 1.0, 1.0),
+        Point3::new(0.5, 0.5, 1.0),
+        Point3::new(2.0, 2.0, 2.0),
+        Point3::new(-1.0, -2.0, -3.0),
+    ];
+
+    for x in [-0.5, 0.25, 0.5, 0.75, 1.5] {
+        for y in [-0.5, 0.25, 0.5, 0.75, 1.5] {
+            for z in [-0.5, 0.25, 0.5, 0.75, 1.5] {
+                test_points.push(Point3::new(x, y, z));
+            }
+        }
+    }
+
+    // Distance test
+    let cuda_distances = cuda_analyzer.distance2_point_cloud(&cube, &test_points);
+    assert_eq!(cuda_distances.len(), test_points.len());
+
+    for (i, &pt) in test_points.iter().enumerate() {
+        let cpu_dist2 = cpu_min_distance2(&cube, pt);
+        let cuda_dist2 = cuda_distances[i] as f64;
+        let diff = (cuda_dist2 - cpu_dist2).abs();
+        let rel_err = diff / cpu_dist2.max(1.0);
+
+        assert!(
+            rel_err < 1e-4,
+            "CUDA Distance mismatch at point #{}: {:?} - CPU: {}, CUDA: {}, diff: {}, rel_err: {}",
+            i, pt, cpu_dist2, cuda_dist2, diff, rel_err
+        );
+    }
+
+    // Containment test
+    let cpu_inside: Vec<bool> = test_points.iter().map(|&p| cube.inside(p)).collect();
+    let cuda_inside = cuda_analyzer.inside(&cube, &test_points);
+    for i in 0..test_points.len() {
+        assert_eq!(
+            cuda_inside[i], cpu_inside[i],
+            "CUDA inside mismatch at point #{}: {:?}, CUDA: {}, CPU: {}",
+            i, test_points[i], cuda_inside[i], cpu_inside[i]
+        );
+    }
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_vulkan_vs_cuda_exact_parity() {
+    let handler = init_vulkan_device();
+    let vulkan_analyzer = GpuMeshAnalyzer::new(&handler);
+    let cuda_analyzer = CudaMeshAnalyzer::new();
+
+    let sphere_mesh = common::shapes::sphere(Point3::origin(), 1.5, 24, 24);
+    let n_points = 500;
+    let points: Vec<Point3> = (0..n_points)
+        .map(|i| {
+            let u = (i as f64 * 0.314).sin() * 3.0;
+            let v = (i as f64 * 0.271).cos() * 3.0;
+            let w = (i as f64 * 0.141).sin() * 3.0;
+            Point3::new(u, v, w)
+        })
+        .collect();
+
+    let vulkan_dist = vulkan_analyzer.distance2_point_cloud(&sphere_mesh, &points);
+    let cuda_dist = cuda_analyzer.distance2_point_cloud(&sphere_mesh, &points);
+
+    assert_eq!(vulkan_dist.len(), n_points);
+    assert_eq!(cuda_dist.len(), n_points);
+
+    for i in 0..n_points {
+        let diff = (vulkan_dist[i] - cuda_dist[i]).abs();
+        let rel_diff = diff / vulkan_dist[i].max(1.0);
+        assert!(
+            rel_diff < 1e-4,
+            "Vulkan vs CUDA distance difference at index {}: Vulkan={}, CUDA={}, diff={}",
+            i, vulkan_dist[i], cuda_dist[i], diff
+        );
+    }
+
+    let vulkan_inside = vulkan_analyzer.inside(&sphere_mesh, &points);
+    let cuda_inside = cuda_analyzer.inside(&sphere_mesh, &points);
+    assert_eq!(vulkan_inside, cuda_inside, "Vulkan and CUDA inside classifications differ!");
+}

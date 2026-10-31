@@ -16,7 +16,11 @@ filters = []
 tessellation = ["spade", "filters"]
 vtk = ["vtkio"]
 gpu = ["dep:truck-platform", "dep:bytemuck", "dep:pollster"]
+cuda = []
 default = ["analyzers", "filters", "tessellation", "vtk", "gpu"]
+
+[build-dependencies]
+cc = "1.10.0"
 
 [dependencies]
 bytemuck = { version = "1.25.2", features = ["derive"], optional = true }
