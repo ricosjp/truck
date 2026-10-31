@@ -41,12 +41,18 @@ pub mod tessellation;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod vtk;
 
+/// GPU-accelerated algorithms based on wgpu / Vulkan
+#[cfg(feature = "gpu")]
+pub mod gpu;
+
 /// This module contains all traits and re-exports `truck_polymesh`.
 pub mod prelude {
     #[cfg(feature = "analyzers")]
     pub use crate::analyzers::*;
     #[cfg(feature = "filters")]
     pub use crate::filters::*;
+    #[cfg(feature = "gpu")]
+    pub use crate::gpu::*;
     pub use crate::rexport_polymesh::*;
     #[cfg(feature = "tessellation")]
     pub use crate::tessellation::*;
