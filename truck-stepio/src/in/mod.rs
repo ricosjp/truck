@@ -11,7 +11,11 @@ use ruststep::{
 };
 use serde::{Deserialize, Serialize};
 use std::result::Result;
-use std::{collections::HashMap, f64::consts::PI};
+use std::{
+    collections::HashMap,
+    f64::consts::PI,
+    ops::{Range, RangeInclusive},
+};
 use truck_assembly::assy::*;
 use truck_geometry::prelude as truck;
 use truck_topology::compress::*;
@@ -1226,7 +1230,7 @@ impl BSplineCurveWithKnots {
             .iter()
             .map(|n| *n as usize)
             .collect();
-        let knots = KnotVec::from_single_multi(knots, multi).unwrap();
+        let knots = KnotVec::from_single_multi(knots, multi)?;
         let ctrpts = self.control_points_list.iter().map(Into::into).collect();
         Ok(BSplineCurve::try_new(knots, ctrpts)?)
     }
@@ -1250,28 +1254,30 @@ where P: for<'a> From<&'a CartesianPoint> + control_point::ControlPoint<f64> + t
 /// outside the STEP domain: there the curve drifts away from the intended geometry, and a
 /// rational curve evaluates to `0 / 0` at the ends of its knot vector.
 ///
-/// Cutting at both ends of the STEP domain gives the same geometry with a clamped knot vector.
+/// Inserting knots until both ends of the STEP domain have multiplicity `p + 1`, then dropping
+/// the knots and control points outside of it, gives the same geometry with a clamped knot vector.
+///
+/// Multiplicities are counted with exact equality: `Cut::cut` and `KnotVec::multiplicity` treat
+/// knots closer than `TOLERANCE` as one knot, which would restrict close but distinct knots wrongly.
 ///
 /// # Failure
-/// Returns an error if the STEP domain is empty, i.e. if there are fewer than `p + 1` control points.
+/// Returns an error if the STEP domain is empty, i.e. if there are fewer than `p + 1` control points,
+/// or too short for truck.
 fn bspline_curve_on_step_domain<P: control_point::ControlPoint<f64> + truck::Tolerance>(
     mut curve: BSplineCurve<P>,
 ) -> Result<BSplineCurve<P>, StepConvertingError> {
     let degree = curve.degree();
-    let knot_vec = curve.knot_vec();
-    let last = knot_vec.len() - 1;
-    let (front, back) = step_domain(knot_vec, degree)?;
-    let (clamped_front, clamped_back) = (
-        knot_vec.multiplicity(0) > degree,
-        knot_vec.multiplicity(last) > degree,
-    );
-    if !clamped_back {
-        curve.cut(back);
+    let (front, back) = step_domain(curve.knot_vec(), degree)?;
+    for _ in exact_multiplicity(curve.knot_vec(), back)..=degree {
+        curve.add_knot(back);
     }
-    if !clamped_front {
-        curve = curve.cut(front);
+    for _ in exact_multiplicity(curve.knot_vec(), front)..=degree {
+        curve.add_knot(front);
     }
-    Ok(curve)
+    let (knots, ctrls) = step_domain_indices(curve.knot_vec(), degree, front, back);
+    let knot_vec = curve.knot_vec().sub_vec(knots);
+    let control_points = curve.control_points()[ctrls].to_vec();
+    Ok(BSplineCurve::try_new(knot_vec, control_points)?)
 }
 
 /// The parameter range `[u_p, u_{m-p}]` on which STEP defines a B-spline of degree `p`
@@ -1285,6 +1291,35 @@ fn step_domain(knot_vec: &KnotVec, degree: usize) -> Result<(f64, f64), StepConv
         (Some(front), Some(back)) if front < back => Ok((front, back)),
         _ => Err("B-spline has fewer control points than its degree plus one".into()),
     }
+}
+
+/// The number of knots exactly equal to `t`.
+fn exact_multiplicity(knot_vec: &KnotVec, t: f64) -> usize {
+    knot_vec.iter().filter(|u| **u == t).count()
+}
+
+/// The indices of the knots and control points that define a B-spline of degree `degree`
+/// on `[front, back]`, given that `front` and `back` are knots of multiplicity at least `degree + 1`.
+fn step_domain_indices(
+    knot_vec: &KnotVec,
+    degree: usize,
+    front: f64,
+    back: f64,
+) -> (RangeInclusive<usize>, Range<usize>) {
+    // An end of the knot vector which is already clamped is kept as is. Otherwise, keep the
+    // last `degree + 1` copies of `front` and the first `degree + 1` copies of `back`.
+    let last = knot_vec.len() - 1;
+    let start = if knot_vec[0] == front {
+        0
+    } else {
+        knot_vec.iter().rposition(|u| *u == front).unwrap() - degree
+    };
+    let end = if knot_vec[last] == back {
+        last
+    } else {
+        knot_vec.iter().position(|u| *u == back).unwrap() + degree
+    };
+    (start..=end, start..end - degree)
 }
 
 /// `bezier_curve`
@@ -2070,14 +2105,14 @@ impl BSplineSurfaceWithKnots {
             .iter()
             .map(|n| *n as usize)
             .collect();
-        let uknots = KnotVec::from_single_multi(uknots, umulti).unwrap();
+        let uknots = KnotVec::from_single_multi(uknots, umulti)?;
         let vknots = surface.v_knots.to_vec();
         let vmulti = surface
             .v_multiplicities
             .iter()
             .map(|n| *n as usize)
             .collect();
-        let vknots = KnotVec::from_single_multi(vknots, vmulti).unwrap();
+        let vknots = KnotVec::from_single_multi(vknots, vmulti)?;
         let ctrls = surface
             .control_points_list
             .iter()
@@ -2241,29 +2276,31 @@ fn bspline_surface_on_step_domain<P: control_point::ControlPoint<f64> + truck::T
     mut surface: BSplineSurface<P>,
 ) -> Result<BSplineSurface<P>, StepConvertingError> {
     let (udegree, vdegree) = (surface.udegree(), surface.vdegree());
-    let domain = |knot_vec: &KnotVec, degree: usize| {
-        let last = knot_vec.len() - 1;
-        let (front, back) = step_domain(knot_vec, degree)?;
-        Ok::<_, StepConvertingError>((
-            (front, knot_vec.multiplicity(0) > degree),
-            (back, knot_vec.multiplicity(last) > degree),
-        ))
-    };
-    let ((ufront, uclamped_front), (uback, uclamped_back)) = domain(surface.uknot_vec(), udegree)?;
-    let ((vfront, vclamped_front), (vback, vclamped_back)) = domain(surface.vknot_vec(), vdegree)?;
-    if !uclamped_back {
-        surface.ucut(uback);
+    let (ufront, uback) = step_domain(surface.uknot_vec(), udegree)?;
+    let (vfront, vback) = step_domain(surface.vknot_vec(), vdegree)?;
+    for _ in exact_multiplicity(surface.uknot_vec(), uback)..=udegree {
+        surface.add_uknot(uback);
     }
-    if !uclamped_front {
-        surface = surface.ucut(ufront);
+    for _ in exact_multiplicity(surface.uknot_vec(), ufront)..=udegree {
+        surface.add_uknot(ufront);
     }
-    if !vclamped_back {
-        surface.vcut(vback);
+    for _ in exact_multiplicity(surface.vknot_vec(), vback)..=vdegree {
+        surface.add_vknot(vback);
     }
-    if !vclamped_front {
-        surface = surface.vcut(vfront);
+    for _ in exact_multiplicity(surface.vknot_vec(), vfront)..=vdegree {
+        surface.add_vknot(vfront);
     }
-    Ok(surface)
+    let (uknots, urows) = step_domain_indices(surface.uknot_vec(), udegree, ufront, uback);
+    let (vknots, vcols) = step_domain_indices(surface.vknot_vec(), vdegree, vfront, vback);
+    let knot_vecs = (
+        surface.uknot_vec().sub_vec(uknots),
+        surface.vknot_vec().sub_vec(vknots),
+    );
+    let control_points = surface.control_points()[urows]
+        .iter()
+        .map(|row| row[vcols.clone()].to_vec())
+        .collect();
+    Ok(BSplineSurface::try_new(knot_vecs, control_points)?)
 }
 
 /// `rational_b_spline_surface` as complex entity

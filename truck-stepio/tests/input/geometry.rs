@@ -303,6 +303,12 @@ fn is_valid_step_bspline(knot_vec: &KnotVec, degree: usize) -> bool {
     }
 }
 
+/// Whether both ends of `knot_vec` already have multiplicity `degree + 1`, exactly.
+fn is_exactly_clamped(knot_vec: &KnotVec, degree: usize) -> bool {
+    let last = knot_vec.len() - 1;
+    knot_vec[0] == knot_vec[degree] && knot_vec[last] == knot_vec[last - degree]
+}
+
 /// Checks that `res` has exactly `domain` as parameter range and coincides with `ans` there.
 fn compare_curves_on_step_domain<C>(res: &C, ans: &C, (t0, t1): (f64, f64))
 where
@@ -378,6 +384,10 @@ fn exec_b_spline_curve_with_knots(
     let domain = step_domain(bsp.knot_vec(), bsp.degree());
     assert!(res.is_clamped());
     compare_curves_on_step_domain(&res, &bsp, domain);
+    // Already clamped: imported as is.
+    if is_exactly_clamped(bsp.knot_vec(), bsp.degree()) {
+        assert_eq!(res, bsp);
+    }
 }
 
 #[property_test]
@@ -505,6 +515,10 @@ fn exec_uniform_curve(degree: usize, knot_len: usize, ctrlpt_coords: Vec<[f64; 3
     let domain = step_domain(ans.knot_vec(), ans.degree());
     assert!(res.is_clamped());
     compare_curves_on_step_domain(&res, &ans, domain);
+    // Already clamped: imported as is.
+    if is_exactly_clamped(ans.knot_vec(), ans.degree()) {
+        assert_eq!(res, ans);
+    }
 }
 
 #[property_test]
@@ -558,6 +572,114 @@ ENDSEC;";
     assert_near!(curve.back(), curve.front());
 }
 
+/// Distinct knots closer than `TOLERANCE` must not be treated as one knot when restricting
+/// a B-spline to its STEP domain. The STEP data is written by hand because the exporter
+/// merges such knots.
+#[test]
+fn close_knots() {
+    // Curve with STEP domain `[5e-7, 2]`, whose front is within `TOLERANCE` of the knot `0`.
+    let step_str = "DATA;
+#1 = B_SPLINE_CURVE_WITH_KNOTS('', 2, (#2, #3, #4, #5), .UNSPECIFIED., .U., .U.,
+    (1, 1, 1, 1, 1, 1, 1), (-1., 0., 0.0000005, 1., 2., 3., 4.), .UNSPECIFIED.);
+#2 = CARTESIAN_POINT('', (0., 0.));
+#3 = CARTESIAN_POINT('', (1., 2.));
+#4 = CARTESIAN_POINT('', (2., -1.));
+#5 = CARTESIAN_POINT('', (3., 1.));
+ENDSEC;";
+    let bsp_step = step_to_entity::<BSplineCurveWithKnotsHolder>(step_str);
+    let res: BSplineCurve<Point2> = (&bsp_step).try_into().unwrap();
+    let ans = BSplineCurve::new(
+        KnotVec::from(vec![-1.0, 0.0, 5.0e-7, 1.0, 2.0, 3.0, 4.0]),
+        vec![
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 2.0),
+            Point2::new(2.0, -1.0),
+            Point2::new(3.0, 1.0),
+        ],
+    );
+    let ans_knots = KnotVec::from(vec![5.0e-7, 5.0e-7, 5.0e-7, 1.0, 2.0, 2.0, 2.0]);
+    assert_eq!(res.knot_vec(), &ans_knots);
+    compare_curves_on_step_domain(&res, &ans, (5.0e-7, 2.0));
+
+    // Surface with STEP domain `[0, 1]` in `u`, whose front is within `TOLERANCE` of the knot `5e-7`.
+    let step_str = "DATA;
+#1 = B_SPLINE_SURFACE_WITH_KNOTS('', 2, 1, ((#2, #3), (#4, #5), (#6, #7), (#8, #9)),
+    .UNSPECIFIED., .U., .U., .U., (1, 1, 1, 1, 1, 1, 1), (2, 2),
+    (-2., -1., 0., 0.0000005, 1., 2., 3.), (0., 1.), .UNSPECIFIED.);
+#2 = CARTESIAN_POINT('', (0., 0., 0.));
+#3 = CARTESIAN_POINT('', (0., 1., 0.));
+#4 = CARTESIAN_POINT('', (1., 0., 1.));
+#5 = CARTESIAN_POINT('', (1., 1., -1.));
+#6 = CARTESIAN_POINT('', (2., 0., 4.));
+#7 = CARTESIAN_POINT('', (2., 1., -2.));
+#8 = CARTESIAN_POINT('', (3., 0., 9.));
+#9 = CARTESIAN_POINT('', (3., 1., -3.));
+ENDSEC;";
+    let bsp_step = step_to_entity::<BSplineSurfaceWithKnotsHolder>(step_str);
+    let res: BSplineSurface<Point3> = (&bsp_step).try_into().unwrap();
+    let cps = (0..4)
+        .map(|i| {
+            let x = i as f64;
+            vec![Point3::new(x, 0.0, x * x), Point3::new(x, 1.0, -x)]
+        })
+        .collect::<Vec<_>>();
+    let ans = BSplineSurface::new(
+        (
+            KnotVec::from(vec![-2.0, -1.0, 0.0, 5.0e-7, 1.0, 2.0, 3.0]),
+            KnotVec::bezier_knot(1),
+        ),
+        cps,
+    );
+    let ans_uknots = KnotVec::from(vec![0.0, 0.0, 0.0, 5.0e-7, 1.0, 1.0, 1.0]);
+    assert_eq!(res.uknot_vec(), &ans_uknots);
+    compare_surfaces_on_step_domain(&res, &ans, ((0.0, 1.0), (0.0, 1.0)));
+
+    // Surface with STEP domain `[0, 5e-7]` in `u`, too short for truck: an error, not a panic.
+    let step_str = "DATA;
+#1 = B_SPLINE_SURFACE_WITH_KNOTS('', 2, 1, ((#2, #3), (#2, #3), (#2, #3)),
+    .UNSPECIFIED., .U., .U., .U., (1, 1, 1, 1, 1, 1), (2, 2),
+    (-2., -1., 0., 0.0000005, 1., 2.), (0., 1.), .UNSPECIFIED.);
+#2 = CARTESIAN_POINT('', (0., 0., 0.));
+#3 = CARTESIAN_POINT('', (0., 1., 0.));
+ENDSEC;";
+    let bsp_step = step_to_entity::<BSplineSurfaceWithKnotsHolder>(step_str);
+    assert!(BSplineSurface::<Point3>::try_from(&bsp_step).is_err());
+}
+
+/// Clamped ends are kept as they are; only unclamped ones are restricted.
+#[test]
+fn partially_clamped_b_spline_curve() {
+    let points = vec![
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(1.0, 2.0, 0.0),
+        Point3::new(2.0, -1.0, 1.0),
+        Point3::new(3.0, 1.0, 0.0),
+    ];
+    let import = |bsp: &BSplineCurve<Point3>| {
+        let step_str = format!("DATA;{}ENDSEC;", StepDataDisplay::new(bsp, 1));
+        let bsp_step = step_to_entity::<BSplineCurveWithKnotsHolder>(&step_str);
+        BSplineCurve::<Point3>::try_from(&bsp_step).unwrap()
+    };
+
+    // Clamped at the front only: STEP domain `[0, 2]`.
+    let bsp = BSplineCurve::new(
+        KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0]),
+        points.clone(),
+    );
+    let res = import(&bsp);
+    let ans_knots = KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0]);
+    assert_eq!(res.knot_vec(), &ans_knots);
+    assert_eq!(res.control_points()[..2], points[..2]);
+    compare_curves_on_step_domain(&res, &bsp, (0.0, 2.0));
+
+    // Clamped at both ends: unchanged.
+    let bsp = BSplineCurve::new(
+        KnotVec::from(vec![0.0, 0.0, 0.0, 1.0, 2.0, 2.0, 2.0]),
+        points,
+    );
+    assert_eq!(import(&bsp), bsp);
+}
+
 fn exec_nurbs_curve_b_spline_with_knots(
     knot_len: usize,
     knot_incrs: Vec<f64>,
@@ -594,6 +716,10 @@ fn exec_nurbs_curve_b_spline_with_knots(
     let domain = step_domain(nurbs.knot_vec(), nurbs.degree());
     assert!(res.is_clamped());
     compare_curves_on_step_domain(&res, &nurbs, domain);
+    // Already clamped: imported as is.
+    if is_exactly_clamped(nurbs.knot_vec(), nurbs.degree()) {
+        assert_eq!(res, nurbs);
+    }
 }
 
 #[property_test]
@@ -766,6 +892,10 @@ fn exec_nurbs_curve_uniform_curve(
     let domain = step_domain(ans.knot_vec(), ans.degree());
     assert!(res.is_clamped());
     compare_curves_on_step_domain(&res, &ans, domain);
+    // Already clamped: imported as is.
+    if is_exactly_clamped(ans.knot_vec(), ans.degree()) {
+        assert_eq!(res, ans);
+    }
 }
 
 #[property_test]
@@ -1692,6 +1822,12 @@ fn exec_b_spline_surface_with_knots(
     );
     assert!(res.is_clamped());
     compare_surfaces_on_step_domain(&res, &bsp, domain);
+    // Already clamped: imported as is.
+    if is_exactly_clamped(bsp.uknot_vec(), bsp.udegree())
+        && is_exactly_clamped(bsp.vknot_vec(), bsp.vdegree())
+    {
+        assert_eq!(res, bsp);
+    }
 }
 
 #[property_test]
@@ -1834,6 +1970,12 @@ fn exec_uniform_surface(
     );
     assert!(res.is_clamped());
     compare_surfaces_on_step_domain(&res, &ans, domain);
+    // Already clamped: imported as is.
+    if is_exactly_clamped(ans.uknot_vec(), ans.udegree())
+        && is_exactly_clamped(ans.vknot_vec(), ans.vdegree())
+    {
+        assert_eq!(res, ans);
+    }
 }
 
 #[property_test]
@@ -1904,6 +2046,12 @@ fn exec_nurbs_surface_b_spline_surface_with_knots(
     );
     assert!(res.is_clamped());
     compare_surfaces_on_step_domain(&res, &ans, domain);
+    // Already clamped: imported as is.
+    if is_exactly_clamped(ans.uknot_vec(), ans.udegree())
+        && is_exactly_clamped(ans.vknot_vec(), ans.vdegree())
+    {
+        assert_eq!(res, ans);
+    }
 }
 
 #[property_test]
@@ -2096,6 +2244,12 @@ fn exec_nurbs_surface_uniform_surface(
     );
     assert!(res.is_clamped());
     compare_surfaces_on_step_domain(&res, &ans, domain);
+    // Already clamped: imported as is.
+    if is_exactly_clamped(ans.uknot_vec(), ans.udegree())
+        && is_exactly_clamped(ans.vknot_vec(), ans.vdegree())
+    {
+        assert_eq!(res, ans);
+    }
 }
 
 #[property_test]

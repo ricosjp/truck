@@ -5,7 +5,6 @@ The version is of the bottom crate `truck-rendimpl`.
 ## Unreleased
 
 - Restrict B-splines imported by `truck-stepio` to their STEP domain.
-
 - Upgrade `cargo-doc`.
 - Fix some bugs reported on GitHub.
 - Remove `compression` feature from `vtkio`.
