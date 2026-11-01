@@ -148,7 +148,7 @@ fn bench_fn<F: FnMut()>(name: &str, mut f: F, iters: usize) -> Duration {
         f();
     }
     let elapsed = start.elapsed() / iters as u32;
-    eprintln!("  {:25}: {:?}", name, elapsed);
+    eprintln!("  {:30}: {:?}", name, elapsed);
     elapsed
 }
 
@@ -178,7 +178,8 @@ fn main() {
         cpu_single: Duration,
         cpu_rayon: Duration,
         gpu_vulkan: Duration,
-        gpu_cuda: Duration,
+        gpu_cuda_baseline: Duration,
+        gpu_ptx_sm86: Duration,
     }
 
     let mut results = Vec::new();
@@ -205,12 +206,20 @@ fn main() {
         }, iters);
 
         #[cfg(feature = "cuda")]
-        let t_cuda = bench_fn("GPU CUDA (RTX 3080)", || {
+        let t_cuda_baseline = bench_fn("GPU CUDA Baseline", || {
+            let res = cuda_analyzer.distance2_point_cloud_baseline(&sphere_small, &points);
+            std::hint::black_box(res);
+        }, iters);
+        #[cfg(not(feature = "cuda"))]
+        let t_cuda_baseline = Duration::ZERO;
+
+        #[cfg(feature = "cuda")]
+        let t_ptx_sm86 = bench_fn("GPU PTX SM 8.6 (RTX 3080)", || {
             let res = cuda_analyzer.distance2_point_cloud(&sphere_small, &points);
             std::hint::black_box(res);
         }, iters);
         #[cfg(not(feature = "cuda"))]
-        let t_cuda = Duration::ZERO;
+        let t_ptx_sm86 = Duration::ZERO;
 
         results.push(ResultRow {
             workload: "Point-Mesh Distance".to_string(),
@@ -219,7 +228,8 @@ fn main() {
             cpu_single: t_cpu_single,
             cpu_rayon: t_cpu_rayon,
             gpu_vulkan: t_vulkan,
-            gpu_cuda: t_cuda,
+            gpu_cuda_baseline: t_cuda_baseline,
+            gpu_ptx_sm86: t_ptx_sm86,
         });
 
         println!();
@@ -246,12 +256,20 @@ fn main() {
         }, iters);
 
         #[cfg(feature = "cuda")]
-        let t_cuda = bench_fn("GPU CUDA (RTX 3080)", || {
+        let t_cuda_baseline = bench_fn("GPU CUDA Baseline", || {
+            let res = cuda_analyzer.inside_baseline(&sphere_small, &points);
+            std::hint::black_box(res);
+        }, iters);
+        #[cfg(not(feature = "cuda"))]
+        let t_cuda_baseline = Duration::ZERO;
+
+        #[cfg(feature = "cuda")]
+        let t_ptx_sm86 = bench_fn("GPU PTX SM 8.6 (RTX 3080)", || {
             let res = cuda_analyzer.inside(&sphere_small, &points);
             std::hint::black_box(res);
         }, iters);
         #[cfg(not(feature = "cuda"))]
-        let t_cuda = Duration::ZERO;
+        let t_ptx_sm86 = Duration::ZERO;
 
         results.push(ResultRow {
             workload: "In-Out Containment".to_string(),
@@ -260,44 +278,47 @@ fn main() {
             cpu_single: t_cpu_single,
             cpu_rayon: t_cpu_rayon,
             gpu_vulkan: t_vulkan,
-            gpu_cuda: t_cuda,
+            gpu_cuda_baseline: t_cuda_baseline,
+            gpu_ptx_sm86: t_ptx_sm86,
         });
 
         println!();
     }
 
-    println!("\n========================================================================================================");
-    println!("                                          BENCHMARK SUMMARY TABLE                                       ");
-    println!("========================================================================================================");
+    println!("\n=================================================================================================================================");
+    println!("                                                    BENCHMARK SUMMARY TABLE                                                      ");
+    println!("=================================================================================================================================");
     println!(
-        "| {:<20} | {:>7} | {:>9} | {:>10} | {:>10} | {:>10} | {:>10} | {:>9} | {:>9} |",
-        "Workload", "Points", "Triangles", "CPU (1T)", "CPU (Rayon)", "GPU (Vulkan)", "GPU (CUDA)", "Vulkan vs 1T", "CUDA vs 1T"
+        "| {:<20} | {:>7} | {:>9} | {:>10} | {:>10} | {:>10} | {:>12} | {:>13} | {:>11} | {:>10} |",
+        "Workload", "Points", "Triangles", "CPU (1T)", "CPU (Rayon)", "GPU (Vulkan)", "CUDA Base", "GPU PTX SM86", "PTX vs Base", "PTX vs 1T"
     );
     println!(
-        "|{:-<22}|{:-<9}|{:-<11}|{:-<12}|{:-<12}|{:-<12}|{:-<12}|{:-<15}|{:-<13}|",
-        "", "", "", "", "", "", "", "", ""
+        "|{:-<22}|{:-<9}|{:-<11}|{:-<12}|{:-<12}|{:-<12}|{:-<14}|{:-<15}|{:-<13}|{:-<12}|",
+        "", "", "", "", "", "", "", "", "", ""
     );
 
     for r in results {
         let cpu_s_ms = r.cpu_single.as_secs_f64() * 1000.0;
         let cpu_r_ms = r.cpu_rayon.as_secs_f64() * 1000.0;
         let vulkan_ms = r.gpu_vulkan.as_secs_f64() * 1000.0;
-        let cuda_ms = r.gpu_cuda.as_secs_f64() * 1000.0;
-        let speedup_vulkan = cpu_s_ms / vulkan_ms;
-        let speedup_cuda = cpu_s_ms / cuda_ms;
+        let cuda_base_ms = r.gpu_cuda_baseline.as_secs_f64() * 1000.0;
+        let ptx_ms = r.gpu_ptx_sm86.as_secs_f64() * 1000.0;
+        let speedup_base = cuda_base_ms / ptx_ms;
+        let speedup_1t = cpu_s_ms / ptx_ms;
 
         println!(
-            "| {:<20} | {:>7} | {:>9} | {:>9.2}ms | {:>9.2}ms | {:>9.2}ms | {:>9.2}ms | {:>13.1}x | {:>11.1}x |",
+            "| {:<20} | {:>7} | {:>9} | {:>9.2}ms | {:>9.2}ms | {:>9.2}ms | {:>11.2}ms | {:>12.2}ms | {:>11.1}x | {:>10.1}x |",
             r.workload,
             r.points,
             r.triangles,
             cpu_s_ms,
             cpu_r_ms,
             vulkan_ms,
-            cuda_ms,
-            speedup_vulkan,
-            speedup_cuda
+            cuda_base_ms,
+            ptx_ms,
+            speedup_base,
+            speedup_1t
         );
     }
-    println!("========================================================================================================");
+    println!("=================================================================================================================================");
 }

@@ -10,6 +10,8 @@ fn find_compatible_ccbin() -> Option<&'static str> {
 
 fn main() {
     println!("cargo:rerun-if-changed=src/gpu/kernels.cu");
+    println!("cargo:rerun-if-changed=src/gpu/kernels_sm86.ptx");
+    println!("cargo:rerun-if-changed=src/gpu/kernels_sm86_ptx.h");
 
     #[cfg(feature = "cuda")]
     {
@@ -30,6 +32,7 @@ fn main() {
             build.compile("truck_cuda");
 
             println!("cargo:rustc-link-lib=cudart");
+            println!("cargo:rustc-link-lib=cuda");
             if let Ok(cuda_path) = std::env::var("CUDA_PATH") {
                 println!("cargo:rustc-link-search=native={}/lib64", cuda_path);
             } else {

@@ -393,3 +393,65 @@ fn test_vulkan_vs_cuda_exact_parity() {
     let cuda_inside = cuda_analyzer.inside(&sphere_mesh, &points);
     assert_eq!(vulkan_inside, cuda_inside, "Vulkan and CUDA inside classifications differ!");
 }
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_baseline_vs_sm86_ptx_exact_parity() {
+    let cuda = CudaMeshAnalyzer::new();
+    let sphere = common::shapes::sphere(Point3::origin(), 1.2, 20, 20);
+
+    let n_points = 1000;
+    let points: Vec<Point3> = (0..n_points)
+        .map(|i| {
+            let u = (i as f64 * 0.421).sin() * 2.5;
+            let v = (i as f64 * 0.733).cos() * 2.5;
+            let w = (i as f64 * 0.189).sin() * 2.5;
+            Point3::new(u, v, w)
+        })
+        .collect();
+
+    // 1. Distance Parity: Baseline vs SM86 Runtime vs Driver PTX
+    let d_opt = cuda.distance2_point_cloud(&sphere, &points);
+    let d_base = cuda.distance2_point_cloud_baseline(&sphere, &points);
+    let d_ptx = cuda.distance2_point_cloud_ptx(&sphere, &points);
+
+    assert_eq!(d_opt.len(), n_points);
+    assert_eq!(d_base.len(), n_points);
+    assert_eq!(d_ptx.len(), n_points);
+
+    for i in 0..n_points {
+        let diff_opt_base = (d_opt[i] - d_base[i]).abs();
+        let diff_ptx_base = (d_ptx[i] - d_base[i]).abs();
+        assert!(
+            diff_opt_base < 1e-4,
+            "Distance mismatch at #{}: Opt={}, Base={}, diff={}",
+            i, d_opt[i], d_base[i], diff_opt_base
+        );
+        assert!(
+            diff_ptx_base < 1e-4,
+            "Distance mismatch at #{}: PTX={}, Base={}, diff={}",
+            i, d_ptx[i], d_base[i], diff_ptx_base
+        );
+    }
+
+    // 2. Ray Crossing Parity: Baseline vs SM86 Runtime vs Driver PTX
+    let ray_dirs: Vec<Vector3> = points
+        .iter()
+        .map(|&p| hash::take_one_unit(p))
+        .collect();
+
+    let c_opt = cuda.signed_crossing_rays(&sphere, &points, &ray_dirs);
+    let c_base = cuda.signed_crossing_rays_baseline(&sphere, &points, &ray_dirs);
+    let c_ptx = cuda.signed_crossing_rays_ptx(&sphere, &points, &ray_dirs);
+
+    assert_eq!(c_opt, c_base, "SM86 optimized ray crossings differ from baseline!");
+    assert_eq!(c_ptx, c_base, "Driver PTX ray crossings differ from baseline!");
+
+    let in_opt = cuda.inside(&sphere, &points);
+    let in_base = cuda.inside_baseline(&sphere, &points);
+    let in_ptx = cuda.inside_ptx(&sphere, &points);
+
+    assert_eq!(in_opt, in_base, "SM86 inside flags differ from baseline!");
+    assert_eq!(in_ptx, in_base, "Driver PTX inside flags differ from baseline!");
+}
+
