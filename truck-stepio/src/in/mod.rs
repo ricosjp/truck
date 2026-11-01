@@ -1268,10 +1268,12 @@ fn knot_vec_from_step(
 ///
 /// Multiplicities are counted with exact equality: `Cut::cut` and `KnotVec::multiplicity` treat
 /// knots closer than `TOLERANCE` as one knot, which would restrict close but distinct knots wrongly.
+/// The new control points are still computed by `add_knot`, which, like truck's evaluation, treats
+/// knot spans shorter than `TOLERANCE` as empty.
 ///
 /// # Failure
-/// Returns an error if the STEP domain is empty, i.e. if there are fewer than `p + 1` control points,
-/// or too short for truck.
+/// Returns an error if the STEP domain is empty (fewer than `p + 1` control points, or
+/// `u_p == u_{m-p}`) or too short for truck.
 fn bspline_curve_on_step_domain<P: control_point::ControlPoint<f64> + truck::Tolerance>(
     mut curve: BSplineCurve<P>,
 ) -> Result<BSplineCurve<P>, StepConvertingError> {
