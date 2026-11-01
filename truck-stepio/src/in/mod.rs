@@ -1224,13 +1224,7 @@ impl BSplineCurveWithKnots {
     fn raw_bspline<P: for<'a> From<&'a CartesianPoint>>(
         &self,
     ) -> Result<BSplineCurve<P>, StepConvertingError> {
-        let knots = self.knots.clone();
-        let multi = self
-            .knot_multiplicities
-            .iter()
-            .map(|n| *n as usize)
-            .collect();
-        let knots = KnotVec::from_single_multi(knots, multi)?;
+        let knots = knot_vec_from_step(&self.knots, &self.knot_multiplicities)?;
         let ctrpts = self.control_points_list.iter().map(Into::into).collect();
         Ok(BSplineCurve::try_new(knots, ctrpts)?)
     }
@@ -1243,6 +1237,21 @@ where P: for<'a> From<&'a CartesianPoint> + control_point::ControlPoint<f64> + t
     fn try_from(curve: &BSplineCurveWithKnots) -> Result<Self, StepConvertingError> {
         bspline_curve_on_step_domain(curve.raw_bspline()?)
     }
+}
+
+/// The knot vector given by the distinct knots and their multiplicities, as written in STEP.
+fn knot_vec_from_step(
+    knots: &[f64],
+    multiplicities: &[i64],
+) -> Result<KnotVec, StepConvertingError> {
+    if knots.len() != multiplicities.len() {
+        return Err("knots and knot multiplicities have different lengths".into());
+    }
+    let multiplicities = multiplicities
+        .iter()
+        .map(|m| usize::try_from(*m).map_err(|_| "negative knot multiplicity".into()))
+        .collect::<Result<Vec<_>, StepConvertingError>>()?;
+    Ok(KnotVec::from_single_multi(knots.to_vec(), multiplicities)?)
 }
 
 /// Restricts a B-spline curve to the domain on which STEP defines it.
@@ -1289,7 +1298,7 @@ fn step_domain(knot_vec: &KnotVec, degree: usize) -> Result<(f64, f64), StepConv
         last.checked_sub(degree).map(|i| knot_vec[i]),
     ) {
         (Some(front), Some(back)) if front < back => Ok((front, back)),
-        _ => Err("B-spline has fewer control points than its degree plus one".into()),
+        _ => Err("B-spline has an empty STEP domain".into()),
     }
 }
 
@@ -2098,22 +2107,9 @@ impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
 impl BSplineSurfaceWithKnots {
     /// The B-spline with the knot vectors as written, before restricting it to the STEP domain.
     fn raw_bspline(&self) -> Result<BSplineSurface<Point3>, StepConvertingError> {
-        let surface = self;
-        let uknots = surface.u_knots.to_vec();
-        let umulti = surface
-            .u_multiplicities
-            .iter()
-            .map(|n| *n as usize)
-            .collect();
-        let uknots = KnotVec::from_single_multi(uknots, umulti)?;
-        let vknots = surface.v_knots.to_vec();
-        let vmulti = surface
-            .v_multiplicities
-            .iter()
-            .map(|n| *n as usize)
-            .collect();
-        let vknots = KnotVec::from_single_multi(vknots, vmulti)?;
-        let ctrls = surface
+        let uknots = knot_vec_from_step(&self.u_knots, &self.u_multiplicities)?;
+        let vknots = knot_vec_from_step(&self.v_knots, &self.v_multiplicities)?;
+        let ctrls = self
             .control_points_list
             .iter()
             .map(|vec| vec.iter().map(Point3::from).collect())
@@ -2149,14 +2145,13 @@ impl TryFrom<&UniformSurface> for BSplineSurface<Point3> {
 impl UniformSurface {
     /// The B-spline with uniform knot vectors, before restricting it to the STEP domain.
     fn raw_bspline(&self) -> Result<BSplineSurface<Point3>, StepConvertingError> {
-        let surface = self;
-        let uknots = uniform_knots(surface.control_points_list.len(), surface.u_degree as usize)?;
-        let first = surface
+        let uknots = uniform_knots(self.control_points_list.len(), self.u_degree as usize)?;
+        let first = self
             .control_points_list
             .first()
             .ok_or("control points list is empty.")?;
-        let vknots = uniform_knots(first.len(), surface.v_degree as usize)?;
-        let ctrls = surface
+        let vknots = uniform_knots(first.len(), self.v_degree as usize)?;
+        let ctrls = self
             .control_points_list
             .iter()
             .map(|vec| vec.iter().map(Point3::from).collect())

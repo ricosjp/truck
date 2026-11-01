@@ -309,6 +309,12 @@ fn is_exactly_clamped(knot_vec: &KnotVec, degree: usize) -> bool {
     knot_vec[0] == knot_vec[degree] && knot_vec[last] == knot_vec[last - degree]
 }
 
+/// Checks that `a` and `b` have the same number of knots, and that they are near.
+fn assert_knots_near(a: &KnotVec, b: &KnotVec) {
+    assert_eq!(a.len(), b.len());
+    a.iter().zip(b.iter()).for_each(|(s, t)| assert_near!(s, t));
+}
+
 /// Checks that `res` has exactly `domain` as parameter range and coincides with `ans` there.
 fn compare_curves_on_step_domain<C>(res: &C, ans: &C, (t0, t1): (f64, f64))
 where
@@ -384,9 +390,10 @@ fn exec_b_spline_curve_with_knots(
     let domain = step_domain(bsp.knot_vec(), bsp.degree());
     assert!(res.is_clamped());
     compare_curves_on_step_domain(&res, &bsp, domain);
-    // Already clamped: imported as is.
+    // Already clamped: imported without inserting or dropping knots. Not compared exactly,
+    // because the exporter rounds values below `1e-2` to 11 significant digits.
     if is_exactly_clamped(bsp.knot_vec(), bsp.degree()) {
-        assert_eq!(res, bsp);
+        assert_knots_near(res.knot_vec(), bsp.knot_vec());
     }
 }
 
@@ -515,9 +522,10 @@ fn exec_uniform_curve(degree: usize, knot_len: usize, ctrlpt_coords: Vec<[f64; 3
     let domain = step_domain(ans.knot_vec(), ans.degree());
     assert!(res.is_clamped());
     compare_curves_on_step_domain(&res, &ans, domain);
-    // Already clamped: imported as is.
+    // Already clamped: imported without inserting or dropping knots. Not compared exactly,
+    // because the exporter rounds values below `1e-2` to 11 significant digits.
     if is_exactly_clamped(ans.knot_vec(), ans.degree()) {
-        assert_eq!(res, ans);
+        assert_knots_near(res.knot_vec(), ans.knot_vec());
     }
 }
 
@@ -680,6 +688,35 @@ fn partially_clamped_b_spline_curve() {
     assert_eq!(import(&bsp), bsp);
 }
 
+/// Malformed knot data gives an error, not a panic.
+#[test]
+fn malformed_knots() {
+    let knots_and_multiplicities = [
+        // fewer multiplicities than knots
+        "(3, 3), (0., 1., 2.)",
+        // negative multiplicity
+        "(3, -1, 3), (0., 1., 2.)",
+        // unsorted knots
+        "(3, 1, 3), (0., 2., 1.)",
+    ];
+    for knots in knots_and_multiplicities {
+        let step_str = format!(
+            "DATA;
+#1 = B_SPLINE_CURVE_WITH_KNOTS('', 2, (#2, #3, #4, #5), .UNSPECIFIED., .U., .U., {knots}, .UNSPECIFIED.);
+#2 = CARTESIAN_POINT('', (0., 0.));
+#3 = CARTESIAN_POINT('', (1., 2.));
+#4 = CARTESIAN_POINT('', (2., -1.));
+#5 = CARTESIAN_POINT('', (3., 1.));
+ENDSEC;"
+        );
+        let bsp_step = step_to_entity::<BSplineCurveWithKnotsHolder>(&step_str);
+        assert!(
+            BSplineCurve::<Point2>::try_from(&bsp_step).is_err(),
+            "{knots}"
+        );
+    }
+}
+
 fn exec_nurbs_curve_b_spline_with_knots(
     knot_len: usize,
     knot_incrs: Vec<f64>,
@@ -716,9 +753,10 @@ fn exec_nurbs_curve_b_spline_with_knots(
     let domain = step_domain(nurbs.knot_vec(), nurbs.degree());
     assert!(res.is_clamped());
     compare_curves_on_step_domain(&res, &nurbs, domain);
-    // Already clamped: imported as is.
+    // Already clamped: imported without inserting or dropping knots. Not compared exactly,
+    // because the exporter rounds values below `1e-2` to 11 significant digits.
     if is_exactly_clamped(nurbs.knot_vec(), nurbs.degree()) {
-        assert_eq!(res, nurbs);
+        assert_knots_near(res.knot_vec(), nurbs.knot_vec());
     }
 }
 
@@ -892,9 +930,10 @@ fn exec_nurbs_curve_uniform_curve(
     let domain = step_domain(ans.knot_vec(), ans.degree());
     assert!(res.is_clamped());
     compare_curves_on_step_domain(&res, &ans, domain);
-    // Already clamped: imported as is.
+    // Already clamped: imported without inserting or dropping knots. Not compared exactly,
+    // because the exporter rounds values below `1e-2` to 11 significant digits.
     if is_exactly_clamped(ans.knot_vec(), ans.degree()) {
-        assert_eq!(res, ans);
+        assert_knots_near(res.knot_vec(), ans.knot_vec());
     }
 }
 
@@ -1822,11 +1861,13 @@ fn exec_b_spline_surface_with_knots(
     );
     assert!(res.is_clamped());
     compare_surfaces_on_step_domain(&res, &bsp, domain);
-    // Already clamped: imported as is.
+    // Already clamped: imported without inserting or dropping knots. Not compared exactly,
+    // because the exporter rounds values below `1e-2` to 11 significant digits.
     if is_exactly_clamped(bsp.uknot_vec(), bsp.udegree())
         && is_exactly_clamped(bsp.vknot_vec(), bsp.vdegree())
     {
-        assert_eq!(res, bsp);
+        assert_knots_near(res.uknot_vec(), bsp.uknot_vec());
+        assert_knots_near(res.vknot_vec(), bsp.vknot_vec());
     }
 }
 
@@ -1970,11 +2011,13 @@ fn exec_uniform_surface(
     );
     assert!(res.is_clamped());
     compare_surfaces_on_step_domain(&res, &ans, domain);
-    // Already clamped: imported as is.
+    // Already clamped: imported without inserting or dropping knots. Not compared exactly,
+    // because the exporter rounds values below `1e-2` to 11 significant digits.
     if is_exactly_clamped(ans.uknot_vec(), ans.udegree())
         && is_exactly_clamped(ans.vknot_vec(), ans.vdegree())
     {
-        assert_eq!(res, ans);
+        assert_knots_near(res.uknot_vec(), ans.uknot_vec());
+        assert_knots_near(res.vknot_vec(), ans.vknot_vec());
     }
 }
 
@@ -2046,11 +2089,13 @@ fn exec_nurbs_surface_b_spline_surface_with_knots(
     );
     assert!(res.is_clamped());
     compare_surfaces_on_step_domain(&res, &ans, domain);
-    // Already clamped: imported as is.
+    // Already clamped: imported without inserting or dropping knots. Not compared exactly,
+    // because the exporter rounds values below `1e-2` to 11 significant digits.
     if is_exactly_clamped(ans.uknot_vec(), ans.udegree())
         && is_exactly_clamped(ans.vknot_vec(), ans.vdegree())
     {
-        assert_eq!(res, ans);
+        assert_knots_near(res.uknot_vec(), ans.uknot_vec());
+        assert_knots_near(res.vknot_vec(), ans.vknot_vec());
     }
 }
 
@@ -2244,11 +2289,13 @@ fn exec_nurbs_surface_uniform_surface(
     );
     assert!(res.is_clamped());
     compare_surfaces_on_step_domain(&res, &ans, domain);
-    // Already clamped: imported as is.
+    // Already clamped: imported without inserting or dropping knots. Not compared exactly,
+    // because the exporter rounds values below `1e-2` to 11 significant digits.
     if is_exactly_clamped(ans.uknot_vec(), ans.udegree())
         && is_exactly_clamped(ans.vknot_vec(), ans.vdegree())
     {
-        assert_eq!(res, ans);
+        assert_knots_near(res.uknot_vec(), ans.uknot_vec());
+        assert_knots_near(res.vknot_vec(), ans.vknot_vec());
     }
 }
 
