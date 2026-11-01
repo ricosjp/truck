@@ -62,6 +62,12 @@ pub enum Operation {
     LoopSubdivision,
     /// Mesh feature edges, creases, and boundary extraction.
     FeatureEdges,
+    /// Quadric Error Metric edge collapse costs and optimal targets.
+    QemEdgeCollapse,
+    /// 2D multi-loop point-in-polygon winding tests.
+    PointIn2dLoops,
+    /// 3D line segment to mesh clearance distances.
+    SegmentMeshDistance,
 }
 
 /// Recorded microbenchmark measurement sample.
@@ -182,6 +188,24 @@ impl ScalingThresholds {
                 preferred_gpu: KernelTarget::GpuCuda,
                 sample_timings: Vec::new(),
             },
+            Operation::QemEdgeCollapse => Self {
+                cpu_single_max: 64,
+                cpu_rayon_max: 256,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
+            Operation::PointIn2dLoops => Self {
+                cpu_single_max: 64,
+                cpu_rayon_max: 256,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
+            Operation::SegmentMeshDistance => Self {
+                cpu_single_max: 32,
+                cpu_rayon_max: 128,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
         }
     }
 
@@ -258,6 +282,12 @@ pub struct DispatchProfile {
     pub loop_subdivision: ScalingThresholds,
     /// Thresholds for feature edge extraction.
     pub feature_edges: ScalingThresholds,
+    /// Thresholds for QEM edge collapse cost evaluation.
+    pub qem_edge_collapse: ScalingThresholds,
+    /// Thresholds for 2D multi-loop point-in-polygon winding tests.
+    pub point_in_2d_loops: ScalingThresholds,
+    /// Thresholds for 3D segment-to-mesh clearance distances.
+    pub segment_mesh_distance: ScalingThresholds,
 }
 
 impl Default for DispatchProfile {
@@ -278,6 +308,9 @@ impl Default for DispatchProfile {
             raycast_mesh: ScalingThresholds::default_fallback(Operation::RaycastMesh),
             loop_subdivision: ScalingThresholds::default_fallback(Operation::LoopSubdivision),
             feature_edges: ScalingThresholds::default_fallback(Operation::FeatureEdges),
+            qem_edge_collapse: ScalingThresholds::default_fallback(Operation::QemEdgeCollapse),
+            point_in_2d_loops: ScalingThresholds::default_fallback(Operation::PointIn2dLoops),
+            segment_mesh_distance: ScalingThresholds::default_fallback(Operation::SegmentMeshDistance),
         }
     }
 }
@@ -301,6 +334,9 @@ impl DispatchProfile {
             raycast_mesh: ScalingThresholds::cpu_only(64),
             loop_subdivision: ScalingThresholds::cpu_only(32),
             feature_edges: ScalingThresholds::cpu_only(64),
+            qem_edge_collapse: ScalingThresholds::cpu_only(64),
+            point_in_2d_loops: ScalingThresholds::cpu_only(64),
+            segment_mesh_distance: ScalingThresholds::cpu_only(32),
         }
     }
 
@@ -322,6 +358,9 @@ impl DispatchProfile {
             Operation::RaycastMesh => self.raycast_mesh.select_kernel(size),
             Operation::LoopSubdivision => self.loop_subdivision.select_kernel(size),
             Operation::FeatureEdges => self.feature_edges.select_kernel(size),
+            Operation::QemEdgeCollapse => self.qem_edge_collapse.select_kernel(size),
+            Operation::PointIn2dLoops => self.point_in_2d_loops.select_kernel(size),
+            Operation::SegmentMeshDistance => self.segment_mesh_distance.select_kernel(size),
         }
     }
 }

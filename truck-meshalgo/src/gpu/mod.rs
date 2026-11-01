@@ -8,6 +8,7 @@ use truck_platform::wgpu::*;
 use truck_platform::*;
 use std::mem::size_of;
 use truck_polymesh::{Faces, PolygonMesh, StandardVertex};
+use crate::filters::StructuringFilter;
 
 #[cfg(feature = "cuda")]
 pub mod cuda;
@@ -1741,6 +1742,507 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 "#;
 
+const QEM_SHADER: &str = r#"
+struct QemUniforms {
+    num_edges: u32,
+    num_vertices: u32,
+    _pad0: u32,
+    _pad1: u32,
+};
+
+struct GpuQuadric {
+    q0: f32, q1: f32, q2: f32, q3: f32,
+    q4: f32, q5: f32, q6: f32, q7: f32,
+    q8: f32, q9: f32, _pad0: f32, _pad1: f32,
+};
+
+struct GpuEdge {
+    v0: u32,
+    v1: u32,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: QemUniforms;
+@group(0) @binding(1) var<storage, read> vertices: array<vec4<f32>>;
+@group(0) @binding(2) var<storage, read> vertex_quadrics: array<GpuQuadric>;
+@group(0) @binding(3) var<storage, read> edges: array<GpuEdge>;
+@group(0) @binding(4) var<storage, read_write> out_costs: array<f32>;
+@group(0) @binding(5) var<storage, read_write> out_targets: array<vec4<f32>>;
+
+fn eval_quadric_cost(q: GpuQuadric, p: vec3<f32>) -> f32 {
+    let cost = q.q0 * p.x * p.x + 2.0 * q.q1 * p.x * p.y + 2.0 * q.q2 * p.x * p.z + 2.0 * q.q3 * p.x
+             + q.q4 * p.y * p.y + 2.0 * q.q5 * p.y * p.z + 2.0 * q.q6 * p.y
+             + q.q7 * p.z * p.z + 2.0 * q.q8 * p.z + q.q9;
+    return max(0.0, cost);
+}
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let e = global_id.x;
+    if (e >= uniforms.num_edges) {
+        return;
+    }
+
+    let edge = edges[e];
+    let v0 = edge.v0;
+    let v1 = edge.v1;
+    if (v0 >= uniforms.num_vertices || v1 >= uniforms.num_vertices) {
+        return;
+    }
+
+    let p0 = vertices[v0].xyz;
+    let p1 = vertices[v1].xyz;
+
+    let q0 = vertex_quadrics[v0];
+    let q1 = vertex_quadrics[v1];
+
+    var Q: GpuQuadric;
+    Q.q0 = q0.q0 + q1.q0;
+    Q.q1 = q0.q1 + q1.q1;
+    Q.q2 = q0.q2 + q1.q2;
+    Q.q3 = q0.q3 + q1.q3;
+    Q.q4 = q0.q4 + q1.q4;
+    Q.q5 = q0.q5 + q1.q5;
+    Q.q6 = q0.q6 + q1.q6;
+    Q.q7 = q0.q7 + q1.q7;
+    Q.q8 = q0.q8 + q1.q8;
+    Q.q9 = q0.q9 + q1.q9;
+
+    let pm = 0.5 * (p0 + p1);
+
+    let c0 = eval_quadric_cost(Q, p0);
+    let c1 = eval_quadric_cost(Q, p1);
+    let cm = eval_quadric_cost(Q, pm);
+
+    var best_cost = cm;
+    var best_target = pm;
+
+    if (c0 < best_cost) {
+        best_cost = c0;
+        best_target = p0;
+    }
+    if (c1 < best_cost) {
+        best_cost = c1;
+        best_target = p1;
+    }
+
+    let C00 = Q.q4 * Q.q7 - Q.q5 * Q.q5;
+    let C01 = Q.q2 * Q.q5 - Q.q1 * Q.q7;
+    let C02 = Q.q1 * Q.q5 - Q.q2 * Q.q4;
+    let C11 = Q.q0 * Q.q7 - Q.q2 * Q.q2;
+    let C12 = Q.q1 * Q.q2 - Q.q0 * Q.q5;
+    let C22 = Q.q0 * Q.q4 - Q.q1 * Q.q1;
+    let det = Q.q0 * C00 + Q.q1 * C01 + Q.q2 * C02;
+
+    if (abs(det) > 1.0e-7) {
+        let inv_det = 1.0 / det;
+        let opt_x = -(C00 * Q.q3 + C01 * Q.q6 + C02 * Q.q8) * inv_det;
+        let opt_y = -(C01 * Q.q3 + C11 * Q.q6 + C12 * Q.q8) * inv_det;
+        let opt_z = -(C02 * Q.q3 + C12 * Q.q6 + C22 * Q.q8) * inv_det;
+        let opt_pt = vec3<f32>(opt_x, opt_y, opt_z);
+        let c_opt = eval_quadric_cost(Q, opt_pt);
+        if (c_opt <= best_cost) {
+            best_cost = c_opt;
+            best_target = opt_pt;
+        }
+    }
+
+    out_costs[e] = best_cost;
+    out_targets[e] = vec4<f32>(best_target, 1.0);
+}
+"#;
+
+const POINT_IN_2D_LOOPS_SHADER: &str = r#"
+struct PointIn2dLoopsUniforms {
+    num_points: u32,
+    num_segments: u32,
+    _pad0: u32,
+    _pad1: u32,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: PointIn2dLoopsUniforms;
+@group(0) @binding(1) var<storage, read> query_points: array<vec2<f32>>;
+@group(0) @binding(2) var<storage, read> segments: array<vec4<f32>>;
+@group(0) @binding(3) var<storage, read_write> out_inside_flags: array<u32>;
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    if (idx >= uniforms.num_points) {
+        return;
+    }
+
+    let p = query_points[idx];
+    var crossings = 0u;
+
+    for (var k = 0u; k < uniforms.num_segments; k = k + 1u) {
+        let seg = segments[k];
+        let x0 = seg.x;
+        let y0 = seg.y;
+        let x1 = seg.z;
+        let y1 = seg.w;
+
+        if ((y0 > p.y) != (y1 > p.y)) {
+            let x_int = x0 + (p.y - y0) * (seg.z - seg.x) / (y1 - y0);
+            if (p.x < x_int) {
+                crossings = crossings + 1u;
+            }
+        }
+    }
+
+    out_inside_flags[idx] = crossings % 2u;
+}
+"#;
+
+const SEGMENT_MESH_DIST_SHADER: &str = r#"
+struct SegmentMeshDistUniforms {
+    num_segments: u32,
+    num_triangles: u32,
+    _pad0: u32,
+    _pad1: u32,
+};
+
+struct GpuSegment {
+    p0: vec4<f32>,
+    p1: vec4<f32>,
+};
+
+struct GpuTriangle {
+    v0: vec4<f32>,
+    v1: vec4<f32>,
+    v2: vec4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: SegmentMeshDistUniforms;
+@group(0) @binding(1) var<storage, read> segments: array<GpuSegment>;
+@group(0) @binding(2) var<storage, read> triangles: array<GpuTriangle>;
+@group(0) @binding(3) var<storage, read_write> out_distances: array<f32>;
+
+fn distance2_pt_tri(point: vec3<f32>, v0: vec3<f32>, v1: vec3<f32>, v2: vec3<f32>) -> f32 {
+    let ab = v1 - v0;
+    let ap = point - v0;
+    let bc = v2 - v1;
+    let bp = point - v1;
+    let ca = v0 - v2;
+    let cp = point - v2;
+    let nor = cross(ab, ca);
+
+    let s0 = sign(dot(cross(ab, nor), ap));
+    let s1 = sign(dot(cross(bc, nor), bp));
+    let s2 = sign(dot(cross(ca, nor), cp));
+    let coef = s0 + s1 + s2;
+    let nor_len2 = dot(nor, nor);
+
+    if (coef < 2.0 || nor_len2 < 1.0e-12) {
+        let dot_ab = dot(ab, ab);
+        let t_a = clamp(dot(ap, ab) / max(dot_ab, 1.0e-12), 0.0, 1.0);
+        let da = ap - ab * t_a;
+        let d2_a = dot(da, da);
+
+        let dot_bc = dot(bc, bc);
+        let t_b = clamp(dot(bp, bc) / max(dot_bc, 1.0e-12), 0.0, 1.0);
+        let db = bp - bc * t_b;
+        let d2_b = dot(db, db);
+
+        let dot_ca = dot(ca, ca);
+        let t_c = clamp(dot(cp, ca) / max(dot_ca, 1.0e-12), 0.0, 1.0);
+        let dc = cp - ca * t_c;
+        let d2_c = dot(dc, dc);
+
+        return min(min(d2_a, d2_b), d2_c);
+    } else {
+        let d = dot(nor, ap);
+        return (d * d) / nor_len2;
+    }
+}
+
+fn distance2_seg_seg(p0: vec3<f32>, p1: vec3<f32>, q0: vec3<f32>, q1: vec3<f32>) -> f32 {
+    let u = p1 - p0;
+    let v = q1 - q0;
+    let w0 = p0 - q0;
+    let a = dot(u, u);
+    let b = dot(u, v);
+    let c = dot(v, v);
+    let d = dot(u, w0);
+    let e = dot(v, w0);
+    let D = a * c - b * b;
+    var sN = 0.0;
+    var sD = D;
+    var tN = 0.0;
+    var tD = D;
+
+    if (D < 1.0e-8) {
+        sN = 0.0;
+        sD = 1.0;
+        tN = e;
+        tD = c;
+    } else {
+        sN = b * e - c * d;
+        tN = a * e - b * d;
+        if (sN < 0.0) {
+            sN = 0.0;
+            tN = e;
+            tD = c;
+        } else if (sN > sD) {
+            sN = sD;
+            tN = e + b;
+            tD = c;
+        }
+    }
+
+    if (tN <= 0.0) {
+        tN = 0.0;
+        if (-d < 0.0) {
+            sN = 0.0;
+        } else if (-d > a) {
+            sN = sD;
+        } else {
+            sN = -d;
+            sD = a;
+        }
+    } else if (tN >= tD) {
+        tN = tD;
+        if ((-d + b) < 0.0) {
+            sN = 0.0;
+        } else if ((-d + b) > a) {
+            sN = sD;
+        } else {
+            sN = -d + b;
+            sD = a;
+        }
+    }
+
+    let sc = select(sN / sD, 0.0, abs(sN) < 1.0e-8);
+    let tc = select(tN / tD, 0.0, abs(tN) < 1.0e-8);
+    let dP = (p0 + u * sc) - (q0 + v * tc);
+    return dot(dP, dP);
+}
+
+fn segment_intersects_triangle(p0: vec3<f32>, p1: vec3<f32>, v0: vec3<f32>, v1: vec3<f32>, v2: vec3<f32>) -> bool {
+    let ab = v1 - v0;
+    let ca = v0 - v2;
+    let nor = cross(ab, ca);
+    let nor_len2 = dot(nor, nor);
+    if (nor_len2 < 1.0e-12) {
+        return false;
+    }
+
+    let d0 = dot(nor, p0 - v0);
+    let d1 = dot(nor, p1 - v0);
+    if ((d0 > 1.0e-6 && d1 > 1.0e-6) || (d0 < -1.0e-6 && d1 < -1.0e-6)) {
+        return false;
+    }
+    let denom = d0 - d1;
+    if (abs(denom) < 1.0e-8) {
+        return false;
+    }
+    let t = d0 / denom;
+    if (t < 0.0 || t > 1.0) {
+        return false;
+    }
+
+    let pint = p0 + (p1 - p0) * t;
+    let bc = v2 - v1;
+    let s0 = dot(cross(ab, nor), pint - v0);
+    let s1 = dot(cross(bc, nor), pint - v1);
+    let s2 = dot(cross(ca, nor), pint - v2);
+
+    let eps = -1.0e-5 * sqrt(nor_len2);
+    return (s0 >= eps && s1 >= eps && s2 >= eps) || (s0 <= -eps && s1 <= -eps && s2 <= -eps);
+}
+
+fn distance2_seg_tri(p0: vec3<f32>, p1: vec3<f32>, v0: vec3<f32>, v1: vec3<f32>, v2: vec3<f32>) -> f32 {
+    if (segment_intersects_triangle(p0, p1, v0, v1, v2)) {
+        return 0.0;
+    }
+    var d2 = distance2_pt_tri(p0, v0, v1, v2);
+    d2 = min(d2, distance2_pt_tri(p1, v0, v1, v2));
+    d2 = min(d2, distance2_seg_seg(p0, p1, v0, v1));
+    d2 = min(d2, distance2_seg_seg(p0, p1, v1, v2));
+    d2 = min(d2, distance2_seg_seg(p0, p1, v2, v0));
+    return d2;
+}
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    if (idx >= uniforms.num_segments) {
+        return;
+    }
+
+    let seg = segments[idx];
+    let p0 = seg.p0.xyz;
+    let p1 = seg.p1.xyz;
+
+    var min_d2 = 1.0e30;
+    for (var i = 0u; i < uniforms.num_triangles; i = i + 1u) {
+        let tri = triangles[i];
+        let v0 = tri.v0.xyz;
+        let v1 = tri.v1.xyz;
+        let v2 = tri.v2.xyz;
+
+        let d2 = distance2_seg_tri(p0, p1, v0, v1, v2);
+        min_d2 = min(min_d2, d2);
+    }
+
+    out_distances[idx] = sqrt(min_d2);
+}
+"#;
+
+fn qem_layout_entries() -> [BindGroupLayoutEntry; 6] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 4,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 5,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
+fn point_in_2d_loops_layout_entries() -> [BindGroupLayoutEntry; 4] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
+fn segment_mesh_dist_layout_entries() -> [BindGroupLayoutEntry; 4] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
 fn loop_subdivision_layout_entries() -> [BindGroupLayoutEntry; 6] {
     [
         BindGroupLayoutEntry {
@@ -2424,6 +2926,9 @@ pub struct GpuMeshAnalyzer {
     raycast_mesh_engine: ComputeEngine,
     loop_subdivision_engine: ComputeEngine,
     feature_edges_engine: ComputeEngine,
+    qem_engine: ComputeEngine,
+    point_in_2d_loops_engine: ComputeEngine,
+    segment_mesh_dist_engine: ComputeEngine,
 }
 
 impl GpuMeshAnalyzer {
@@ -2494,6 +2999,15 @@ impl GpuMeshAnalyzer {
         let fe_entries = feature_edges_layout_entries();
         let feature_edges_engine = ComputeEngine::new(handler, FEATURE_EDGES_SHADER, "main", &fe_entries);
 
+        let qem_entries = qem_layout_entries();
+        let qem_engine = ComputeEngine::new(handler, QEM_SHADER, "main", &qem_entries);
+
+        let p2d_entries = point_in_2d_loops_layout_entries();
+        let point_in_2d_loops_engine = ComputeEngine::new(handler, POINT_IN_2D_LOOPS_SHADER, "main", &p2d_entries);
+
+        let smd_entries = segment_mesh_dist_layout_entries();
+        let segment_mesh_dist_engine = ComputeEngine::new(handler, SEGMENT_MESH_DIST_SHADER, "main", &smd_entries);
+
         Self {
             handler: handler.clone(),
             dist_engine,
@@ -2512,6 +3026,9 @@ impl GpuMeshAnalyzer {
             raycast_mesh_engine,
             loop_subdivision_engine,
             feature_edges_engine,
+            qem_engine,
+            point_in_2d_loops_engine,
+            segment_mesh_dist_engine,
         }
     }
 
@@ -3722,6 +4239,295 @@ impl GpuMeshAnalyzer {
             })
             .collect()
     }
+
+    /// Evaluates Quadric Error Metric (Garland & Heckbert) edge collapse costs and optimal targets via Vulkan compute.
+    pub fn compute_edge_collapse_costs(&self, mesh: &PolygonMesh) -> Vec<([usize; 2], f64, Point3)> {
+        let triangulated;
+        let mesh = if mesh.tri_faces().is_empty() && !mesh.faces().is_empty() {
+            let mut m = mesh.clone();
+            m.triangulate();
+            triangulated = m;
+            &triangulated
+        } else {
+            mesh
+        };
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return Vec::new();
+        }
+        let mut edge_set = rustc_hash::FxHashSet::default();
+        for tri in tri_faces {
+            let v0 = tri[0].pos;
+            let v1 = tri[1].pos;
+            let v2 = tri[2].pos;
+            edge_set.insert((v0.min(v1), v0.max(v1)));
+            edge_set.insert((v1.min(v2), v1.max(v2)));
+            edge_set.insert((v2.min(v0), v2.max(v0)));
+        }
+        let mut edges: Vec<[usize; 2]> = edge_set.into_iter().map(|(a, b)| [a, b]).collect();
+        edges.sort_unstable();
+
+        let num_vertices = mesh.positions().len() as u32;
+        let num_edges = edges.len() as u32;
+
+        let positions = mesh.positions();
+        let mut vertex_quadrics = vec![[0.0f32; 12]; num_vertices as usize];
+        for tri in tri_faces {
+            let p0 = positions[tri[0].pos];
+            let p1 = positions[tri[1].pos];
+            let p2 = positions[tri[2].pos];
+            let u = p1 - p0;
+            let v = p2 - p0;
+            let n = u.cross(v);
+            let len = n.magnitude();
+            let (a, b, c) = if len > 1e-12 {
+                let inv = 1.0 / len;
+                ((n.x * inv) as f32, (n.y * inv) as f32, (n.z * inv) as f32)
+            } else {
+                (0.0f32, 0.0f32, 1.0f32)
+            };
+            let d = -(a * p0.x as f32 + b * p0.y as f32 + c * p0.z as f32);
+            let k = [
+                a * a, a * b, a * c, a * d,
+                b * b, b * c, b * d,
+                c * c, c * d,
+                d * d, 0.0f32, 0.0f32,
+            ];
+            for &idx in &[tri[0].pos, tri[1].pos, tri[2].pos] {
+                for m in 0..10 {
+                    vertex_quadrics[idx][m] += k[m];
+                }
+            }
+        }
+
+        let in_vertices: Vec<[f32; 4]> = positions
+            .iter()
+            .map(|p| [p.x as f32, p.y as f32, p.z as f32, 1.0])
+            .collect();
+
+        let in_edges: Vec<[u32; 2]> = edges
+            .iter()
+            .map(|e| [e[0] as u32, e[1] as u32])
+            .collect();
+
+        let uniforms = QemUniforms {
+            num_edges,
+            num_vertices,
+            _pad0: 0,
+            _pad1: 0,
+        };
+
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+        let vert_buf = BufferHandler::storage_from_slice(&in_vertices, self.handler.device());
+        let q_buf = BufferHandler::storage_from_slice(&vertex_quadrics, self.handler.device());
+        let edge_buf = BufferHandler::storage_from_slice(&in_edges, self.handler.device());
+        let cost_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_edges as usize * size_of::<f32>()) as u64,
+        );
+        let target_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_edges as usize * size_of::<[f32; 4]>()) as u64,
+        );
+
+        let bind_group = self.qem_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            vert_buf.binding_resource(),
+            q_buf.binding_resource(),
+            edge_buf.binding_resource(),
+            cost_buf.binding_resource(),
+            target_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_edges + 63) / 64, 1, 1);
+        self.qem_engine.dispatch(&bind_group, workgroups);
+
+        let out_costs: Vec<f32> = cost_buf.read_to_vec_block(&self.handler);
+        let out_targets: Vec<[f32; 4]> = target_buf.read_to_vec_block(&self.handler);
+
+        edges
+            .into_iter()
+            .zip(out_costs)
+            .zip(out_targets)
+            .map(|((edge, cost), tgt)| {
+                (
+                    edge,
+                    cost as f64,
+                    Point3::new(tgt[0] as f64, tgt[1] as f64, tgt[2] as f64),
+                )
+            })
+            .collect()
+    }
+
+    /// Evaluates 2D point-in-polygon containment across nested loops (outer boundary + holes) via Vulkan compute.
+    pub fn point_in_2d_loops(&self, points: &[Point2], loops: &[Vec<Point2>]) -> Vec<bool> {
+        if points.is_empty() {
+            return Vec::new();
+        }
+        let mut segments: Vec<[f32; 4]> = Vec::new();
+        for lp in loops {
+            let n = lp.len();
+            if n < 3 {
+                continue;
+            }
+            let is_closed = lp[0].distance2(lp[n - 1]) < 1e-14;
+            let seg_count = if is_closed { n - 1 } else { n };
+            for i in 0..seg_count {
+                let p0 = lp[i];
+                let p1 = lp[(i + 1) % n];
+                segments.push([p0.x as f32, p0.y as f32, p1.x as f32, p1.y as f32]);
+            }
+        }
+
+        let num_points = points.len() as u32;
+        let num_segments = segments.len() as u32;
+
+        let query_points: Vec<[f32; 2]> = points
+            .iter()
+            .map(|p| [p.x as f32, p.y as f32])
+            .collect();
+
+        let uniforms = PointIn2dLoopsUniforms {
+            num_points,
+            num_segments,
+            _pad0: 0,
+            _pad1: 0,
+        };
+
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+        let pt_buf = BufferHandler::storage_from_slice(&query_points, self.handler.device());
+        let seg_buf = BufferHandler::storage_from_slice(&segments, self.handler.device());
+        let out_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_points as usize * size_of::<u32>()) as u64,
+        );
+
+        let bind_group = self.point_in_2d_loops_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            pt_buf.binding_resource(),
+            seg_buf.binding_resource(),
+            out_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_points + 63) / 64, 1, 1);
+        self.point_in_2d_loops_engine.dispatch(&bind_group, workgroups);
+
+        let flags: Vec<u32> = out_buf.read_to_vec_block(&self.handler);
+        flags.into_iter().map(|f| f != 0).collect()
+    }
+
+    /// Evaluates minimum clearance distance from 3D line segments to a workpiece mesh via Vulkan compute.
+    pub fn segment_mesh_distances(&self, mesh: &PolygonMesh, segments: &[(Point3, Point3)]) -> Vec<f64> {
+        if segments.is_empty() {
+            return Vec::new();
+        }
+        let triangles = Self::extract_triangles(mesh);
+        if triangles.is_empty() {
+            return vec![f64::INFINITY; segments.len()];
+        }
+        let num_segments = segments.len() as u32;
+        let num_triangles = triangles.len() as u32;
+
+        let gpu_segments: Vec<GpuSegment> = segments
+            .iter()
+            .map(|(p0, p1)| GpuSegment {
+                p0: [p0.x as f32, p0.y as f32, p0.z as f32, 1.0],
+                p1: [p1.x as f32, p1.y as f32, p1.z as f32, 1.0],
+            })
+            .collect();
+
+        let uniforms = SegmentMeshDistUniforms {
+            num_segments,
+            num_triangles,
+            _pad0: 0,
+            _pad1: 0,
+        };
+
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+        let seg_buf = BufferHandler::storage_from_slice(&gpu_segments, self.handler.device());
+        let tri_buf = BufferHandler::storage_from_slice(&triangles, self.handler.device());
+        let dist_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_segments as usize * size_of::<f32>()) as u64,
+        );
+
+        let bind_group = self.segment_mesh_dist_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            seg_buf.binding_resource(),
+            tri_buf.binding_resource(),
+            dist_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_segments + 63) / 64, 1, 1);
+        self.segment_mesh_dist_engine.dispatch(&bind_group, workgroups);
+
+        let distances: Vec<f32> = dist_buf.read_to_vec_block(&self.handler);
+        distances.into_iter().map(|d| d as f64).collect()
+    }
+}
+
+/// Uniforms for Quadric Error Metric (QEM) compute shader.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct QemUniforms {
+    /// Number of unique mesh edges.
+    pub num_edges: u32,
+    /// Number of mesh vertices.
+    pub num_vertices: u32,
+    /// Alignment padding.
+    pub _pad0: u32,
+    /// Alignment padding.
+    pub _pad1: u32,
+}
+
+/// Uniforms for 2D multi-loop point-in-polygon compute shader.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct PointIn2dLoopsUniforms {
+    /// Number of 2D query points.
+    pub num_points: u32,
+    /// Total number of directed 2D line segments across all loops.
+    pub num_segments: u32,
+    /// Alignment padding.
+    pub _pad0: u32,
+    /// Alignment padding.
+    pub _pad1: u32,
+}
+
+/// Uniforms for 3D segment-to-mesh clearance distance compute shader.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct SegmentMeshDistUniforms {
+    /// Number of 3D line segments.
+    pub num_segments: u32,
+    /// Number of mesh triangles.
+    pub num_triangles: u32,
+    /// Alignment padding.
+    pub _pad0: u32,
+    /// Alignment padding.
+    pub _pad1: u32,
+}
+
+/// 3D line segment input for segment-mesh distance calculations.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Pod, Zeroable)]
+pub struct GpuSegment {
+    /// First segment endpoint `[x, y, z, 1.0]`.
+    pub p0: [f32; 4],
+    /// Second segment endpoint `[x, y, z, 1.0]`.
+    pub p1: [f32; 4],
 }
 
 /// Uniforms for Loop subdivision compute shader.

@@ -1885,6 +1885,225 @@ fn test_cuda_and_vulkan_feature_and_boundary_edges_parity() {
     println!("Feature edges and boundary parity verified across cube and open quad.");
 }
 
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_qem_parity() {
+    let dev = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&dev);
+    let cuda = CudaMeshAnalyzer::new();
+    let dispatcher = Dispatcher::global();
+
+    // Test on unit cube
+    let cube = create_unit_cube();
+
+    let cpu_costs = dispatcher.compute_edge_collapse_costs(&cube);
+    let cuda_costs = cuda.compute_edge_collapse_costs(&cube);
+    let vulk_costs = vulkan.compute_edge_collapse_costs(&cube);
+    let disp_costs = cube.compute_edge_collapse_costs();
+
+    assert_eq!(cpu_costs.len(), cuda_costs.len(), "CPU vs CUDA edge count match");
+    assert_eq!(cpu_costs.len(), vulk_costs.len(), "CPU vs Vulkan edge count match");
+    assert_eq!(cpu_costs.len(), disp_costs.len(), "CPU vs Dispatcher edge count match");
+    assert!(!cpu_costs.is_empty(), "Mesh has candidate edges");
+
+    for i in 0..cpu_costs.len() {
+        let (cpu_edge, cpu_cost, cpu_tgt) = cpu_costs[i];
+        let (cuda_edge, cuda_cost, cuda_tgt) = cuda_costs[i];
+        let (vulk_edge, vulk_cost, vulk_tgt) = vulk_costs[i];
+        let (disp_edge, disp_cost, disp_tgt) = disp_costs[i];
+
+        assert_eq!(cpu_edge, cuda_edge, "Edge indices match CPU vs CUDA at {}", i);
+        assert_eq!(cpu_edge, vulk_edge, "Edge indices match CPU vs Vulkan at {}", i);
+        assert_eq!(cpu_edge, disp_edge, "Edge indices match CPU vs Dispatcher at {}", i);
+
+        // CUDA vs CPU (FP64 parity)
+        assert!(
+            (cuda_cost - cpu_cost).abs() < 1e-6,
+            "CUDA cost mismatch at edge {:?}: {} vs {}",
+            cpu_edge, cuda_cost, cpu_cost
+        );
+        assert!(
+            cuda_tgt.distance(cpu_tgt) < 1e-6,
+            "CUDA target mismatch at edge {:?}: {:?} vs {:?}",
+            cpu_edge, cuda_tgt, cpu_tgt
+        );
+
+        // Vulkan vs CPU (FP32 parity)
+        assert!(
+            (vulk_cost - cpu_cost).abs() < 1e-3,
+            "Vulkan cost mismatch at edge {:?}: {} vs {}",
+            cpu_edge, vulk_cost, cpu_cost
+        );
+        assert!(
+            vulk_tgt.distance(cpu_tgt) < 1e-3,
+            "Vulkan target mismatch at edge {:?}: {:?} vs {:?}",
+            cpu_edge, vulk_tgt, cpu_tgt
+        );
+
+        // Dispatcher vs CPU
+        assert!(
+            (disp_cost - cpu_cost).abs() < 1e-3,
+            "Dispatcher cost mismatch at edge {:?}: {} vs {}",
+            cpu_edge, disp_cost, cpu_cost
+        );
+        assert!(
+            disp_tgt.distance(cpu_tgt) < 1e-3,
+            "Dispatcher target mismatch at edge {:?}: {:?} vs {:?}",
+            cpu_edge, disp_tgt, cpu_tgt
+        );
+    }
+
+    println!("QEM parity test passed across CPU, CUDA, and Vulkan.");
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_point_in_2d_loops_parity() {
+    let dev = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&dev);
+    let cuda = CudaMeshAnalyzer::new();
+    let dispatcher = Dispatcher::global();
+
+    // Nested loops: Outer boundary (10x10) + Hole 1 (center 4x4) + Hole 2 (small 1x1)
+    let outer_loop = vec![
+        Point2::new(0.0, 0.0),
+        Point2::new(10.0, 0.0),
+        Point2::new(10.0, 10.0),
+        Point2::new(0.0, 10.0),
+    ];
+    let hole1 = vec![
+        Point2::new(3.0, 3.0),
+        Point2::new(7.0, 3.0),
+        Point2::new(7.0, 7.0),
+        Point2::new(3.0, 7.0),
+    ];
+    let hole2 = vec![
+        Point2::new(1.0, 1.0),
+        Point2::new(2.0, 1.0),
+        Point2::new(2.0, 2.0),
+        Point2::new(1.0, 2.0),
+    ];
+    let loops = vec![outer_loop, hole1, hole2];
+
+    // Diverse test points:
+    let query_points = vec![
+        // Completely outside outer box
+        Point2::new(-1.0, 5.0),
+        Point2::new(11.0, 5.0),
+        Point2::new(5.0, -2.0),
+        Point2::new(5.0, 12.0),
+        // Inside outer box, outside holes (should be true)
+        Point2::new(1.5, 5.0),
+        Point2::new(8.5, 5.0),
+        Point2::new(5.0, 1.5),
+        Point2::new(5.0, 8.5),
+        // Inside hole1 (should be false by parity rule)
+        Point2::new(5.0, 5.0),
+        Point2::new(4.0, 4.0),
+        Point2::new(6.0, 6.0),
+        // Inside hole2 (should be false by parity rule)
+        Point2::new(1.5, 1.5),
+        Point2::new(1.2, 1.8),
+    ];
+
+    let cpu_inside = dispatcher.point_in_2d_loops(&query_points, &loops);
+    let cuda_inside = cuda.point_in_2d_loops(&query_points, &loops);
+    let vulk_inside = vulkan.point_in_2d_loops(&query_points, &loops);
+
+    assert_eq!(cpu_inside.len(), query_points.len());
+    assert_eq!(cuda_inside.len(), query_points.len());
+    assert_eq!(vulk_inside.len(), query_points.len());
+
+    assert_eq!(cuda_inside, cpu_inside, "CUDA vs CPU point-in-2d-loops parity");
+    assert_eq!(vulk_inside, cpu_inside, "Vulkan vs CPU point-in-2d-loops parity");
+
+    // Semantic assertions:
+    // Points 0..4 are outside outer box -> false
+    for (i, &inside) in cpu_inside.iter().enumerate().take(4) {
+        assert!(!inside, "Point {} should be outside", i);
+    }
+    // Points 4..8 are in solid domain -> true
+    for (i, &inside) in cpu_inside.iter().enumerate().take(8).skip(4) {
+        assert!(inside, "Point {} should be inside domain", i);
+    }
+    // Points 8..11 are in hole1 -> false
+    for (i, &inside) in cpu_inside.iter().enumerate().take(11).skip(8) {
+        assert!(!inside, "Point {} should be inside hole1 -> outside domain", i);
+    }
+    // Points 11..13 are in hole2 -> false
+    for (i, &inside) in cpu_inside.iter().enumerate().take(13).skip(11) {
+        assert!(!inside, "Point {} should be inside hole2 -> outside domain", i);
+    }
+
+    println!("2D multi-loop point-in-polygon parity verified across CPU, CUDA, and Vulkan.");
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_segment_mesh_distance_parity() {
+    let dev = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&dev);
+    let cuda = CudaMeshAnalyzer::new();
+    let dispatcher = Dispatcher::global();
+
+    let cube = create_unit_cube();
+
+    let segments = vec![
+        // Penetrating segment through the cube interior -> distance 0.0
+        (Point3::new(-0.5, 0.5, 0.5), Point3::new(1.5, 0.5, 0.5)),
+        // Parallel segment 1.0 unit in front of +X face (x=1.0) -> distance 1.0
+        (Point3::new(2.0, 0.2, 0.2), Point3::new(2.0, 0.8, 0.8)),
+        // Parallel segment 2.0 units above +Z face (z=1.0) -> distance 2.0
+        (Point3::new(0.2, 0.2, 3.0), Point3::new(0.8, 0.8, 3.0)),
+        // Segment closest to edge along x=1, y=1: at (1.5, 1.5, 0.5) -> dist = sqrt(0.5^2 + 0.5^2) = sqrt(0.5) ~= 0.70710678
+        (Point3::new(1.5, 1.5, 0.2), Point3::new(1.5, 1.5, 0.8)),
+        // Segment closest to vertex (1, 1, 1): from (2, 2, 2) to (3, 3, 3) -> dist = sqrt(1+1+1) = sqrt(3) ~= 1.7320508
+        (Point3::new(2.0, 2.0, 2.0), Point3::new(3.0, 3.0, 3.0)),
+        // Skew cutter move passing close to the cube corner
+        (Point3::new(-1.0, 1.2, 1.2), Point3::new(2.0, 1.2, 1.2)),
+    ];
+
+    let cpu_dists = dispatcher.segment_mesh_distances(&cube, &segments);
+    let cuda_dists = cuda.segment_mesh_distances(&cube, &segments);
+    let vulk_dists = vulkan.segment_mesh_distances(&cube, &segments);
+    let disp_dists = cube.segment_mesh_distances(&segments);
+
+    assert_eq!(cpu_dists.len(), segments.len());
+    assert_eq!(cuda_dists.len(), segments.len());
+    assert_eq!(vulk_dists.len(), segments.len());
+    assert_eq!(disp_dists.len(), segments.len());
+
+    // Check penetrating segment
+    assert!(cpu_dists[0] < 1e-6, "Penetrating segment distance is 0.0");
+    assert!(cuda_dists[0] < 1e-6, "CUDA penetrating segment distance is 0.0");
+    assert!(vulk_dists[0] < 1e-3, "Vulkan penetrating segment distance is 0.0");
+
+    // Check parallel face segment (dist = 1.0)
+    assert!((cpu_dists[1] - 1.0).abs() < 1e-5, "CPU face clearance is 1.0");
+    assert!((cuda_dists[1] - 1.0).abs() < 1e-5, "CUDA face clearance is 1.0");
+    assert!((vulk_dists[1] - 1.0).abs() < 1e-3, "Vulkan face clearance is 1.0");
+
+    for i in 0..segments.len() {
+        assert!(
+            (cuda_dists[i] - cpu_dists[i]).abs() < 1e-5,
+            "CUDA clearance mismatch at segment {}: {} vs {}",
+            i, cuda_dists[i], cpu_dists[i]
+        );
+        assert!(
+            (vulk_dists[i] - cpu_dists[i]).abs() < 2e-3,
+            "Vulkan clearance mismatch at segment {}: {} vs {}",
+            i, vulk_dists[i], cpu_dists[i]
+        );
+        assert!(
+            (disp_dists[i] - cpu_dists[i]).abs() < 2e-3,
+            "Dispatcher clearance mismatch at segment {}: {} vs {}",
+            i, disp_dists[i], cpu_dists[i]
+        );
+    }
+
+    println!("3D segment toolpath clearance parity verified across CPU, CUDA, and Vulkan.");
+}
+
 
 
 

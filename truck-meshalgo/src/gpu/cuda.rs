@@ -2,6 +2,7 @@
 #![allow(unsafe_code)]
 
 use super::{filter_and_cluster_seeds, sample_surface_grid, GpuTriangle};
+use crate::filters::StructuringFilter;
 use truck_base::cgmath64::*;
 use truck_base::hash::{self, HashGen};
 use truck_geometry::prelude::*;
@@ -272,6 +273,33 @@ extern "C" {
         include_boundaries: i32,
         h_out_segments: *mut f64,
         h_out_count: *mut u32,
+    ) -> i32;
+
+    fn truck_cuda_compute_quadrics_and_edge_costs(
+        h_vertices: *const f64,
+        num_vertices: u32,
+        h_faces: *const u32,
+        num_faces: u32,
+        h_edges: *const u32,
+        num_edges: u32,
+        h_out_costs: *mut f64,
+        h_out_targets: *mut f64,
+    ) -> i32;
+
+    fn truck_cuda_point_in_2d_loops(
+        h_points: *const f64,
+        num_points: u32,
+        h_segments: *const f64,
+        num_segments: u32,
+        h_inside_flags: *mut i32,
+    ) -> i32;
+
+    fn truck_cuda_segment_mesh_distances(
+        h_segments: *const f64,
+        num_segments: u32,
+        h_triangles: *const f64,
+        num_triangles: u32,
+        h_out_min_distances: *mut f64,
     ) -> i32;
 
     fn truck_cuda_get_device_info(
@@ -1594,5 +1622,171 @@ impl CudaMeshAnalyzer {
             .chunks_exact(6)
             .map(|c| (Point3::new(c[0], c[1], c[2]), Point3::new(c[3], c[4], c[5])))
             .collect()
+    }
+
+    /// Evaluates Quadric Error Metric (Garland & Heckbert) edge collapse costs and optimal targets via CUDA.
+    #[allow(clippy::chunks_exact_to_as_chunks)]
+    pub fn compute_edge_collapse_costs(&self, mesh: &PolygonMesh) -> Vec<([usize; 2], f64, Point3)> {
+        let triangulated;
+        let mesh = if mesh.tri_faces().is_empty() && !mesh.faces().is_empty() {
+            let mut m = mesh.clone();
+            m.triangulate();
+            triangulated = m;
+            &triangulated
+        } else {
+            mesh
+        };
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return Vec::new();
+        }
+        let mut edge_set = rustc_hash::FxHashSet::default();
+        for tri in tri_faces {
+            let v0 = tri[0].pos;
+            let v1 = tri[1].pos;
+            let v2 = tri[2].pos;
+            edge_set.insert((v0.min(v1), v0.max(v1)));
+            edge_set.insert((v1.min(v2), v1.max(v2)));
+            edge_set.insert((v2.min(v0), v2.max(v0)));
+        }
+        let mut edges: Vec<[usize; 2]> = edge_set.into_iter().map(|(a, b)| [a, b]).collect();
+        edges.sort_unstable();
+
+        let num_vertices = mesh.positions().len() as u32;
+        let num_faces = tri_faces.len() as u32;
+        let num_edges = edges.len() as u32;
+
+        let flat_positions: Vec<f64> = mesh
+            .positions()
+            .iter()
+            .flat_map(|p| [p.x, p.y, p.z])
+            .collect();
+
+        let flat_faces: Vec<u32> = tri_faces
+            .iter()
+            .flat_map(|tri| [tri[0].pos as u32, tri[1].pos as u32, tri[2].pos as u32])
+            .collect();
+
+        let flat_edges: Vec<u32> = edges
+            .iter()
+            .flat_map(|e| [e[0] as u32, e[1] as u32])
+            .collect();
+
+        let mut out_costs = vec![0.0f64; num_edges as usize];
+        let mut out_targets = vec![0.0f64; num_edges as usize * 3];
+
+        let status = unsafe {
+            truck_cuda_compute_quadrics_and_edge_costs(
+                flat_positions.as_ptr(),
+                num_vertices,
+                flat_faces.as_ptr(),
+                num_faces,
+                flat_edges.as_ptr(),
+                num_edges,
+                out_costs.as_mut_ptr(),
+                out_targets.as_mut_ptr(),
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_compute_quadrics_and_edge_costs failed with code: {}", status);
+
+        edges
+            .into_iter()
+            .zip(out_costs)
+            .zip(out_targets.chunks_exact(3))
+            .map(|((edge, cost), tgt)| (edge, cost, Point3::new(tgt[0], tgt[1], tgt[2])))
+            .collect()
+    }
+
+    /// Evaluates 2D point-in-polygon containment across nested loops (outer boundary + holes) via CUDA.
+    pub fn point_in_2d_loops(&self, points: &[Point2], loops: &[Vec<Point2>]) -> Vec<bool> {
+        if points.is_empty() {
+            return Vec::new();
+        }
+        let mut flat_segments = Vec::new();
+        for lp in loops {
+            let n = lp.len();
+            if n < 3 {
+                continue;
+            }
+            let is_closed = lp[0].distance2(lp[n - 1]) < 1e-14;
+            let seg_count = if is_closed { n - 1 } else { n };
+            for i in 0..seg_count {
+                let p0 = lp[i];
+                let p1 = lp[(i + 1) % n];
+                flat_segments.push(p0.x);
+                flat_segments.push(p0.y);
+                flat_segments.push(p1.x);
+                flat_segments.push(p1.y);
+            }
+        }
+
+        let num_segments = (flat_segments.len() / 4) as u32;
+        let num_points = points.len() as u32;
+        let flat_points: Vec<f64> = points.iter().flat_map(|p| [p.x, p.y]).collect();
+        let mut out_flags = vec![0i32; num_points as usize];
+
+        let status = unsafe {
+            truck_cuda_point_in_2d_loops(
+                flat_points.as_ptr(),
+                num_points,
+                flat_segments.as_ptr(),
+                num_segments,
+                out_flags.as_mut_ptr(),
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_point_in_2d_loops failed with code: {}", status);
+
+        out_flags.into_iter().map(|f| f != 0).collect()
+    }
+
+    /// Evaluates minimum clearance distance from 3D line segments to a workpiece mesh via CUDA.
+    pub fn segment_mesh_distances(&self, mesh: &PolygonMesh, segments: &[(Point3, Point3)]) -> Vec<f64> {
+        if segments.is_empty() {
+            return Vec::new();
+        }
+        let triangulated;
+        let mesh = if mesh.tri_faces().is_empty() && !mesh.faces().is_empty() {
+            let mut m = mesh.clone();
+            m.triangulate();
+            triangulated = m;
+            &triangulated
+        } else {
+            mesh
+        };
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return vec![f64::INFINITY; segments.len()];
+        }
+        let positions = mesh.positions();
+        let flat_triangles: Vec<f64> = tri_faces
+            .iter()
+            .flat_map(|f| {
+                let p0 = positions[f[0].pos];
+                let p1 = positions[f[1].pos];
+                let p2 = positions[f[2].pos];
+                [p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z]
+            })
+            .collect();
+        let flat_segments: Vec<f64> = segments
+            .iter()
+            .flat_map(|(p0, p1)| [p0.x, p0.y, p0.z, p1.x, p1.y, p1.z])
+            .collect();
+
+        let num_segments = segments.len() as u32;
+        let num_triangles = tri_faces.len() as u32;
+        let mut out_min_distances = vec![0.0f64; num_segments as usize];
+
+        let status = unsafe {
+            truck_cuda_segment_mesh_distances(
+                flat_segments.as_ptr(),
+                num_segments,
+                flat_triangles.as_ptr(),
+                num_triangles,
+                out_min_distances.as_mut_ptr(),
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_segment_mesh_distances failed with code: {}", status);
+
+        out_min_distances
     }
 }

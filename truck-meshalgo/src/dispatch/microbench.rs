@@ -444,6 +444,9 @@ pub fn run_scaling_microbenchmark() -> DispatchProfile {
         raycast_mesh: ScalingThresholds::default_fallback(Operation::RaycastMesh),
         loop_subdivision: ScalingThresholds::default_fallback(Operation::LoopSubdivision),
         feature_edges: ScalingThresholds::default_fallback(Operation::FeatureEdges),
+        qem_edge_collapse: ScalingThresholds::default_fallback(Operation::QemEdgeCollapse),
+        point_in_2d_loops: ScalingThresholds::default_fallback(Operation::PointIn2dLoops),
+        segment_mesh_distance: ScalingThresholds::default_fallback(Operation::SegmentMeshDistance),
     }
 }
 

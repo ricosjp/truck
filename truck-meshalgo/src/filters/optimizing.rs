@@ -94,6 +94,8 @@ pub trait OptimizingFilter {
     /// assert_eq!(mesh.positions().len(), 4);
     /// ```
     fn put_together_same_attrs(&mut self, tol: f64) -> &mut Self;
+    /// Evaluates Quadric Error Metric (Garland & Heckbert) edge collapse costs and optimal targets.
+    fn compute_edge_collapse_costs(&self) -> Vec<([usize; 2], f64, Point3)>;
 }
 
 fn all_pos_mut(faces: &mut Faces) -> impl Iterator<Item = &mut usize> {
@@ -190,6 +192,10 @@ impl OptimizingFilter for PolygonMesh {
         all_nor_mut(faces).for_each(|idx| *idx = nor_map[*idx]);
         drop(mesh);
         self
+    }
+
+    fn compute_edge_collapse_costs(&self) -> Vec<([usize; 2], f64, Point3)> {
+        dispatch::Dispatcher::global().compute_edge_collapse_costs(self)
     }
 }
 

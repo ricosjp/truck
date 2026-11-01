@@ -18,7 +18,7 @@ use truck_polymesh::*;
 use truck_polymesh::StandardVertex as Vertex;
 
 use crate::analyzers::{is_in_the_plane, Collision, ExperimentalSplitters, IncludingPointInDomain};
-use crate::filters::NormalFilters;
+use crate::filters::{NormalFilters, StructuringFilter};
 
 pub use metadata::{CpuMetadata, GpuMetadata, SystemMetadata};
 pub use profile::{DispatchProfile, KernelTarget, Operation, SampleTiming, ScalingThresholds};
@@ -1219,6 +1219,127 @@ impl Dispatcher {
             })
             .collect()
     }
+
+    // ========================================================================
+    // Operation 16: Quadric Error Metric (QEM) Edge Collapse Costs
+    // ========================================================================
+
+    /// Evaluates QEM edge collapse costs and optimal target points using the optimal kernel.
+    pub fn compute_edge_collapse_costs(&self, mesh: &PolygonMesh) -> Vec<([usize; 2], f64, Point3)> {
+        let triangulated;
+        let mesh = if mesh.tri_faces().is_empty() && !mesh.faces().is_empty() {
+            let mut m = mesh.clone();
+            m.triangulate();
+            triangulated = m;
+            &triangulated
+        } else {
+            mesh
+        };
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return Vec::new();
+        }
+        let target = self.select_kernel(Operation::QemEdgeCollapse, tri_faces.len());
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().compute_edge_collapse_costs(mesh);
+                #[cfg(not(feature = "cuda"))]
+                self.compute_edge_collapse_costs_rayon(mesh)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.compute_edge_collapse_costs(mesh);
+                }
+                self.compute_edge_collapse_costs_rayon(mesh)
+            }
+            KernelTarget::CpuRayon => self.compute_edge_collapse_costs_rayon(mesh),
+            KernelTarget::CpuSingle => self.compute_edge_collapse_costs_cpu(mesh),
+        }
+    }
+
+    fn compute_edge_collapse_costs_cpu(&self, mesh: &PolygonMesh) -> Vec<([usize; 2], f64, Point3)> {
+        cpu_compute_quadrics_and_edge_costs(mesh, false)
+    }
+
+    fn compute_edge_collapse_costs_rayon(&self, mesh: &PolygonMesh) -> Vec<([usize; 2], f64, Point3)> {
+        cpu_compute_quadrics_and_edge_costs(mesh, true)
+    }
+
+    // ========================================================================
+    // Operation 17: 2D Multi-Loop Point-in-Polygon Engine
+    // ========================================================================
+
+    /// Tests whether 2D points lie inside complex 2D planar profiles with nested loops using the optimal kernel.
+    pub fn point_in_2d_loops(&self, points: &[Point2], loops: &[Vec<Point2>]) -> Vec<bool> {
+        if points.is_empty() {
+            return Vec::new();
+        }
+        let target = self.select_kernel(Operation::PointIn2dLoops, points.len());
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().point_in_2d_loops(points, loops);
+                #[cfg(not(feature = "cuda"))]
+                self.point_in_2d_loops_rayon(points, loops)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.point_in_2d_loops(points, loops);
+                }
+                self.point_in_2d_loops_rayon(points, loops)
+            }
+            KernelTarget::CpuRayon => self.point_in_2d_loops_rayon(points, loops),
+            KernelTarget::CpuSingle => self.point_in_2d_loops_cpu(points, loops),
+        }
+    }
+
+    fn point_in_2d_loops_cpu(&self, points: &[Point2], loops: &[Vec<Point2>]) -> Vec<bool> {
+        cpu_point_in_2d_loops(points, loops, false)
+    }
+
+    fn point_in_2d_loops_rayon(&self, points: &[Point2], loops: &[Vec<Point2>]) -> Vec<bool> {
+        cpu_point_in_2d_loops(points, loops, true)
+    }
+
+    // ========================================================================
+    // Operation 18: 3D Segment / Toolpath Clearance & Gouge Checking
+    // ========================================================================
+
+    /// Evaluates minimum clearance distances from 3D line segments to a mesh using the optimal kernel.
+    pub fn segment_mesh_distances(&self, mesh: &PolygonMesh, segments: &[(Point3, Point3)]) -> Vec<f64> {
+        if segments.is_empty() {
+            return Vec::new();
+        }
+        let target = self.select_kernel(Operation::SegmentMeshDistance, segments.len());
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().segment_mesh_distances(mesh, segments);
+                #[cfg(not(feature = "cuda"))]
+                self.segment_mesh_distances_rayon(mesh, segments)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.segment_mesh_distances(mesh, segments);
+                }
+                self.segment_mesh_distances_rayon(mesh, segments)
+            }
+            KernelTarget::CpuRayon => self.segment_mesh_distances_rayon(mesh, segments),
+            KernelTarget::CpuSingle => self.segment_mesh_distances_cpu(mesh, segments),
+        }
+    }
+
+    fn segment_mesh_distances_cpu(&self, mesh: &PolygonMesh, segments: &[(Point3, Point3)]) -> Vec<f64> {
+        cpu_segment_mesh_distances(mesh, segments, false)
+    }
+
+    fn segment_mesh_distances_rayon(&self, mesh: &PolygonMesh, segments: &[(Point3, Point3)]) -> Vec<f64> {
+        cpu_segment_mesh_distances(mesh, segments, true)
+    }
 }
 
 // Helpers
@@ -1251,5 +1372,308 @@ fn cpu_dist2_point_triangle(point: Point3, triangle: &[Point3; 3]) -> f64 {
         da.magnitude2().min(db.magnitude2()).min(dc.magnitude2())
     } else {
         nor.dot(ap).powi(2) / nor.magnitude2()
+    }
+}
+
+fn cpu_compute_quadrics_and_edge_costs(
+    mesh: &PolygonMesh,
+    parallel: bool,
+) -> Vec<([usize; 2], f64, Point3)> {
+    let triangulated;
+    let mesh = if mesh.tri_faces().is_empty() && !mesh.faces().is_empty() {
+        let mut m = mesh.clone();
+        m.triangulate();
+        triangulated = m;
+        &triangulated
+    } else {
+        mesh
+    };
+    let tri_faces = mesh.tri_faces();
+    if tri_faces.is_empty() {
+        return Vec::new();
+    }
+    let positions = mesh.positions();
+    let num_vertices = positions.len();
+
+    let mut edge_set = rustc_hash::FxHashSet::default();
+    for tri in tri_faces {
+        let v0 = tri[0].pos;
+        let v1 = tri[1].pos;
+        let v2 = tri[2].pos;
+        edge_set.insert((v0.min(v1), v0.max(v1)));
+        edge_set.insert((v1.min(v2), v1.max(v2)));
+        edge_set.insert((v2.min(v0), v2.max(v0)));
+    }
+    let mut edges: Vec<[usize; 2]> = edge_set.into_iter().map(|(a, b)| [a, b]).collect();
+    edges.sort_unstable();
+
+    // Compute vertex quadrics
+    let mut vertex_quadrics = vec![[0.0f64; 10]; num_vertices];
+    for tri in tri_faces {
+        let p0 = positions[tri[0].pos];
+        let p1 = positions[tri[1].pos];
+        let p2 = positions[tri[2].pos];
+        let u = p1 - p0;
+        let v = p2 - p0;
+        let n = u.cross(v);
+        let len = n.magnitude();
+        let (a, b, c) = if len > 1e-12 {
+            let inv = 1.0 / len;
+            (n.x * inv, n.y * inv, n.z * inv)
+        } else {
+            (0.0, 0.0, 1.0)
+        };
+        let d = -(a * p0.x + b * p0.y + c * p0.z);
+        let k = [
+            a * a, a * b, a * c, a * d,
+            b * b, b * c, b * d,
+            c * c, c * d,
+            d * d,
+        ];
+        for &idx in &[tri[0].pos, tri[1].pos, tri[2].pos] {
+            for m in 0..10 {
+                vertex_quadrics[idx][m] += k[m];
+            }
+        }
+    }
+
+    let eval_edge = |edge: [usize; 2]| -> ([usize; 2], f64, Point3) {
+        let v0 = edge[0];
+        let v1 = edge[1];
+        let p0 = positions[v0];
+        let p1 = positions[v1];
+        let q0 = vertex_quadrics[v0];
+        let q1 = vertex_quadrics[v1];
+
+        let mut q = [0.0f64; 10];
+        for m in 0..10 {
+            q[m] = q0[m] + q1[m];
+        }
+
+        let eval_q = |p: Point3| -> f64 {
+            let cost = q[0] * p.x * p.x + 2.0 * q[1] * p.x * p.y + 2.0 * q[2] * p.x * p.z + 2.0 * q[3] * p.x
+                     + q[4] * p.y * p.y + 2.0 * q[5] * p.y * p.z + 2.0 * q[6] * p.y
+                     + q[7] * p.z * p.z + 2.0 * q[8] * p.z + q[9];
+            f64::max(0.0, cost)
+        };
+
+        let pm = Point3::new(0.5 * (p0.x + p1.x), 0.5 * (p0.y + p1.y), 0.5 * (p0.z + p1.z));
+        let c0 = eval_q(p0);
+        let c1 = eval_q(p1);
+        let cm = eval_q(pm);
+
+        let mut best_cost = cm;
+        let mut best_target = pm;
+
+        if c0 < best_cost {
+            best_cost = c0;
+            best_target = p0;
+        }
+        if c1 < best_cost {
+            best_cost = c1;
+            best_target = p1;
+        }
+
+        let c00 = q[4] * q[7] - q[5] * q[5];
+        let c01 = q[2] * q[5] - q[1] * q[7];
+        let c02 = q[1] * q[5] - q[2] * q[4];
+        let c11 = q[0] * q[7] - q[2] * q[2];
+        let c12 = q[1] * q[2] - q[0] * q[5];
+        let c22 = q[0] * q[4] - q[1] * q[1];
+        let det = q[0] * c00 + q[1] * c01 + q[2] * c02;
+
+        if det.abs() > 1e-8 {
+            let inv_det = 1.0 / det;
+            let opt_x = -(c00 * q[3] + c01 * q[6] + c02 * q[8]) * inv_det;
+            let opt_y = -(c01 * q[3] + c11 * q[6] + c12 * q[8]) * inv_det;
+            let opt_z = -(c02 * q[3] + c12 * q[6] + c22 * q[8]) * inv_det;
+            if opt_x.is_finite() && opt_y.is_finite() && opt_z.is_finite() {
+                let opt_pt = Point3::new(opt_x, opt_y, opt_z);
+                let c_opt = eval_q(opt_pt);
+                if c_opt <= best_cost {
+                    best_cost = c_opt;
+                    best_target = opt_pt;
+                }
+            }
+        }
+
+        (edge, best_cost, best_target)
+    };
+
+    if parallel {
+        edges.into_par_iter().map(eval_edge).collect()
+    } else {
+        edges.into_iter().map(eval_edge).collect()
+    }
+}
+
+fn cpu_point_in_2d_loops(
+    points: &[Point2],
+    loops: &[Vec<Point2>],
+    parallel: bool,
+) -> Vec<bool> {
+    if points.is_empty() {
+        return Vec::new();
+    }
+    let mut segments = Vec::new();
+    for lp in loops {
+        let n = lp.len();
+        if n < 3 {
+            continue;
+        }
+        let is_closed = lp[0].distance2(lp[n - 1]) < 1e-14;
+        let seg_count = if is_closed { n - 1 } else { n };
+        for i in 0..seg_count {
+            segments.push((lp[i], lp[(i + 1) % n]));
+        }
+    }
+
+    let eval_point = |p: Point2| -> bool {
+        let mut crossings = 0;
+        for &(p0, p1) in &segments {
+            if (p0.y > p.y) != (p1.y > p.y) {
+                let x_int = p0.x + (p.y - p0.y) * (p1.x - p0.x) / (p1.y - p0.y);
+                if p.x < x_int {
+                    crossings += 1;
+                }
+            }
+        }
+        crossings % 2 == 1
+    };
+
+    if parallel {
+        points.par_iter().copied().map(eval_point).collect()
+    } else {
+        points.iter().copied().map(eval_point).collect()
+    }
+}
+
+fn cpu_dist2_segment_segment(p0: Point3, p1: Point3, q0: Point3, q1: Point3) -> f64 {
+    let u = p1 - p0;
+    let v = q1 - q0;
+    let w0 = p0 - q0;
+    let a = u.dot(u);
+    let b = u.dot(v);
+    let c = v.dot(v);
+    let d = u.dot(w0);
+    let e = v.dot(w0);
+    let cap_d = a * c - b * b;
+    let (mut s_n, mut s_d, mut t_n, t_d) = if cap_d < 1e-12 {
+        (0.0, 1.0, e, c)
+    } else {
+        let mut sn = b * e - c * d;
+        let mut tn = a * e - b * d;
+        if sn < 0.0 {
+            sn = 0.0;
+            tn = e;
+        } else if sn > cap_d {
+            sn = cap_d;
+            tn = e + b;
+        }
+        (sn, cap_d, tn, c)
+    };
+
+    if t_n <= 0.0 {
+        t_n = 0.0;
+        if -d < 0.0 {
+            s_n = 0.0;
+        } else if -d > a {
+            s_n = s_d;
+        } else {
+            s_n = -d;
+            s_d = a;
+        }
+    } else if t_n >= t_d {
+        t_n = t_d;
+        if (-d + b) < 0.0 {
+            s_n = 0.0;
+        } else if (-d + b) > a {
+            s_n = s_d;
+        } else {
+            s_n = -d + b;
+            s_d = a;
+        }
+    }
+
+    let sc = if s_n.abs() < 1e-12 { 0.0 } else { s_n / s_d };
+    let tc = if t_n.abs() < 1e-12 { 0.0 } else { t_n / t_d };
+    let dp = (p0 + u * sc) - (q0 + v * tc);
+    dp.dot(dp)
+}
+
+fn cpu_segment_intersects_triangle(p0: Point3, p1: Point3, v0: Point3, v1: Point3, v2: Point3) -> bool {
+    let ab = v1 - v0;
+    let ca = v0 - v2;
+    let nor = ab.cross(ca);
+    let nor_len2 = nor.dot(nor);
+    if nor_len2 < 1e-20 {
+        return false;
+    }
+    let d0 = nor.dot(p0 - v0);
+    let d1 = nor.dot(p1 - v0);
+    if (d0 > 1e-12 && d1 > 1e-12) || (d0 < -1e-12 && d1 < -1e-12) {
+        return false;
+    }
+    let denom = d0 - d1;
+    if denom.abs() < 1e-14 {
+        return false;
+    }
+    let t = d0 / denom;
+    if !(0.0..=1.0).contains(&t) {
+        return false;
+    }
+    let pint = p0 + (p1 - p0) * t;
+    let bc = v2 - v1;
+    let s0 = (ab.cross(nor)).dot(pint - v0);
+    let s1 = (bc.cross(nor)).dot(pint - v1);
+    let s2 = (ca.cross(nor)).dot(pint - v2);
+    let eps = -1e-9 * nor_len2.sqrt();
+    (s0 >= eps && s1 >= eps && s2 >= eps) || (s0 <= -eps && s1 <= -eps && s2 <= -eps)
+}
+
+fn cpu_dist2_segment_triangle(p0: Point3, p1: Point3, tri: &[Point3; 3]) -> f64 {
+    let (v0, v1, v2) = (tri[0], tri[1], tri[2]);
+    if cpu_segment_intersects_triangle(p0, p1, v0, v1, v2) {
+        return 0.0;
+    }
+    let mut d2 = cpu_dist2_point_triangle(p0, tri);
+    d2 = d2.min(cpu_dist2_point_triangle(p1, tri));
+    d2 = d2.min(cpu_dist2_segment_segment(p0, p1, v0, v1));
+    d2 = d2.min(cpu_dist2_segment_segment(p0, p1, v1, v2));
+    d2 = d2.min(cpu_dist2_segment_segment(p0, p1, v2, v0));
+    d2
+}
+
+fn cpu_segment_mesh_distances(
+    mesh: &PolygonMesh,
+    segments: &[(Point3, Point3)],
+    parallel: bool,
+) -> Vec<f64> {
+    if segments.is_empty() {
+        return Vec::new();
+    }
+    let triangles = extract_tri_tuples(mesh);
+    if triangles.is_empty() {
+        return vec![f64::INFINITY; segments.len()];
+    }
+
+    let eval_seg = |&(p0, p1): &(Point3, Point3)| -> f64 {
+        let mut min_d2 = f64::INFINITY;
+        for tri in &triangles {
+            let d2 = cpu_dist2_segment_triangle(p0, p1, tri);
+            if d2 < min_d2 {
+                min_d2 = d2;
+                if min_d2 <= 0.0 {
+                    break;
+                }
+            }
+        }
+        min_d2.sqrt()
+    };
+
+    if parallel {
+        segments.par_iter().map(eval_seg).collect()
+    } else {
+        segments.iter().map(eval_seg).collect()
     }
 }
