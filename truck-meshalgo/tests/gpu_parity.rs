@@ -2227,6 +2227,74 @@ fn test_cuda_and_vulkan_weld_attributes_parity() {
     println!("Parallel vertex welding parity verified across CPU, CUDA, and Vulkan.");
 }
 
+#[test]
+fn test_vulkan_zero_copy_direct_nurbs_tessellation() {
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+
+    // Quarter cylinder NURBS patch:
+    // u: [0, 0, 1, 1], degree 1
+    // v: [0, 0, 0, 1, 1, 1], degree 2 (90-deg rational circular arc)
+    let u_knots = vec![0.0, 0.0, 1.0, 1.0];
+    let v_knots = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    let sqrt2_inv = 1.0 / std::f64::consts::SQRT_2;
+    let control_points = vec![
+        vec![
+            Vector4::new(1.0, 0.0, 0.0, 1.0),
+            Vector4::new(sqrt2_inv, sqrt2_inv, 0.0, sqrt2_inv),
+            Vector4::new(0.0, 1.0, 0.0, 1.0),
+        ],
+        vec![
+            Vector4::new(1.0, 0.0, 1.0, 1.0),
+            Vector4::new(sqrt2_inv, sqrt2_inv, sqrt2_inv, sqrt2_inv),
+            Vector4::new(0.0, 1.0, 1.0, 1.0),
+        ],
+    ];
+
+    let u_div = 16;
+    let v_div = 16;
+    let (vb, ib, idx_count) = vulkan.tessellate_nurbs_surface_direct(
+        &u_knots,
+        &v_knots,
+        1,
+        2,
+        &control_points,
+        u_div,
+        v_div,
+    );
+
+    let num_verts = u_div * v_div;
+    let num_quads = (u_div - 1) * (v_div - 1);
+    assert_eq!(idx_count, num_quads * 6);
+    assert_eq!(vb.size(), (num_verts * 32) as u64);
+    assert_eq!(ib.size(), (idx_count * 4) as u64);
+
+    // Verify data correctness by reading back GPU buffers (for verification only)
+    let vertices: Vec<truck_meshalgo::gpu::DirectAttrVertex> = vb.read_to_vec_block(&handler);
+    let indices: Vec<u32> = ib.read_to_vec_block(&handler);
+
+    assert_eq!(vertices.len(), num_verts);
+    assert_eq!(indices.len(), idx_count);
+
+    // Verify cylinder radius: x^2 + y^2 = 1.0 for all vertices
+    for (i, v) in vertices.iter().enumerate() {
+        let r = (v.position[0].powi(2) + v.position[1].powi(2)).sqrt();
+        assert!(
+            (r - 1.0).abs() < 1e-3,
+            "Vertex {} radius mismatch: {} != 1.0 (pos: {:?})",
+            i, r, v.position
+        );
+        let n_len = (v.normal[0].powi(2) + v.normal[1].powi(2) + v.normal[2].powi(2)).sqrt();
+        assert!(
+            (n_len - 1.0).abs() < 1e-2,
+            "Vertex {} normal length mismatch: {}",
+            i, n_len
+        );
+    }
+
+    println!("Zero-copy direct GPU NURBS tessellation successfully verified (all vertices and indices generated in VRAM).");
+}
+
 
 
 

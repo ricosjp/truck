@@ -21,6 +21,15 @@ impl BufferHandler {
             stride,
         }
     }
+    /// Creates a buffer handler directly wrapping an existing `wgpu::Buffer`.
+    #[inline(always)]
+    pub fn from_buffer(buffer: Buffer, size: u64, stride: u64) -> Self {
+        BufferHandler {
+            buffer,
+            size,
+            stride,
+        }
+    }
     /// Returns the reference of the buffer.
     #[inline(always)]
     pub const fn buffer(&self) -> &Buffer { &self.buffer }

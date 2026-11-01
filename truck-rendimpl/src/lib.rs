@@ -154,11 +154,15 @@ pub trait Instance {
     fn standard_shaders(creator: &InstanceCreator) -> Self::Shaders;
 }
 
+/// Standard vertex attributes (position, UV coordinates, normal) for polygon rendering.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
-struct AttrVertex {
+pub struct AttrVertex {
+    /// 3D position
     pub position: [f32; 3],
+    /// 2D UV coordinate
     pub uv_coord: [f32; 2],
+    /// 3D normal vector
     pub normal: [f32; 3],
 }
 

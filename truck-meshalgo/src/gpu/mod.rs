@@ -1,6 +1,7 @@
 //! GPU-accelerated mesh algorithms based on wgpu / Vulkan.
 
 use bytemuck::{Pod, Zeroable};
+use std::sync::Arc;
 use truck_base::cgmath64::*;
 use truck_base::hash;
 use truck_geometry::prelude::*;
@@ -3025,6 +3026,152 @@ fn collision_layout_entries() -> [BindGroupLayoutEntry; 5] {
     ]
 }
 
+/// 32-byte standard vertex format for zero-copy direct GPU tessellation matching `truck-rendimpl::AttrVertex`.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod, PartialEq)]
+pub struct DirectAttrVertex {
+    /// 3D position
+    pub position: [f32; 3],
+    /// 2D UV coordinate
+    pub uv_coord: [f32; 2],
+    /// 3D normal vector
+    pub normal: [f32; 3],
+}
+
+const NURBS_PACK_VERTICES_SHADER: &str = r#"
+@group(0) @binding(0) var<storage, read> in_pts: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read> in_uv: array<vec2<f32>>;
+@group(0) @binding(2) var<storage, read> in_nors: array<vec4<f32>>;
+@group(0) @binding(3) var<storage, read_write> out_vertex_buf: array<f32>;
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let idx = id.x;
+    if (idx >= arrayLength(&in_pts)) {
+        return;
+    }
+    let base = idx * 8u;
+    let p = in_pts[idx];
+    let uv = in_uv[idx];
+    let n = in_nors[idx];
+    out_vertex_buf[base + 0u] = p.x;
+    out_vertex_buf[base + 1u] = p.y;
+    out_vertex_buf[base + 2u] = p.z;
+    out_vertex_buf[base + 3u] = uv.x;
+    out_vertex_buf[base + 4u] = uv.y;
+    out_vertex_buf[base + 5u] = n.x;
+    out_vertex_buf[base + 6u] = n.y;
+    out_vertex_buf[base + 7u] = n.z;
+}
+"#;
+
+const GRID_INDEX_GEN_SHADER: &str = r#"
+struct GridDims {
+    u_div: u32,
+    v_div: u32,
+    num_quads: u32,
+    _pad: u32,
+};
+
+@group(0) @binding(0) var<uniform> dims: GridDims;
+@group(0) @binding(1) var<storage, read_write> out_indices: array<u32>;
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let qidx = id.x;
+    if (qidx >= dims.num_quads) {
+        return;
+    }
+    let v_cells = dims.v_div - 1u;
+    let i = qidx / v_cells;
+    let j = qidx % v_cells;
+    let v_div = dims.v_div;
+
+    let v00 = i * v_div + j;
+    let v01 = i * v_div + (j + 1u);
+    let v10 = (i + 1u) * v_div + j;
+    let v11 = (i + 1u) * v_div + (j + 1u);
+
+    let base = qidx * 6u;
+    out_indices[base + 0u] = v00;
+    out_indices[base + 1u] = v10;
+    out_indices[base + 2u] = v01;
+    out_indices[base + 3u] = v01;
+    out_indices[base + 4u] = v10;
+    out_indices[base + 5u] = v11;
+}
+"#;
+
+fn pack_vertices_layout_entries() -> [BindGroupLayoutEntry; 4] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
+fn grid_index_layout_entries() -> [BindGroupLayoutEntry; 2] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
 /// Metadata describing a Vulkan GPU device.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct VulkanDeviceInfo {
@@ -3093,6 +3240,8 @@ pub struct GpuMeshAnalyzer {
     segment_mesh_dist_engine: ComputeEngine,
     weld_build_engine: ComputeEngine,
     weld_propagate_engine: ComputeEngine,
+    pack_vertices_engine: ComputeEngine,
+    grid_index_engine: ComputeEngine,
 }
 
 impl GpuMeshAnalyzer {
@@ -3176,6 +3325,12 @@ impl GpuMeshAnalyzer {
         let weld_build_engine = ComputeEngine::new(handler, WELD_ATTRIBUTES_SHADER, "build_hash", &weld_entries);
         let weld_propagate_engine = ComputeEngine::new(handler, WELD_ATTRIBUTES_SHADER, "propagate_labels", &weld_entries);
 
+        let pack_entries = pack_vertices_layout_entries();
+        let pack_vertices_engine = ComputeEngine::new(handler, NURBS_PACK_VERTICES_SHADER, "main", &pack_entries);
+
+        let grid_idx_entries = grid_index_layout_entries();
+        let grid_index_engine = ComputeEngine::new(handler, GRID_INDEX_GEN_SHADER, "main", &grid_idx_entries);
+
         Self {
             handler: handler.clone(),
             dist_engine,
@@ -3199,6 +3354,8 @@ impl GpuMeshAnalyzer {
             segment_mesh_dist_engine,
             weld_build_engine,
             weld_propagate_engine,
+            pack_vertices_engine,
+            grid_index_engine,
         }
     }
 
@@ -3994,6 +4151,176 @@ impl GpuMeshAnalyzer {
             .collect();
 
         (pts, nors)
+    }
+
+    /// Evaluates a rational NURBS surface directly into GPU vertex and index buffers suitable for zero-copy rendering.
+    ///
+    /// The vertex buffer has layout `[DirectAttrVertex]` (pos: [f32; 3], uv: [f32; 2], nor: [f32; 3]) with `BufferUsages::VERTEX`,
+    /// and the index buffer contains `u32` triangle indices with `BufferUsages::INDEX`.
+    /// Zero vertex or index bytes are transferred back to host CPU memory.
+    #[allow(clippy::too_many_arguments)]
+    pub fn tessellate_nurbs_surface_direct(
+        &self,
+        u_knots: &[f64],
+        v_knots: &[f64],
+        u_degree: usize,
+        v_degree: usize,
+        control_points: &[Vec<Vector4>],
+        u_div: usize,
+        v_div: usize,
+    ) -> (Arc<BufferHandler>, Arc<BufferHandler>, usize) {
+        if u_div < 2 || v_div < 2 || control_points.is_empty() || control_points[0].is_empty() {
+            let vb = Arc::new(BufferHandler::storage_empty(self.handler.device(), 0));
+            let ib = Arc::new(BufferHandler::storage_empty(self.handler.device(), 0));
+            return (vb, ib, 0);
+        }
+
+        let u_min = u_knots[u_degree];
+        let u_max = u_knots[u_knots.len() - 1 - u_degree];
+        let v_min = v_knots[v_degree];
+        let v_max = v_knots[v_knots.len() - 1 - v_degree];
+
+        let num_points = (u_div * v_div) as u32;
+        let mut uv_f32 = Vec::with_capacity(num_points as usize);
+        for i in 0..u_div {
+            let u = u_min + (u_max - u_min) * (i as f64) / ((u_div - 1) as f64);
+            for j in 0..v_div {
+                let v = v_min + (v_max - v_min) * (j as f64) / ((v_div - 1) as f64);
+                uv_f32.push([u as f32, v as f32]);
+            }
+        }
+
+        let num_u_knots = u_knots.len() as u32;
+        let num_v_knots = v_knots.len() as u32;
+        let cp_stride_v = control_points[0].len() as u32;
+
+        let uniforms = NurbsUniforms {
+            num_u_knots,
+            num_v_knots,
+            u_degree: u_degree as u32,
+            v_degree: v_degree as u32,
+            cp_stride_v,
+            num_points,
+            _pad: [0, 0],
+        };
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+
+        let u_knots_f32: Vec<f32> = u_knots.iter().map(|&x| x as f32).collect();
+        let v_knots_f32: Vec<f32> = v_knots.iter().map(|&x| x as f32).collect();
+
+        let mut flat_cps = Vec::with_capacity(control_points.len() * control_points[0].len());
+        for row in control_points {
+            for pt in row {
+                flat_cps.push([pt.x as f32, pt.y as f32, pt.z as f32, pt.w as f32]);
+            }
+        }
+
+        let u_knots_buf = BufferHandler::storage_from_slice(&u_knots_f32, self.handler.device());
+        let v_knots_buf = BufferHandler::storage_from_slice(&v_knots_f32, self.handler.device());
+        let cps_buf = BufferHandler::storage_from_slice(&flat_cps, self.handler.device());
+        let uv_buf = BufferHandler::storage_from_slice(&uv_f32, self.handler.device());
+
+        let out_pts_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_points as usize * size_of::<[f32; 4]>()) as u64,
+        );
+        let out_nors_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_points as usize * size_of::<[f32; 4]>()) as u64,
+        );
+
+        let bind_group = self.nurbs_surface_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            u_knots_buf.binding_resource(),
+            v_knots_buf.binding_resource(),
+            cps_buf.binding_resource(),
+            uv_buf.binding_resource(),
+            out_pts_buf.binding_resource(),
+            out_nors_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_points + 63) / 64, 1, 1);
+        self.nurbs_surface_engine.dispatch(&bind_group, workgroups);
+
+        // Direct packing into AttrVertex buffer entirely on GPU
+        let vertex_buf_size = (num_points as usize * size_of::<DirectAttrVertex>()) as u64;
+        let vertex_raw_buffer = self.handler.device().create_buffer(&BufferDescriptor {
+            label: Some("direct_vertex_buffer"),
+            size: vertex_buf_size,
+            usage: BufferUsages::VERTEX | BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let pack_bind_group = self.pack_vertices_engine.create_bind_group([
+            out_pts_buf.binding_resource(),
+            uv_buf.binding_resource(),
+            out_nors_buf.binding_resource(),
+            BindingResource::Buffer(BufferBinding {
+                buffer: &vertex_raw_buffer,
+                offset: 0,
+                size: None,
+            }),
+        ]);
+        self.pack_vertices_engine.dispatch(&pack_bind_group, workgroups);
+
+        // Generate triangle indices on GPU
+        let num_quads = ((u_div - 1) * (v_div - 1)) as u32;
+        let index_count = (num_quads * 6) as usize;
+        let index_buf_size = (index_count * size_of::<u32>()) as u64;
+
+        #[repr(C)]
+        #[derive(Clone, Copy, Pod, Zeroable)]
+        struct GridDims {
+            u_div: u32,
+            v_div: u32,
+            num_quads: u32,
+            _pad: u32,
+        }
+        let dims_uniform = BufferHandler::from_slice(
+            &[GridDims {
+                u_div: u_div as u32,
+                v_div: v_div as u32,
+                num_quads,
+                _pad: 0,
+            }],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+
+        let index_raw_buffer = self.handler.device().create_buffer(&BufferDescriptor {
+            label: Some("direct_index_buffer"),
+            size: index_buf_size,
+            usage: BufferUsages::INDEX | BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let idx_bind_group = self.grid_index_engine.create_bind_group([
+            dims_uniform.binding_resource(),
+            BindingResource::Buffer(BufferBinding {
+                buffer: &index_raw_buffer,
+                offset: 0,
+                size: None,
+            }),
+        ]);
+        let idx_workgroups = ((num_quads + 63) / 64, 1, 1);
+        self.grid_index_engine.dispatch(&idx_bind_group, idx_workgroups);
+
+        let vertex_handler = Arc::new(BufferHandler::from_buffer(
+            vertex_raw_buffer,
+            vertex_buf_size,
+            size_of::<DirectAttrVertex>() as u64,
+        ));
+        let index_handler = Arc::new(BufferHandler::from_buffer(
+            index_raw_buffer,
+            index_buf_size,
+            size_of::<u32>() as u64,
+        ));
+
+        (vertex_handler, index_handler, index_count)
     }
 
     /// Evaluates a rational NURBS curve on a batch of parameters on the GPU via Vulkan compute.

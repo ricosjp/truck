@@ -116,4 +116,19 @@ impl InstanceCreator {
     pub fn create_texture(&self, image: &DynamicImage) -> Arc<Texture> {
         Arc::new(image2texture::image2texture(&self.handler, image))
     }
+    /// Creates a PolygonInstance directly from GPU vertex and index buffer handlers without host memory roundtrip.
+    #[inline(always)]
+    pub fn create_direct_polygon_instance(
+        &self,
+        vertex_buffer: Arc<BufferHandler>,
+        index_buffer: Arc<BufferHandler>,
+        state: &PolygonState,
+    ) -> PolygonInstance {
+        PolygonInstance::from_buffer_handlers(
+            vertex_buffer,
+            index_buffer,
+            &self.polygon_shaders,
+            state,
+        )
+    }
 }
