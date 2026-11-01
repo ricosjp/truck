@@ -48,6 +48,7 @@ pub mod gpu;
 
 /// Intelligent kernel dispatcher and dynamic calibration engine
 pub mod dispatch;
+pub use dispatch::warmup;
 
 /// This module contains all traits and re-exports `truck_polymesh`.
 pub mod prelude {

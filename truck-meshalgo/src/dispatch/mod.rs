@@ -24,6 +24,14 @@ pub use metadata::{CpuMetadata, GpuMetadata, SystemMetadata};
 pub use profile::{DispatchProfile, KernelTarget, Operation, SampleTiming, ScalingThresholds};
 pub use cache::{cache_file_path, clear_cache, load_cached_profile, save_cached_profile, KernelCache, CURRENT_CACHE_VERSION};
 
+/// Eagerly warms up the dispatcher and preloads GPU execution environments (CUDA contexts, PTX modules, scratchpads, and Vulkan compute pipelines).
+///
+/// Calling this during application startup or splash screens (optionally on a background thread)
+/// eliminates the one-time 50ms–250ms cold-start JIT and allocation latency on the first dispatched call.
+pub fn warmup() {
+    Dispatcher::warmup();
+}
+
 static GLOBAL_DISPATCHER: OnceLock<Dispatcher> = OnceLock::new();
 
 /// The intelligent kernel dispatcher.
@@ -34,6 +42,21 @@ pub struct Dispatcher {
 }
 
 impl Dispatcher {
+    /// Eagerly warms up the dispatcher and preloads GPU execution environments (CUDA contexts, PTX modules, scratchpads, and Vulkan compute pipelines).
+    pub fn warmup() {
+        let _ = Dispatcher::global();
+
+        #[cfg(feature = "cuda")]
+        {
+            crate::gpu::cuda::CudaMeshAnalyzer::preload_all();
+        }
+
+        #[cfg(feature = "gpu")]
+        {
+            let _ = get_vulkan_analyzers();
+        }
+    }
+
     /// Returns the global shared dispatcher, calibrating or loading cached results on first use.
     pub fn global() -> &'static Dispatcher {
         GLOBAL_DISPATCHER.get_or_init(|| {

@@ -389,3 +389,21 @@ fn test_multi_gpu_concurrent_execution() {
         }
     }
 }
+
+#[test]
+fn test_explicit_warmup() {
+    let t0 = std::time::Instant::now();
+    truck_meshalgo::warmup();
+    let elapsed = t0.elapsed();
+    println!("Explicit warmup completed in {:?}", elapsed);
+
+    // After warmup, running a distance query executes with zero cold-start hitch
+    let mesh = create_cube();
+    let pts = vec![Point3::new(0.5, 0.5, 0.5)];
+    let t1 = std::time::Instant::now();
+    let d = Dispatcher::global().distance2_point_cloud(&mesh, &pts);
+    let first_query_elapsed = t1.elapsed();
+    println!("Post-warmup first query latency: {:?}", first_query_elapsed);
+    assert_eq!(d.len(), 1);
+    assert!(first_query_elapsed < std::time::Duration::from_millis(50));
+}

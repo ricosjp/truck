@@ -333,6 +333,7 @@ extern "C" {
         multi_processor_count: *mut i32,
         total_mem: *mut usize,
     ) -> i32;
+    fn truck_cuda_preload_device(device_id: i32) -> i32;
 }
 
 /// Metadata describing a CUDA device.
@@ -432,6 +433,26 @@ impl CudaMeshAnalyzer {
     pub fn get_device_info() -> Option<CudaDeviceInfo> {
         let devices = Self::get_all_devices();
         devices.into_iter().max_by_key(|d| d.multi_processor_count)
+    }
+
+    /// Preloads CUDA driver context, compiles PTX kernels, and allocates initial scratchpad memory on the targeted GPU.
+    pub fn preload(&self) -> bool {
+        let dev = self.device_id.unwrap_or_else(|| {
+            Self::get_device_info().map(|d| d.device_id).unwrap_or(0)
+        });
+        unsafe { truck_cuda_preload_device(dev) == 0 }
+    }
+
+    /// Preloads CUDA driver contexts, compiles PTX kernels, and allocates initial scratchpad memory across all detected GPUs.
+    pub fn preload_all() -> usize {
+        let count = Self::get_device_count();
+        let mut preloaded = 0;
+        for i in 0..count as i32 {
+            if unsafe { truck_cuda_preload_device(i) } == 0 {
+                preloaded += 1;
+            }
+        }
+        preloaded
     }
 
     /// Extracts triangles from a polygon mesh into GPU triangle format.

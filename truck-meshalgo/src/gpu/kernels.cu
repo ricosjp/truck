@@ -4685,4 +4685,28 @@ int truck_cuda_get_device_info(
     );
 }
 
+int truck_cuda_preload_device(int device_id) {
+    int count = 0;
+    if (cudaGetDeviceCount(&count) != cudaSuccess || device_id < 0 || device_id >= count || device_id >= TRUCK_MAX_CUDA_DEVICES) {
+        return -1;
+    }
+    if (cudaSetDevice(device_id) != cudaSuccess) {
+        return -1;
+    }
+    t_device_explicitly_set = true;
+    ensure_driver_ptx_loaded();
+
+    {
+        std::lock_guard<std::mutex> lock(g_dist_mutex[device_id]);
+        get_dist_scratch(1024 * 1024);
+    }
+    {
+        std::lock_guard<std::mutex> lock(g_cross_mutex[device_id]);
+        get_cross_scratch(1024 * 1024);
+    }
+
+    cudaDeviceSynchronize();
+    return 0;
+}
+
 } // extern "C"
