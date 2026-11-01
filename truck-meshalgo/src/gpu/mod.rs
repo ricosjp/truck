@@ -66,6 +66,34 @@ struct SsiUniforms {
     _pad1: u32,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+struct ExtractPlanesUniforms {
+    num_faces: u32,
+    tol: f32,
+    _pad0: u32,
+    _pad1: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+struct SubdivideUniforms {
+    num_triangles: u32,
+    _pad: [u32; 3],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+struct NurbsUniforms {
+    num_u_knots: u32,
+    num_v_knots: u32,
+    u_degree: u32,
+    v_degree: u32,
+    cp_stride_v: u32,
+    num_points: u32,
+    _pad: [u32; 2],
+}
+
 /// GPU-compatible sample point representation for B-spline surfaces.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
@@ -908,6 +936,551 @@ fn main(
 }
 "#;
 
+const EXTRACT_PLANES_SHADER: &str = r#"
+struct ExtractPlanesUniforms {
+    num_faces: u32,
+    tol: f32,
+    _pad0: u32,
+    _pad1: u32,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: ExtractPlanesUniforms;
+@group(0) @binding(1) var<storage, read> face_offsets: array<u32>;
+@group(0) @binding(2) var<storage, read> face_positions: array<vec4<f32>>;
+@group(0) @binding(3) var<storage, read> face_normals: array<vec4<f32>>;
+@group(0) @binding(4) var<storage, read_write> counts: array<atomic<u32>>;
+@group(0) @binding(5) var<storage, read_write> planar_indices: array<u32>;
+@group(0) @binding(6) var<storage, read_write> other_indices: array<u32>;
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    if (idx >= uniforms.num_faces) {
+        return;
+    }
+
+    let start = face_offsets[idx];
+    let end = face_offsets[idx + 1u];
+    let count = end - start;
+    if (count < 3u) {
+        let slot = atomicAdd(&counts[1], 1u);
+        other_indices[slot] = idx;
+        return;
+    }
+
+    var normal_sum = vec3<f32>(0.0);
+    if (count == 3u) {
+        let p0 = face_positions[start].xyz;
+        let p1 = face_positions[start + 1u].xyz;
+        let p2 = face_positions[start + 2u].xyz;
+        normal_sum = cross(p1 - p0, p2 - p0);
+    } else {
+        for (var k = 0u; k < count; k = k + 1u) {
+            let pk = face_positions[start + k].xyz;
+            let next_idx = start + ((k + 1u) % count);
+            let pnext = face_positions[next_idx].xyz;
+            normal_sum = normal_sum + cross(pk, pnext);
+        }
+    }
+
+    let len2 = dot(normal_sum, normal_sum);
+    var is_planar = false;
+    if (len2 > 1.0e-12) {
+        let fn_norm = normalize(normal_sum);
+        let tol2 = uniforms.tol * uniforms.tol;
+
+        for (var k = 0u; k < count; k = k + 1u) {
+            let vn = face_normals[start + k];
+            if (vn.w > 0.5) {
+                let diff = fn_norm - vn.xyz;
+                if (dot(diff, diff) < tol2) {
+                    is_planar = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (is_planar) {
+        let slot = atomicAdd(&counts[0], 1u);
+        planar_indices[slot] = idx;
+    } else {
+        let slot = atomicAdd(&counts[1], 1u);
+        other_indices[slot] = idx;
+    }
+}
+"#;
+
+const SUBDIVIDE_SHADER: &str = r#"
+struct SubdivideUniforms {
+    num_triangles: u32,
+    _pad0: u32,
+    _pad1: u32,
+    _pad2: u32,
+};
+
+struct GpuTriangle {
+    v0: vec4<f32>,
+    v1: vec4<f32>,
+    v2: vec4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: SubdivideUniforms;
+@group(0) @binding(1) var<storage, read> in_triangles: array<GpuTriangle>;
+@group(0) @binding(2) var<storage, read_write> out_triangles: array<GpuTriangle>;
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    if (idx >= uniforms.num_triangles) {
+        return;
+    }
+
+    let tri = in_triangles[idx];
+    let v0 = tri.v0;
+    let v1 = tri.v1;
+    let v2 = tri.v2;
+
+    let m01 = vec4<f32>((v0.xyz + v1.xyz) * 0.5, 0.0);
+    let m12 = vec4<f32>((v1.xyz + v2.xyz) * 0.5, 0.0);
+    let m20 = vec4<f32>((v2.xyz + v0.xyz) * 0.5, 0.0);
+
+    let out_base = idx * 4u;
+    out_triangles[out_base + 0u] = GpuTriangle(v0, m01, m20);
+    out_triangles[out_base + 1u] = GpuTriangle(v1, m12, m01);
+    out_triangles[out_base + 2u] = GpuTriangle(v2, m20, m12);
+    out_triangles[out_base + 3u] = GpuTriangle(m01, m12, m20);
+}
+"#;
+
+const NURBS_SURFACE_SHADER: &str = r#"
+struct NurbsUniforms {
+    num_u_knots: u32,
+    num_v_knots: u32,
+    u_degree: u32,
+    v_degree: u32,
+    cp_stride_v: u32,
+    num_points: u32,
+    _pad0: u32,
+    _pad1: u32,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: NurbsUniforms;
+@group(0) @binding(1) var<storage, read> u_knots: array<f32>;
+@group(0) @binding(2) var<storage, read> v_knots: array<f32>;
+@group(0) @binding(3) var<storage, read> control_points: array<vec4<f32>>;
+@group(0) @binding(4) var<storage, read> uv_points: array<vec2<f32>>;
+@group(0) @binding(5) var<storage, read_write> out_points: array<vec4<f32>>;
+@group(0) @binding(6) var<storage, read_write> out_normals: array<vec4<f32>>;
+
+fn inv_or_zero(delta: f32) -> f32 {
+    if (abs(delta) > 1.0e-7) {
+        return 1.0 / delta;
+    }
+    return 0.0;
+}
+
+struct BasisResult {
+    base: u32,
+    len: u32,
+    vals: array<f32, 16>,
+};
+
+fn bspline_basis_u(t: f32, degree: u32, der_rank: u32) -> BasisResult {
+    var res: BasisResult;
+    let n = uniforms.num_u_knots - 1u;
+
+    var idx = 0u;
+    while (idx < n && u_knots[idx + 1u] <= t) {
+        idx = idx + 1u;
+    }
+    if (idx == n) {
+        var mult = 0u;
+        var k = n;
+        loop {
+            if (abs(u_knots[k] - u_knots[n]) < 1.0e-7) {
+                mult = mult + 1u;
+            } else {
+                break;
+            }
+            if (k == 0u) { break; }
+            k = k - 1u;
+        }
+        idx = n - mult;
+    }
+
+    var global_base = 0u;
+    if (idx >= degree) {
+        global_base = idx - degree;
+    }
+    res.base = global_base;
+
+    var eval: array<f32, 16>;
+    for (var i = 0u; i < 16u; i = i + 1u) {
+        eval[i] = 0.0;
+    }
+    eval[idx - global_base] = 1.0;
+
+    if (degree >= der_rank) {
+        let k_limit_1 = degree - der_rank;
+        for (var k = 1u; k <= k_limit_1; k = k + 1u) {
+            var base = 0u;
+            if (idx >= k) {
+                base = idx - k;
+            }
+            let delta = u_knots[base + k] - u_knots[base];
+            var a = inv_or_zero(delta) * (t - u_knots[base]);
+            var max_i = idx;
+            if ((n - k - 1u) < max_i) {
+                max_i = n - k - 1u;
+            }
+            for (var i = base; i <= max_i; i = i + 1u) {
+                let delta2 = u_knots[i + k + 1u] - u_knots[i + 1u];
+                let b = inv_or_zero(delta2) * (u_knots[i + k + 1u] - t);
+                let j = i - global_base;
+                eval[j] = a * eval[j] + b * eval[j + 1u];
+                a = 1.0 - b;
+            }
+        }
+    }
+
+    let k_start_2 = degree - der_rank + 1u;
+    if (k_start_2 <= degree) {
+        for (var k = k_start_2; k <= degree; k = k + 1u) {
+            var base = 0u;
+            if (idx >= k) {
+                base = idx - k;
+            }
+            let delta = u_knots[base + k] - u_knots[base];
+            var a = inv_or_zero(delta);
+            var max_i = idx;
+            if ((n - k - 1u) < max_i) {
+                max_i = n - k - 1u;
+            }
+            for (var i = base; i <= max_i; i = i + 1u) {
+                let delta2 = u_knots[i + k + 1u] - u_knots[i + 1u];
+                let b = inv_or_zero(delta2);
+                let j = i - global_base;
+                eval[j] = (a * eval[j] - b * eval[j + 1u]) * f32(k);
+                a = b;
+            }
+        }
+    }
+
+    var len = degree + 1u;
+    if ((n - degree - global_base) < len) {
+        len = n - degree - global_base;
+    }
+    res.len = len;
+    for (var i = 0u; i < len; i = i + 1u) {
+        res.vals[i] = eval[i];
+    }
+    return res;
+}
+
+fn bspline_basis_v(t: f32, degree: u32, der_rank: u32) -> BasisResult {
+    var res: BasisResult;
+    let n = uniforms.num_v_knots - 1u;
+
+    var idx = 0u;
+    while (idx < n && v_knots[idx + 1u] <= t) {
+        idx = idx + 1u;
+    }
+    if (idx == n) {
+        var mult = 0u;
+        var k = n;
+        loop {
+            if (abs(v_knots[k] - v_knots[n]) < 1.0e-7) {
+                mult = mult + 1u;
+            } else {
+                break;
+            }
+            if (k == 0u) { break; }
+            k = k - 1u;
+        }
+        idx = n - mult;
+    }
+
+    var global_base = 0u;
+    if (idx >= degree) {
+        global_base = idx - degree;
+    }
+    res.base = global_base;
+
+    var eval: array<f32, 16>;
+    for (var i = 0u; i < 16u; i = i + 1u) {
+        eval[i] = 0.0;
+    }
+    eval[idx - global_base] = 1.0;
+
+    if (degree >= der_rank) {
+        let k_limit_1 = degree - der_rank;
+        for (var k = 1u; k <= k_limit_1; k = k + 1u) {
+            var base = 0u;
+            if (idx >= k) {
+                base = idx - k;
+            }
+            let delta = v_knots[base + k] - v_knots[base];
+            var a = inv_or_zero(delta) * (t - v_knots[base]);
+            var max_i = idx;
+            if ((n - k - 1u) < max_i) {
+                max_i = n - k - 1u;
+            }
+            for (var i = base; i <= max_i; i = i + 1u) {
+                let delta2 = v_knots[i + k + 1u] - v_knots[i + 1u];
+                let b = inv_or_zero(delta2) * (v_knots[i + k + 1u] - t);
+                let j = i - global_base;
+                eval[j] = a * eval[j] + b * eval[j + 1u];
+                a = 1.0 - b;
+            }
+        }
+    }
+
+    let k_start_2 = degree - der_rank + 1u;
+    if (k_start_2 <= degree) {
+        for (var k = k_start_2; k <= degree; k = k + 1u) {
+            var base = 0u;
+            if (idx >= k) {
+                base = idx - k;
+            }
+            let delta = v_knots[base + k] - v_knots[base];
+            var a = inv_or_zero(delta);
+            var max_i = idx;
+            if ((n - k - 1u) < max_i) {
+                max_i = n - k - 1u;
+            }
+            for (var i = base; i <= max_i; i = i + 1u) {
+                let delta2 = v_knots[i + k + 1u] - v_knots[i + 1u];
+                let b = inv_or_zero(delta2);
+                let j = i - global_base;
+                eval[j] = (a * eval[j] - b * eval[j + 1u]) * f32(k);
+                a = b;
+            }
+        }
+    }
+
+    var len = degree + 1u;
+    if ((n - degree - global_base) < len) {
+        len = n - degree - global_base;
+    }
+    res.len = len;
+    for (var i = 0u; i < len; i = i + 1u) {
+        res.vals[i] = eval[i];
+    }
+    return res;
+}
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    if (idx >= uniforms.num_points) { return; }
+
+    let uv = uv_points[idx];
+
+    let bu = bspline_basis_u(uv.x, uniforms.u_degree, 0u);
+    let dbu = bspline_basis_u(uv.x, uniforms.u_degree, 1u);
+
+    let bv = bspline_basis_v(uv.y, uniforms.v_degree, 0u);
+    let dbv = bspline_basis_v(uv.y, uniforms.v_degree, 1u);
+
+    var pt = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    var Su_h = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    var Sv_h = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+
+    for (var i = 0u; i < bu.len; i = i + 1u) {
+        let nu = bu.vals[i];
+        let dnu = dbu.vals[i];
+        let ui = bu.base + i;
+
+        for (var j = 0u; j < bv.len; j = j + 1u) {
+            let nv = bv.vals[j];
+            let dnv = dbv.vals[j];
+            let vj = bv.base + j;
+
+            let cp = control_points[ui * uniforms.cp_stride_v + vj];
+
+            let w = nu * nv;
+            pt = pt + cp * w;
+
+            let wu = dnu * nv;
+            Su_h = Su_h + cp * wu;
+
+            let wv = nu * dnv;
+            Sv_h = Sv_h + cp * wv;
+        }
+    }
+
+    var inv_w = 1.0;
+    if (abs(pt.w) > 1.0e-7) {
+        inv_w = 1.0 / pt.w;
+    }
+    let S = pt.xyz * inv_w;
+
+    let Su = (Su_h.xyz - Su_h.w * S) * inv_w;
+    let Sv = (Sv_h.xyz - Sv_h.w * S) * inv_w;
+
+    let cross_prod = cross(Su, Sv);
+    let nor_len2 = dot(cross_prod, cross_prod);
+    var nor = vec3<f32>(0.0, 0.0, 0.0);
+    if (nor_len2 > 1.0e-14) {
+        nor = cross_prod * inverseSqrt(nor_len2);
+    }
+
+    out_points[idx] = vec4<f32>(S.x, S.y, S.z, 1.0);
+    out_normals[idx] = vec4<f32>(nor.x, nor.y, nor.z, 0.0);
+}
+"#;
+
+fn nurbs_layout_entries() -> [BindGroupLayoutEntry; 7] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 4,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 5,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 6,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
+fn extract_planes_layout_entries() -> [BindGroupLayoutEntry; 7] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 4,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 5,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 6,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
 fn distance_layout_entries() -> [BindGroupLayoutEntry; 4] {
     [
         BindGroupLayoutEntry {
@@ -1154,6 +1727,9 @@ pub struct GpuMeshAnalyzer {
     ssi_seeds_engine: ComputeEngine,
     slicing_engine: ComputeEngine,
     volume_cog_engine: ComputeEngine,
+    extract_planes_engine: ComputeEngine,
+    subdivide_engine: ComputeEngine,
+    nurbs_surface_engine: ComputeEngine,
 }
 
 impl GpuMeshAnalyzer {
@@ -1203,6 +1779,15 @@ impl GpuMeshAnalyzer {
         let vol_entries = face_normals_layout_entries();
         let volume_cog_engine = ComputeEngine::new(handler, VOLUME_COG_SHADER, "main", &vol_entries);
 
+        let ep_entries = extract_planes_layout_entries();
+        let extract_planes_engine = ComputeEngine::new(handler, EXTRACT_PLANES_SHADER, "main", &ep_entries);
+
+        let sub_entries = face_normals_layout_entries();
+        let subdivide_engine = ComputeEngine::new(handler, SUBDIVIDE_SHADER, "main", &sub_entries);
+
+        let nurbs_entries = nurbs_layout_entries();
+        let nurbs_surface_engine = ComputeEngine::new(handler, NURBS_SURFACE_SHADER, "main", &nurbs_entries);
+
         Self {
             handler: handler.clone(),
             dist_engine,
@@ -1214,6 +1799,9 @@ impl GpuMeshAnalyzer {
             ssi_seeds_engine,
             slicing_engine,
             volume_cog_engine,
+            extract_planes_engine,
+            subdivide_engine,
+            nurbs_surface_engine,
         }
     }
 
@@ -1814,4 +2402,273 @@ impl GpuMeshAnalyzer {
     pub fn center_of_gravity(&self, mesh: &PolygonMesh) -> Point3 {
         self.mass_properties(mesh).1
     }
+
+    /// Extracts polygons such that their face normal matches their vertex normal within `tol`.
+    pub fn extract_planes(&self, mesh: &PolygonMesh, tol: f64) -> (Vec<usize>, Vec<usize>) {
+        if mesh.faces().is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+        let (offsets, face_pos, face_nor) = prepare_extract_planes_buffers_f32(mesh);
+        let num_faces = mesh.faces().len() as u32;
+
+        let uniform_data = ExtractPlanesUniforms {
+            num_faces,
+            tol: tol as f32,
+            _pad0: 0,
+            _pad1: 0,
+        };
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniform_data],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+        let offset_buf = BufferHandler::storage_from_slice(&offsets, self.handler.device());
+        let pos_buf = BufferHandler::storage_from_slice(&face_pos, self.handler.device());
+        let nor_buf = BufferHandler::storage_from_slice(&face_nor, self.handler.device());
+        let count_buf = BufferHandler::from_slice(
+            &[0u32, 0u32],
+            self.handler.device(),
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        );
+        let planar_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_faces as usize * size_of::<u32>()) as u64,
+        );
+        let other_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_faces as usize * size_of::<u32>()) as u64,
+        );
+
+        let bind_group = self.extract_planes_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            offset_buf.binding_resource(),
+            pos_buf.binding_resource(),
+            nor_buf.binding_resource(),
+            count_buf.binding_resource(),
+            planar_buf.binding_resource(),
+            other_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_faces + 63) / 64, 1, 1);
+        self.extract_planes_engine.dispatch(&bind_group, workgroups);
+
+        let counts: Vec<u32> = count_buf.read_to_vec_block(&self.handler);
+        let p_count = counts[0].min(num_faces) as usize;
+        let o_count = counts[1].min(num_faces) as usize;
+
+        let p_indices: Vec<u32> = planar_buf.read_to_vec_block(&self.handler);
+        let o_indices: Vec<u32> = other_buf.read_to_vec_block(&self.handler);
+
+        let mut planes: Vec<usize> = p_indices[..p_count].iter().map(|&i| i as usize).collect();
+        let mut others: Vec<usize> = o_indices[..o_count].iter().map(|&i| i as usize).collect();
+
+        planes.sort_unstable();
+        others.sort_unstable();
+
+        (planes, others)
+    }
+
+    /// Subdivides triangles into 4-to-1 midpoint-refined triangles on the GPU via Vulkan compute.
+    pub fn subdivide_triangles(&self, triangles: &[GpuTriangle]) -> Vec<GpuTriangle> {
+        if triangles.is_empty() {
+            return Vec::new();
+        }
+        let num_triangles = triangles.len() as u32;
+        let uniforms = SubdivideUniforms {
+            num_triangles,
+            _pad: [0, 0, 0],
+        };
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+        let in_buf = BufferHandler::storage_from_slice(&triangles.to_vec(), self.handler.device());
+        let out_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_triangles as usize * 4 * size_of::<GpuTriangle>()) as u64,
+        );
+
+        let bind_group = self.subdivide_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            in_buf.binding_resource(),
+            out_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_triangles + 63) / 64, 1, 1);
+        self.subdivide_engine.dispatch(&bind_group, workgroups);
+
+        out_buf.read_to_vec_block(&self.handler)
+    }
+
+    /// Generates a 4-to-1 linearly subdivided mesh on the GPU via Vulkan compute.
+    pub fn linear_subdivide(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        let triangles = Self::extract_triangles(mesh);
+        if triangles.is_empty() {
+            return mesh.clone();
+        }
+        let sub_tris = self.subdivide_triangles(&triangles);
+        create_mesh_from_triangles(&sub_tris)
+    }
+
+    /// Evaluates a rational NURBS surface on a batch of `(u, v)` coordinates on the GPU via Vulkan compute.
+    pub fn evaluate_nurbs_surface(
+        &self,
+        u_knots: &[f64],
+        v_knots: &[f64],
+        u_degree: usize,
+        v_degree: usize,
+        control_points: &[Vec<Vector4>],
+        uv_points: &[Point2],
+    ) -> (Vec<Point3>, Vec<Vector3>) {
+        if uv_points.is_empty() || control_points.is_empty() || control_points[0].is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+
+        let num_u_knots = u_knots.len() as u32;
+        let num_v_knots = v_knots.len() as u32;
+        let num_points = uv_points.len() as u32;
+        let cp_stride_v = control_points[0].len() as u32;
+
+        let uniforms = NurbsUniforms {
+            num_u_knots,
+            num_v_knots,
+            u_degree: u_degree as u32,
+            v_degree: v_degree as u32,
+            cp_stride_v,
+            num_points,
+            _pad: [0, 0],
+        };
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+
+        let u_knots_f32: Vec<f32> = u_knots.iter().map(|&x| x as f32).collect();
+        let v_knots_f32: Vec<f32> = v_knots.iter().map(|&x| x as f32).collect();
+
+        let mut flat_cps = Vec::with_capacity(control_points.len() * control_points[0].len());
+        for row in control_points {
+            for pt in row {
+                flat_cps.push([pt.x as f32, pt.y as f32, pt.z as f32, pt.w as f32]);
+            }
+        }
+
+        let uv_f32: Vec<[f32; 2]> = uv_points.iter().map(|p| [p.x as f32, p.y as f32]).collect();
+
+        let u_knots_buf = BufferHandler::storage_from_slice(&u_knots_f32, self.handler.device());
+        let v_knots_buf = BufferHandler::storage_from_slice(&v_knots_f32, self.handler.device());
+        let cps_buf = BufferHandler::storage_from_slice(&flat_cps, self.handler.device());
+        let uv_buf = BufferHandler::storage_from_slice(&uv_f32, self.handler.device());
+
+        let out_pts_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_points as usize * size_of::<[f32; 4]>()) as u64,
+        );
+        let out_nors_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_points as usize * size_of::<[f32; 4]>()) as u64,
+        );
+
+        let bind_group = self.nurbs_surface_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            u_knots_buf.binding_resource(),
+            v_knots_buf.binding_resource(),
+            cps_buf.binding_resource(),
+            uv_buf.binding_resource(),
+            out_pts_buf.binding_resource(),
+            out_nors_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_points + 63) / 64, 1, 1);
+        self.nurbs_surface_engine.dispatch(&bind_group, workgroups);
+
+        let pts_f32: Vec<[f32; 4]> = out_pts_buf.read_to_vec_block(&self.handler);
+        let nors_f32: Vec<[f32; 4]> = out_nors_buf.read_to_vec_block(&self.handler);
+
+        let pts = pts_f32
+            .into_iter()
+            .map(|p| Point3::new(p[0] as f64, p[1] as f64, p[2] as f64))
+            .collect();
+        let nors = nors_f32
+            .into_iter()
+            .map(|n| Vector3::new(n[0] as f64, n[1] as f64, n[2] as f64))
+            .collect();
+
+        (pts, nors)
+    }
+}
+
+/// Helper to construct a PolygonMesh from a slice of GpuTriangles.
+pub fn create_mesh_from_triangles(triangles: &[GpuTriangle]) -> PolygonMesh {
+    use truck_polymesh::{Faces, StandardAttributes};
+    let mut positions = Vec::with_capacity(triangles.len() * 3);
+    let mut tri_faces = Vec::with_capacity(triangles.len());
+    for (i, tri) in triangles.iter().enumerate() {
+        positions.push(Point3::new(tri.v0[0] as f64, tri.v0[1] as f64, tri.v0[2] as f64));
+        positions.push(Point3::new(tri.v1[0] as f64, tri.v1[1] as f64, tri.v1[2] as f64));
+        positions.push(Point3::new(tri.v2[0] as f64, tri.v2[1] as f64, tri.v2[2] as f64));
+        let base = i * 3;
+        tri_faces.push([base.into(), (base + 1).into(), (base + 2).into()]);
+    }
+    PolygonMesh::new(
+        StandardAttributes {
+            positions,
+            ..Default::default()
+        },
+        Faces::from_tri_and_quad_faces(tri_faces, Vec::new()),
+    )
+}
+
+/// Prepares flattened buffers for extract_planes (f64 precision for CUDA).
+pub fn prepare_extract_planes_buffers_f64(mesh: &PolygonMesh) -> (Vec<u32>, Vec<[f64; 3]>, Vec<[f64; 4]>) {
+    let positions = mesh.positions();
+    let normals = mesh.normals();
+    let num_faces = mesh.faces().len();
+    let mut offsets = Vec::with_capacity(num_faces + 1);
+    let mut face_pos = Vec::new();
+    let mut face_nor = Vec::new();
+
+    offsets.push(0u32);
+    for face in mesh.face_iter() {
+        for v in face {
+            let p = positions[v.pos];
+            face_pos.push([p.x, p.y, p.z]);
+            if let Some(nor_idx) = v.nor {
+                let n = normals[nor_idx];
+                face_nor.push([n.x, n.y, n.z, 1.0]);
+            } else {
+                face_nor.push([0.0, 0.0, 0.0, 0.0]);
+            }
+        }
+        offsets.push(face_pos.len() as u32);
+    }
+    (offsets, face_pos, face_nor)
+}
+
+/// Prepares flattened buffers for extract_planes (f32 precision for Vulkan).
+pub fn prepare_extract_planes_buffers_f32(mesh: &PolygonMesh) -> (Vec<u32>, Vec<[f32; 4]>, Vec<[f32; 4]>) {
+    let positions = mesh.positions();
+    let normals = mesh.normals();
+    let num_faces = mesh.faces().len();
+    let mut offsets = Vec::with_capacity(num_faces + 1);
+    let mut face_pos = Vec::new();
+    let mut face_nor = Vec::new();
+
+    offsets.push(0u32);
+    for face in mesh.face_iter() {
+        for v in face {
+            let p = positions[v.pos];
+            face_pos.push([p.x as f32, p.y as f32, p.z as f32, 0.0]);
+            if let Some(nor_idx) = v.nor {
+                let n = normals[nor_idx];
+                face_nor.push([n.x as f32, n.y as f32, n.z as f32, 1.0]);
+            } else {
+                face_nor.push([0.0, 0.0, 0.0, 0.0]);
+            }
+        }
+        offsets.push(face_pos.len() as u32);
+    }
+    (offsets, face_pos, face_nor)
 }

@@ -438,6 +438,8 @@ pub fn run_scaling_microbenchmark() -> DispatchProfile {
         point_cloud_clung: ScalingThresholds::default_fallback(Operation::PointCloudClung),
         point_cloud_include: ScalingThresholds::default_fallback(Operation::PointCloudInclude),
         surface_intersection_seeds: ScalingThresholds::default_fallback(Operation::SurfaceIntersectionSeeds),
+        planar_face_segmentation: ScalingThresholds::default_fallback(Operation::PlanarFaceSegmentation),
+        linear_subdivision: ScalingThresholds::default_fallback(Operation::LinearSubdivision),
     }
 }
 

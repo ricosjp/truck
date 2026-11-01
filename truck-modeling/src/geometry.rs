@@ -161,6 +161,22 @@ impl ParametricSurface3D for Surface {
     fn normal(&self, u: f64, v: f64) -> Vector3 {
         derive_surface_method!(self, ParametricSurface3D::normal, u, v)
     }
+
+    #[inline(always)]
+    fn as_bspline(&self) -> Option<(&[f64], &[f64], usize, usize, &[Vec<Point3>])> {
+        match self {
+            Self::BSplineSurface(s) => s.as_bspline(),
+            _ => None,
+        }
+    }
+
+    #[inline(always)]
+    fn as_nurbs(&self) -> Option<(&[f64], &[f64], usize, usize, &[Vec<Vector4>])> {
+        match self {
+            Self::NurbsSurface(s) => s.as_nurbs(),
+            _ => None,
+        }
+    }
 }
 
 impl Transformed<Matrix4> for Surface {

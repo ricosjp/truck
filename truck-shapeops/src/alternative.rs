@@ -90,6 +90,22 @@ where
     S1: ParametricSurface3D,
 {
     derive_method!(normal, Vector3, u: f64, v: f64);
+
+    #[inline(always)]
+    fn as_bspline(&self) -> Option<(&[f64], &[f64], usize, usize, &[Vec<Point3>])> {
+        match self {
+            Alternative::FirstType(got) => got.as_bspline(),
+            Alternative::SecondType(got) => got.as_bspline(),
+        }
+    }
+
+    #[inline(always)]
+    fn as_nurbs(&self) -> Option<(&[f64], &[f64], usize, usize, &[Vec<Vector4>])> {
+        match self {
+            Alternative::FirstType(got) => got.as_nurbs(),
+            Alternative::SecondType(got) => got.as_nurbs(),
+        }
+    }
 }
 
 impl<C0, C1> Cut for Alternative<C0, C1>

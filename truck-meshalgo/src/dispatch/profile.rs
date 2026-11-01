@@ -50,6 +50,10 @@ pub enum Operation {
     PointCloudInclude,
     /// Surface-surface intersection candidate grid seed finder.
     SurfaceIntersectionSeeds,
+    /// Planar face extraction / segmentation.
+    PlanarFaceSegmentation,
+    /// Triangle linear subdivision / midpoint refinement.
+    LinearSubdivision,
 }
 
 /// Recorded microbenchmark measurement sample.
@@ -134,6 +138,18 @@ impl ScalingThresholds {
                 preferred_gpu: KernelTarget::GpuCuda,
                 sample_timings: Vec::new(),
             },
+            Operation::PlanarFaceSegmentation => Self {
+                cpu_single_max: 32,
+                cpu_rayon_max: 128,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
+            Operation::LinearSubdivision => Self {
+                cpu_single_max: 64,
+                cpu_rayon_max: 256,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
         }
     }
 
@@ -187,6 +203,10 @@ pub struct DispatchProfile {
     pub point_cloud_include: ScalingThresholds,
     /// Thresholds for surface-surface intersection seed finder.
     pub surface_intersection_seeds: ScalingThresholds,
+    /// Thresholds for planar face extraction / segmentation.
+    pub planar_face_segmentation: ScalingThresholds,
+    /// Thresholds for triangle linear subdivision.
+    pub linear_subdivision: ScalingThresholds,
 }
 
 impl Default for DispatchProfile {
@@ -201,6 +221,8 @@ impl Default for DispatchProfile {
             point_cloud_clung: ScalingThresholds::default_fallback(Operation::PointCloudClung),
             point_cloud_include: ScalingThresholds::default_fallback(Operation::PointCloudInclude),
             surface_intersection_seeds: ScalingThresholds::default_fallback(Operation::SurfaceIntersectionSeeds),
+            planar_face_segmentation: ScalingThresholds::default_fallback(Operation::PlanarFaceSegmentation),
+            linear_subdivision: ScalingThresholds::default_fallback(Operation::LinearSubdivision),
         }
     }
 }
@@ -218,6 +240,8 @@ impl DispatchProfile {
             point_cloud_clung: ScalingThresholds::cpu_only(64),
             point_cloud_include: ScalingThresholds::cpu_only(64),
             surface_intersection_seeds: ScalingThresholds::cpu_only(64),
+            planar_face_segmentation: ScalingThresholds::cpu_only(32),
+            linear_subdivision: ScalingThresholds::cpu_only(64),
         }
     }
 
@@ -233,6 +257,8 @@ impl DispatchProfile {
             Operation::PointCloudClung => self.point_cloud_clung.select_kernel(size),
             Operation::PointCloudInclude => self.point_cloud_include.select_kernel(size),
             Operation::SurfaceIntersectionSeeds => self.surface_intersection_seeds.select_kernel(size),
+            Operation::PlanarFaceSegmentation => self.planar_face_segmentation.select_kernel(size),
+            Operation::LinearSubdivision => self.linear_subdivision.select_kernel(size),
         }
     }
 }

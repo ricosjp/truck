@@ -13,6 +13,10 @@ pub trait Subdivision {
     ///
     /// This method does NOT check these conditions.
     fn loop_subdivision(&mut self) -> &mut Self;
+    /// Linear 4-to-1 triangle subdivision (midpoint refinement) in-place.
+    fn linear_subdivision(&mut self) -> &mut Self;
+    /// Linear 4-to-1 triangle subdivision (midpoint refinement), returning a new mesh.
+    fn linear_subdivide(&self) -> PolygonMesh;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -81,6 +85,15 @@ impl Subdivision for PolygonMesh {
             editor.attributes.positions = positions;
             *editor.faces = Faces::from_tri_and_quad_faces(tri_faces, Vec::new());
         }
+        self
+    }
+
+    fn linear_subdivide(&self) -> PolygonMesh {
+        dispatch::Dispatcher::global().linear_subdivide(self)
+    }
+
+    fn linear_subdivision(&mut self) -> &mut Self {
+        *self = self.linear_subdivide();
         self
     }
 }

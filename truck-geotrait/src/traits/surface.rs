@@ -154,6 +154,13 @@ pub trait ParametricSurface3D: ParametricSurface<Point = Point3, Vector = Vector
     fn as_bspline(&self) -> Option<BSplineSurfaceData<'_, Point3>> {
         None
     }
+
+    /// Returns the components of the rational NURBS surface if `self` is a NURBS surface:
+    /// `(u_knots, v_knots, u_degree, v_degree, control_points)`
+    #[inline(always)]
+    fn as_nurbs(&self) -> Option<BSplineSurfaceData<'_, Vector4>> {
+        None
+    }
 }
 
 impl<S: ParametricSurface3D> ParametricSurface3D for &S {
@@ -163,6 +170,10 @@ impl<S: ParametricSurface3D> ParametricSurface3D for &S {
     fn as_bspline(&self) -> Option<BSplineSurfaceData<'_, Point3>> {
         (*self).as_bspline()
     }
+    #[inline(always)]
+    fn as_nurbs(&self) -> Option<BSplineSurfaceData<'_, Vector4>> {
+        (*self).as_nurbs()
+    }
 }
 
 impl<S: ParametricSurface3D> ParametricSurface3D for Box<S> {
@@ -171,6 +182,10 @@ impl<S: ParametricSurface3D> ParametricSurface3D for Box<S> {
     #[inline(always)]
     fn as_bspline(&self) -> Option<BSplineSurfaceData<'_, Point3>> {
         (**self).as_bspline()
+    }
+    #[inline(always)]
+    fn as_nurbs(&self) -> Option<BSplineSurfaceData<'_, Vector4>> {
+        (**self).as_nurbs()
     }
 }
 

@@ -247,3 +247,32 @@ fn test_cache_hit_vs_miss_timing() {
 
     let _ = std::fs::remove_file(&temp_cache_file);
 }
+
+#[test]
+fn test_dispatcher_nurbs_surface_evaluation() {
+    let dispatcher = Dispatcher::global();
+    let uknot_vec = vec![0.0, 0.0, 1.0, 1.0];
+    let vknot_vec = vec![0.0, 0.0, 1.0, 1.0];
+    let ctrl_pts = vec![
+        vec![Vector4::new(0.0, 0.0, 0.0, 1.0), Vector4::new(0.0, 1.0, 0.0, 1.0)],
+        vec![Vector4::new(1.0, 0.0, 0.0, 1.0), Vector4::new(1.0, 1.0, 1.0, 2.0)],
+    ];
+    let mut uv_points = Vec::new();
+    for &u in &[0.25, 0.5, 0.75] {
+        for &v in &[0.25, 0.5, 0.75] {
+            uv_points.push(Point2::new(u, v));
+        }
+    }
+    let (pts, normals) = dispatcher.evaluate_nurbs_surface(&uknot_vec, &vknot_vec, 1, 1, &ctrl_pts, &uv_points);
+    assert_eq!(pts.len(), 9);
+    assert_eq!(normals.len(), 9);
+
+    dispatcher.set_override(Some(KernelTarget::CpuSingle));
+    let (cpu_pts, cpu_normals) = dispatcher.evaluate_nurbs_surface(&uknot_vec, &vknot_vec, 1, 1, &ctrl_pts, &uv_points);
+    dispatcher.reset_override();
+
+    for i in 0..9 {
+        assert!((pts[i] - cpu_pts[i]).magnitude2() < 1e-10);
+        assert!((normals[i] - cpu_normals[i]).magnitude2() < 1e-10);
+    }
+}

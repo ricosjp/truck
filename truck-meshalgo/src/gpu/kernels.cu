@@ -1980,6 +1980,185 @@ int truck_cuda_evaluate_bspline_surface_f64(
     return 0;
 }
 
+extern "C" __global__ void truck_cuda_evaluate_nurbs_surface_f64_kernel(
+    const double* __restrict__ u_knots,
+    unsigned int num_u_knots,
+    const double* __restrict__ v_knots,
+    unsigned int num_v_knots,
+    unsigned int u_degree,
+    unsigned int v_degree,
+    const double4* __restrict__ control_points,
+    unsigned int cp_stride_v,
+    const double2* __restrict__ uv_points,
+    unsigned int num_points,
+    double4* __restrict__ out_points,
+    double4* __restrict__ out_normals
+) {
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_points) return;
+
+    double2 uv = uv_points[idx];
+
+    double Nu[16], dNu[16];
+    double Nv[16], dNv[16];
+    int u_len = 0, u_der_len = 0;
+    int v_len = 0, v_der_len = 0;
+
+    int u_base = truck_cuda_bspline_basis_functions_f64(uv.x, (int)u_degree, 0, u_knots, (int)num_u_knots, Nu, &u_len);
+    truck_cuda_bspline_basis_functions_f64(uv.x, (int)u_degree, 1, u_knots, (int)num_u_knots, dNu, &u_der_len);
+
+    int v_base = truck_cuda_bspline_basis_functions_f64(uv.y, (int)v_degree, 0, v_knots, (int)num_v_knots, Nv, &v_len);
+    truck_cuda_bspline_basis_functions_f64(uv.y, (int)v_degree, 1, v_knots, (int)num_v_knots, dNv, &v_der_len);
+
+    double4 pt = make_double4(0.0, 0.0, 0.0, 0.0);
+    double4 Su_h = make_double4(0.0, 0.0, 0.0, 0.0);
+    double4 Sv_h = make_double4(0.0, 0.0, 0.0, 0.0);
+
+    for (int i = 0; i < u_len; ++i) {
+        double nu = Nu[i];
+        double dnu = dNu[i];
+        int ui = u_base + i;
+        const double4* cp_row = &control_points[ui * cp_stride_v];
+
+        for (int j = 0; j < v_len; ++j) {
+            double nv = Nv[j];
+            double dnv = dNv[j];
+            int vj = v_base + j;
+
+            double4 cp = cp_row[vj];
+
+            double w = nu * nv;
+            pt.x += cp.x * w;
+            pt.y += cp.y * w;
+            pt.z += cp.z * w;
+            pt.w += cp.w * w;
+
+            double wu = dnu * nv;
+            Su_h.x += cp.x * wu;
+            Su_h.y += cp.y * wu;
+            Su_h.z += cp.z * wu;
+            Su_h.w += cp.w * wu;
+
+            double wv = nu * dnv;
+            Sv_h.x += cp.x * wv;
+            Sv_h.y += cp.y * wv;
+            Sv_h.z += cp.z * wv;
+            Sv_h.w += cp.w * wv;
+        }
+    }
+
+    double inv_w = (fabs(pt.w) > 1.0e-14) ? (1.0 / pt.w) : 1.0;
+    double3 S = make_double3(pt.x * inv_w, pt.y * inv_w, pt.z * inv_w);
+
+    double3 Su = make_double3(
+        (Su_h.x - Su_h.w * S.x) * inv_w,
+        (Su_h.y - Su_h.w * S.y) * inv_w,
+        (Su_h.z - Su_h.w * S.z) * inv_w
+    );
+
+    double3 Sv = make_double3(
+        (Sv_h.x - Sv_h.w * S.x) * inv_w,
+        (Sv_h.y - Sv_h.w * S.y) * inv_w,
+        (Sv_h.z - Sv_h.w * S.z) * inv_w
+    );
+
+    double3 nor = normalize_safe_d(cross_product_d(Su, Sv));
+
+    out_points[idx] = make_double4(S.x, S.y, S.z, 1.0);
+    out_normals[idx] = make_double4(nor.x, nor.y, nor.z, 0.0);
+}
+
+int truck_cuda_evaluate_nurbs_surface_f64(
+    const double* h_u_knots,
+    unsigned int num_u_knots,
+    const double* h_v_knots,
+    unsigned int num_v_knots,
+    unsigned int u_degree,
+    unsigned int v_degree,
+    const double* h_control_points,
+    unsigned int cp_stride_v,
+    const double* h_uv_points,
+    unsigned int num_points,
+    double* h_out_points,
+    double* h_out_normals
+) {
+    if (num_points == 0) return 0;
+    ensure_best_device();
+
+    unsigned int u_ctrl = num_u_knots - 1 - u_degree;
+    size_t u_knot_bytes = num_u_knots * sizeof(double);
+    size_t v_knot_bytes = num_v_knots * sizeof(double);
+    size_t cp_bytes = u_ctrl * cp_stride_v * sizeof(double4);
+    size_t uv_bytes = num_points * sizeof(double2);
+    size_t out_bytes = num_points * sizeof(double4);
+
+    double* d_u_knots = NULL;
+    double* d_v_knots = NULL;
+    double4* d_control_points = NULL;
+    double2* d_uv_points = NULL;
+    double4* d_out_points = NULL;
+    double4* d_out_normals = NULL;
+
+    if (cudaMalloc(&d_u_knots, u_knot_bytes) != cudaSuccess) return -1;
+    if (cudaMalloc(&d_v_knots, v_knot_bytes) != cudaSuccess) {
+        cudaFree(d_u_knots);
+        return -2;
+    }
+    if (cudaMalloc(&d_control_points, cp_bytes) != cudaSuccess) {
+        cudaFree(d_u_knots);
+        cudaFree(d_v_knots);
+        return -3;
+    }
+    if (cudaMalloc(&d_uv_points, uv_bytes) != cudaSuccess) {
+        cudaFree(d_u_knots);
+        cudaFree(d_v_knots);
+        cudaFree(d_control_points);
+        return -4;
+    }
+    if (cudaMalloc(&d_out_points, out_bytes) != cudaSuccess) {
+        cudaFree(d_u_knots);
+        cudaFree(d_v_knots);
+        cudaFree(d_control_points);
+        cudaFree(d_uv_points);
+        return -5;
+    }
+    if (cudaMalloc(&d_out_normals, out_bytes) != cudaSuccess) {
+        cudaFree(d_u_knots);
+        cudaFree(d_v_knots);
+        cudaFree(d_control_points);
+        cudaFree(d_uv_points);
+        cudaFree(d_out_points);
+        return -6;
+    }
+
+    cudaMemcpy(d_u_knots, h_u_knots, u_knot_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_v_knots, h_v_knots, v_knot_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_control_points, h_control_points, cp_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_uv_points, h_uv_points, uv_bytes, cudaMemcpyHostToDevice);
+
+    unsigned int block_size = 256;
+    unsigned int grid_size = (num_points + block_size - 1) / block_size;
+    truck_cuda_evaluate_nurbs_surface_f64_kernel<<<grid_size, block_size>>>(
+        d_u_knots, num_u_knots, d_v_knots, num_v_knots,
+        u_degree, v_degree,
+        d_control_points, cp_stride_v,
+        d_uv_points, num_points,
+        d_out_points, d_out_normals
+    );
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(h_out_points, d_out_points, out_bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_out_normals, d_out_normals, out_bytes, cudaMemcpyDeviceToHost);
+
+    cudaFree(d_u_knots);
+    cudaFree(d_v_knots);
+    cudaFree(d_control_points);
+    cudaFree(d_uv_points);
+    cudaFree(d_out_points);
+    cudaFree(d_out_normals);
+    return 0;
+}
+
 // ============================================================================
 // Point Cloud Conformance (is_clung_to_by & neighborhood_include)
 // ============================================================================
@@ -2721,6 +2900,256 @@ int truck_cuda_mesh_volume_cog(
 
     cudaFree(d_triangles);
     cudaFree(d_accum);
+    return 0;
+}
+
+// ============================================================================
+// Planar Face Segmentation (extract_planes) & Linear Subdivision
+// ============================================================================
+
+extern "C" __global__ void truck_cuda_extract_planes_kernel(
+    const double3* __restrict__ face_positions,
+    const double4* __restrict__ face_normals,
+    const unsigned int* __restrict__ face_offsets,
+    unsigned int num_faces,
+    double tol,
+    unsigned int* __restrict__ d_out_planar_count,
+    unsigned int* __restrict__ d_out_planar_indices,
+    unsigned int* __restrict__ d_out_other_count,
+    unsigned int* __restrict__ d_out_other_indices
+) {
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    bool is_planar = false;
+    bool valid = (idx < num_faces);
+
+    if (valid) {
+        unsigned int start = face_offsets[idx];
+        unsigned int end = face_offsets[idx + 1];
+        unsigned int count = end - start;
+
+        if (count >= 3) {
+            double3 normal_sum = make_double3(0.0, 0.0, 0.0);
+            if (count == 3) {
+                double3 p0 = face_positions[start];
+                double3 p1 = face_positions[start + 1];
+                double3 p2 = face_positions[start + 2];
+                normal_sum = cross_product_f64(sub_f64(p1, p0), sub_f64(p2, p0));
+            } else {
+                for (unsigned int k = 0; k < count; ++k) {
+                    double3 pk = face_positions[start + k];
+                    double3 pnext = face_positions[start + ((k + 1) % count)];
+                    double3 c = cross_product_f64(pk, pnext);
+                    normal_sum = add_f64(normal_sum, c);
+                }
+            }
+
+            double len2 = dot_product_f64(normal_sum, normal_sum);
+            if (len2 > 1.0e-24) {
+                double inv_len = rsqrt(len2);
+                double3 fn = mul_f64(normal_sum, inv_len);
+                double tol2 = tol * tol;
+
+                for (unsigned int k = 0; k < count; ++k) {
+                    double4 vn = face_normals[start + k];
+                    if (vn.w > 0.5) { // vertex has a normal
+                        double3 diff = make_double3(fn.x - vn.x, fn.y - vn.y, fn.z - vn.z);
+                        if (dot_product_f64(diff, diff) < tol2) {
+                            is_planar = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Warp-aggregated atomics for planar indices
+    unsigned int planar_mask = __ballot_sync(0xffffffff, is_planar);
+    if (is_planar) {
+        int lane = threadIdx.x & 31;
+        int rank = __popc(planar_mask & ((1u << lane) - 1));
+        int leader = __ffs(planar_mask) - 1;
+        int base = 0;
+        if (lane == leader) {
+            int c = __popc(planar_mask);
+            base = atomicAdd(d_out_planar_count, c);
+        }
+        base = __shfl_sync(planar_mask, base, leader);
+        if (d_out_planar_indices) {
+            d_out_planar_indices[base + rank] = idx;
+        }
+    }
+
+    // Warp-aggregated atomics for non-planar (remaining) indices
+    bool is_other = valid && !is_planar;
+    unsigned int other_mask = __ballot_sync(0xffffffff, is_other);
+    if (is_other) {
+        int lane = threadIdx.x & 31;
+        int rank = __popc(other_mask & ((1u << lane) - 1));
+        int leader = __ffs(other_mask) - 1;
+        int base = 0;
+        if (lane == leader) {
+            int c = __popc(other_mask);
+            base = atomicAdd(d_out_other_count, c);
+        }
+        base = __shfl_sync(other_mask, base, leader);
+        if (d_out_other_indices) {
+            d_out_other_indices[base + rank] = idx;
+        }
+    }
+}
+
+int truck_cuda_extract_planes(
+    const double* h_face_positions,
+    const double* h_face_normals,
+    const unsigned int* h_face_offsets,
+    unsigned int num_faces,
+    unsigned int total_vertices,
+    double tol,
+    unsigned int* h_planar_count,
+    unsigned int* h_planar_indices,
+    unsigned int* h_other_count,
+    unsigned int* h_other_indices
+) {
+    if (num_faces == 0) {
+        if (h_planar_count) *h_planar_count = 0;
+        if (h_other_count) *h_other_count = 0;
+        return 0;
+    }
+    ensure_best_device();
+
+    double3* d_positions = NULL;
+    double4* d_normals = NULL;
+    unsigned int* d_offsets = NULL;
+    unsigned int* d_planar_count = NULL;
+    unsigned int* d_planar_indices = NULL;
+    unsigned int* d_other_count = NULL;
+    unsigned int* d_other_indices = NULL;
+
+    size_t pos_bytes = (size_t)total_vertices * sizeof(double3);
+    size_t nor_bytes = (size_t)total_vertices * sizeof(double4);
+    size_t off_bytes = (size_t)(num_faces + 1) * sizeof(unsigned int);
+    size_t idx_bytes = (size_t)num_faces * sizeof(unsigned int);
+
+    if (cudaMalloc(&d_positions, pos_bytes) != cudaSuccess) return -1;
+    if (cudaMalloc(&d_normals, nor_bytes) != cudaSuccess) { cudaFree(d_positions); return -2; }
+    if (cudaMalloc(&d_offsets, off_bytes) != cudaSuccess) { cudaFree(d_positions); cudaFree(d_normals); return -3; }
+    if (cudaMalloc(&d_planar_count, sizeof(unsigned int)) != cudaSuccess) { cudaFree(d_positions); cudaFree(d_normals); cudaFree(d_offsets); return -4; }
+    if (cudaMalloc(&d_planar_indices, idx_bytes) != cudaSuccess) { cudaFree(d_positions); cudaFree(d_normals); cudaFree(d_offsets); cudaFree(d_planar_count); return -5; }
+    if (cudaMalloc(&d_other_count, sizeof(unsigned int)) != cudaSuccess) { cudaFree(d_positions); cudaFree(d_normals); cudaFree(d_offsets); cudaFree(d_planar_count); cudaFree(d_planar_indices); return -6; }
+    if (cudaMalloc(&d_other_indices, idx_bytes) != cudaSuccess) { cudaFree(d_positions); cudaFree(d_normals); cudaFree(d_offsets); cudaFree(d_planar_count); cudaFree(d_planar_indices); cudaFree(d_other_count); return -7; }
+
+    cudaMemset(d_planar_count, 0, sizeof(unsigned int));
+    cudaMemset(d_other_count, 0, sizeof(unsigned int));
+
+    cudaMemcpy(d_positions, h_face_positions, pos_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_normals, h_face_normals, nor_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_offsets, h_face_offsets, off_bytes, cudaMemcpyHostToDevice);
+
+    unsigned int block_size = 256;
+    unsigned int grid_size = (num_faces + block_size - 1) / block_size;
+
+    truck_cuda_extract_planes_kernel<<<grid_size, block_size>>>(
+        d_positions,
+        d_normals,
+        d_offsets,
+        num_faces,
+        tol,
+        d_planar_count,
+        d_planar_indices,
+        d_other_count,
+        d_other_indices
+    );
+    cudaDeviceSynchronize();
+
+    unsigned int p_count = 0;
+    unsigned int o_count = 0;
+    cudaMemcpy(&p_count, d_planar_count, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&o_count, d_other_count, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+
+    if (h_planar_count) *h_planar_count = p_count;
+    if (h_other_count) *h_other_count = o_count;
+
+    if (h_planar_indices && p_count > 0) {
+        cudaMemcpy(h_planar_indices, d_planar_indices, p_count * sizeof(unsigned int), cudaMemcpyDeviceToHost);
+    }
+    if (h_other_indices && o_count > 0) {
+        cudaMemcpy(h_other_indices, d_other_indices, o_count * sizeof(unsigned int), cudaMemcpyDeviceToHost);
+    }
+
+    cudaFree(d_positions);
+    cudaFree(d_normals);
+    cudaFree(d_offsets);
+    cudaFree(d_planar_count);
+    cudaFree(d_planar_indices);
+    cudaFree(d_other_count);
+    cudaFree(d_other_indices);
+
+    return 0;
+}
+
+extern "C" __global__ void truck_cuda_subdivide_triangles_kernel(
+    const GpuTriangle* __restrict__ in_triangles,
+    unsigned int num_triangles,
+    GpuTriangle* __restrict__ out_triangles
+) {
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_triangles) return;
+
+    GpuTriangle tri = in_triangles[idx];
+    float4 v0 = tri.v0;
+    float4 v1 = tri.v1;
+    float4 v2 = tri.v2;
+
+    float4 m01 = make_float4((v0.x + v1.x) * 0.5f, (v0.y + v1.y) * 0.5f, (v0.z + v1.z) * 0.5f, 0.0f);
+    float4 m12 = make_float4((v1.x + v2.x) * 0.5f, (v1.y + v2.y) * 0.5f, (v1.z + v2.z) * 0.5f, 0.0f);
+    float4 m20 = make_float4((v2.x + v0.x) * 0.5f, (v2.y + v0.y) * 0.5f, (v2.z + v0.z) * 0.5f, 0.0f);
+
+    unsigned int out_base = idx * 4;
+    GpuTriangle t0 = { v0, m01, m20 };
+    GpuTriangle t1 = { v1, m12, m01 };
+    GpuTriangle t2 = { v2, m20, m12 };
+    GpuTriangle t3 = { m01, m12, m20 };
+
+    out_triangles[out_base + 0] = t0;
+    out_triangles[out_base + 1] = t1;
+    out_triangles[out_base + 2] = t2;
+    out_triangles[out_base + 3] = t3;
+}
+
+int truck_cuda_subdivide_triangles(
+    const float* h_in_triangles,
+    unsigned int num_triangles,
+    float* h_out_triangles
+) {
+    if (num_triangles == 0) return 0;
+    ensure_best_device();
+
+    size_t in_bytes = (size_t)num_triangles * sizeof(GpuTriangle);
+    size_t out_bytes = (size_t)num_triangles * 4 * sizeof(GpuTriangle);
+
+    GpuTriangle* d_in = NULL;
+    GpuTriangle* d_out = NULL;
+
+    if (cudaMalloc(&d_in, in_bytes) != cudaSuccess) return -1;
+    if (cudaMalloc(&d_out, out_bytes) != cudaSuccess) { cudaFree(d_in); return -2; }
+
+    cudaMemcpy(d_in, h_in_triangles, in_bytes, cudaMemcpyHostToDevice);
+
+    unsigned int block_size = 256;
+    unsigned int grid_size = (num_triangles + block_size - 1) / block_size;
+
+    truck_cuda_subdivide_triangles_kernel<<<grid_size, block_size>>>(
+        d_in, num_triangles, d_out
+    );
+    cudaDeviceSynchronize();
+
+    if (h_out_triangles) {
+        cudaMemcpy(h_out_triangles, d_out, out_bytes, cudaMemcpyDeviceToHost);
+    }
+
+    cudaFree(d_in);
+    cudaFree(d_out);
     return 0;
 }
 

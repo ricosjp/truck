@@ -17,6 +17,7 @@ pub use slicing::{
 };
 pub use splitting::ExperimentalSplitters;
 pub use splitting::Splitting;
+pub(crate) use splitting::is_in_the_plane;
 pub use topology::Topology;
 pub use truck_topology::shell::ShellCondition;
 pub use volume::CalcVolume;

@@ -683,6 +683,24 @@ fn triangulation_into_polymesh<'a>(
             &uvs,
         );
         Some((gpu_pts, gpu_nors))
+    } else if let Some((u_knots, v_knots, u_deg, v_deg, ctrl_pts)) = surface.as_nurbs() {
+        let uvs: Vec<Point2> = vert_vec
+            .iter()
+            .map(|v| {
+                let p = *v.as_ref();
+                Point2::new(p.x, p.y)
+            })
+            .collect();
+        let cuda = gpu::cuda::CudaMeshAnalyzer::new();
+        let (gpu_pts, gpu_nors) = cuda.evaluate_nurbs_surface(
+            u_knots,
+            v_knots,
+            u_deg,
+            v_deg,
+            ctrl_pts,
+            &uvs,
+        );
+        Some((gpu_pts, gpu_nors))
     } else {
         None
     };

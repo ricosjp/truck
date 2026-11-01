@@ -15,8 +15,9 @@ use rayon::prelude::*;
 use truck_base::cgmath64::*;
 use truck_geometry::prelude::*;
 use truck_polymesh::*;
+use truck_polymesh::StandardVertex as Vertex;
 
-use crate::analyzers::{Collision, IncludingPointInDomain};
+use crate::analyzers::{is_in_the_plane, Collision, ExperimentalSplitters, IncludingPointInDomain};
 use crate::filters::NormalFilters;
 
 pub use metadata::{CpuMetadata, GpuMetadata, SystemMetadata};
@@ -419,6 +420,65 @@ impl Dispatcher {
     }
 
     // ========================================================================
+    // Operation 6b: Batch NURBS Surface Evaluation
+    // ========================================================================
+
+    /// Evaluates 3D points and surface normals on a rational NURBS surface using the optimal kernel.
+    pub fn evaluate_nurbs_surface(
+        &self,
+        u_knots: &[f64],
+        v_knots: &[f64],
+        u_degree: usize,
+        v_degree: usize,
+        control_points: &[Vec<Vector4>],
+        uv_points: &[Point2],
+    ) -> (Vec<Point3>, Vec<Vector3>) {
+        if uv_points.is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+
+        let target = self.select_kernel(Operation::BsplineEvaluation, uv_points.len());
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().evaluate_nurbs_surface(
+                    u_knots, v_knots, u_degree, v_degree, control_points, uv_points,
+                );
+                #[cfg(not(feature = "cuda"))]
+                self.evaluate_nurbs_surface_cpu(u_knots, v_knots, control_points, uv_points)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.evaluate_nurbs_surface(
+                        u_knots, v_knots, u_degree, v_degree, control_points, uv_points,
+                    );
+                }
+                self.evaluate_nurbs_surface_cpu(u_knots, v_knots, control_points, uv_points)
+            }
+            _ => self.evaluate_nurbs_surface_cpu(u_knots, v_knots, control_points, uv_points),
+        }
+    }
+
+    fn evaluate_nurbs_surface_cpu(
+        &self,
+        u_knots: &[f64],
+        v_knots: &[f64],
+        control_points: &[Vec<Vector4>],
+        uv_points: &[Point2],
+    ) -> (Vec<Point3>, Vec<Vector3>) {
+        let nurbs_surface = NurbsSurface::new(BSplineSurface::new((
+            KnotVec::from(u_knots.to_vec()),
+            KnotVec::from(v_knots.to_vec()),
+        ), control_points.to_vec()));
+
+        uv_points
+            .par_iter()
+            .map(|&p| (nurbs_surface.subs(p.x, p.y), nurbs_surface.normal(p.x, p.y)))
+            .unzip()
+    }
+
+    // ========================================================================
     // Operation 7: Point Cloud Clung Test
     // ========================================================================
 
@@ -586,6 +646,159 @@ impl Dispatcher {
             let _ = (s1, s2, tol);
             Vec::new()
         }
+    }
+
+    // ========================================================================
+    // Operation 10: Planar Face Segmentation
+    // ========================================================================
+
+    /// Extracts planar faces such that their face normal matches their vertex normal within `tol`.
+    pub fn extract_planes(&self, mesh: &PolygonMesh, tol: f64) -> (Vec<usize>, Vec<usize>) {
+        if mesh.faces().is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+        let target = self.select_kernel(Operation::PlanarFaceSegmentation, mesh.faces().len());
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().extract_planes(mesh, tol);
+                #[cfg(not(feature = "cuda"))]
+                self.extract_planes_rayon(mesh, tol)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.extract_planes(mesh, tol);
+                }
+                self.extract_planes_rayon(mesh, tol)
+            }
+            KernelTarget::CpuRayon => self.extract_planes_rayon(mesh, tol),
+            KernelTarget::CpuSingle => self.extract_planes_cpu(mesh, tol),
+        }
+    }
+
+    fn extract_planes_cpu(&self, mesh: &PolygonMesh, tol: f64) -> (Vec<usize>, Vec<usize>) {
+        mesh.faces_into_two_clusters(|face: &[Vertex]| {
+            is_in_the_plane(mesh.positions(), mesh.normals(), face, tol * tol)
+        })
+    }
+
+    fn extract_planes_rayon(&self, mesh: &PolygonMesh, tol: f64) -> (Vec<usize>, Vec<usize>) {
+        let faces: Vec<_> = mesh.face_iter().collect();
+        let flags: Vec<bool> = faces
+            .par_iter()
+            .map(|face| {
+                is_in_the_plane(mesh.positions(), mesh.normals(), face, tol * tol)
+            })
+            .collect();
+        let mut planes = Vec::new();
+        let mut others = Vec::new();
+        for (i, &flag) in flags.iter().enumerate() {
+            if flag {
+                planes.push(i);
+            } else {
+                others.push(i);
+            }
+        }
+        (planes, others)
+    }
+
+    // ========================================================================
+    // Operation 11: Triangle Midpoint Refinement / Linear Subdivision
+    // ========================================================================
+
+    /// Generates a 4-to-1 linearly subdivided mesh on the optimal kernel.
+    pub fn linear_subdivide(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        let total_faces = mesh.faces().len();
+        let target = self.select_kernel(Operation::LinearSubdivision, total_faces);
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().linear_subdivide(mesh);
+                #[cfg(not(feature = "cuda"))]
+                self.linear_subdivide_rayon(mesh)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.linear_subdivide(mesh);
+                }
+                self.linear_subdivide_rayon(mesh)
+            }
+            KernelTarget::CpuRayon => self.linear_subdivide_rayon(mesh),
+            KernelTarget::CpuSingle => self.linear_subdivide_cpu(mesh),
+        }
+    }
+
+    /// Subdivides triangles into 4-to-1 midpoint-refined triangles on the optimal kernel.
+    pub fn subdivide_triangles(&self, triangles: &[crate::gpu::GpuTriangle]) -> Vec<crate::gpu::GpuTriangle> {
+        let target = self.select_kernel(Operation::LinearSubdivision, triangles.len());
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().subdivide_triangles(triangles);
+                #[cfg(not(feature = "cuda"))]
+                self.subdivide_triangles_rayon(triangles)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.subdivide_triangles(triangles);
+                }
+                self.subdivide_triangles_rayon(triangles)
+            }
+            KernelTarget::CpuRayon => self.subdivide_triangles_rayon(triangles),
+            KernelTarget::CpuSingle => self.subdivide_triangles_cpu(triangles),
+        }
+    }
+
+    fn subdivide_triangles_cpu(&self, triangles: &[crate::gpu::GpuTriangle]) -> Vec<crate::gpu::GpuTriangle> {
+        let mut out = Vec::with_capacity(triangles.len() * 4);
+        for tri in triangles {
+            let v0 = tri.v0;
+            let v1 = tri.v1;
+            let v2 = tri.v2;
+            let m01 = [(v0[0] + v1[0]) * 0.5, (v0[1] + v1[1]) * 0.5, (v0[2] + v1[2]) * 0.5, 0.0];
+            let m12 = [(v1[0] + v2[0]) * 0.5, (v1[1] + v2[1]) * 0.5, (v1[2] + v2[2]) * 0.5, 0.0];
+            let m20 = [(v2[0] + v0[0]) * 0.5, (v2[1] + v0[1]) * 0.5, (v2[2] + v0[2]) * 0.5, 0.0];
+            out.push(crate::gpu::GpuTriangle { v0, v1: m01, v2: m20 });
+            out.push(crate::gpu::GpuTriangle { v0: v1, v1: m12, v2: m01 });
+            out.push(crate::gpu::GpuTriangle { v0: v2, v1: m20, v2: m12 });
+            out.push(crate::gpu::GpuTriangle { v0: m01, v1: m12, v2: m20 });
+        }
+        out
+    }
+
+    fn subdivide_triangles_rayon(&self, triangles: &[crate::gpu::GpuTriangle]) -> Vec<crate::gpu::GpuTriangle> {
+        triangles
+            .par_iter()
+            .flat_map(|tri| {
+                let v0 = tri.v0;
+                let v1 = tri.v1;
+                let v2 = tri.v2;
+                let m01 = [(v0[0] + v1[0]) * 0.5, (v0[1] + v1[1]) * 0.5, (v0[2] + v1[2]) * 0.5, 0.0];
+                let m12 = [(v1[0] + v2[0]) * 0.5, (v1[1] + v2[1]) * 0.5, (v1[2] + v2[2]) * 0.5, 0.0];
+                let m20 = [(v2[0] + v0[0]) * 0.5, (v2[1] + v0[1]) * 0.5, (v2[2] + v0[2]) * 0.5, 0.0];
+                vec![
+                    crate::gpu::GpuTriangle { v0, v1: m01, v2: m20 },
+                    crate::gpu::GpuTriangle { v0: v1, v1: m12, v2: m01 },
+                    crate::gpu::GpuTriangle { v0: v2, v1: m20, v2: m12 },
+                    crate::gpu::GpuTriangle { v0: m01, v1: m12, v2: m20 },
+                ]
+            })
+            .collect()
+    }
+
+    fn linear_subdivide_cpu(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        let triangles = crate::gpu::GpuMeshAnalyzer::extract_triangles(mesh);
+        let sub_tris = self.subdivide_triangles_cpu(&triangles);
+        crate::gpu::create_mesh_from_triangles(&sub_tris)
+    }
+
+    fn linear_subdivide_rayon(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        let triangles = crate::gpu::GpuMeshAnalyzer::extract_triangles(mesh);
+        let sub_tris = self.subdivide_triangles_rayon(&triangles);
+        crate::gpu::create_mesh_from_triangles(&sub_tris)
     }
 }
 

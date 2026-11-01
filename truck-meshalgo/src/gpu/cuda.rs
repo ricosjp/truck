@@ -144,6 +144,21 @@ extern "C" {
         h_out_normals: *mut f64,
     ) -> i32;
 
+    fn truck_cuda_evaluate_nurbs_surface_f64(
+        h_u_knots: *const f64,
+        num_u_knots: u32,
+        h_v_knots: *const f64,
+        num_v_knots: u32,
+        u_degree: u32,
+        v_degree: u32,
+        h_control_points: *const f64,
+        cp_stride_v: u32,
+        h_uv_points: *const f64,
+        num_points: u32,
+        h_out_points: *mut f64,
+        h_out_normals: *mut f64,
+    ) -> i32;
+
     fn truck_cuda_is_clung_to_by_f64(
         h_points: *const f64,
         num_points: u32,
@@ -189,6 +204,25 @@ extern "C" {
         h_triangles: *const f32,
         num_triangles: u32,
         h_out_accum: *mut f64,
+    ) -> i32;
+
+    fn truck_cuda_extract_planes(
+        h_face_positions: *const f64,
+        h_face_normals: *const f64,
+        h_face_offsets: *const u32,
+        num_faces: u32,
+        total_vertices: u32,
+        tol: f64,
+        h_planar_count: *mut u32,
+        h_planar_indices: *mut u32,
+        h_other_count: *mut u32,
+        h_other_indices: *mut u32,
+    ) -> i32;
+
+    fn truck_cuda_subdivide_triangles(
+        h_in_triangles: *const f32,
+        num_triangles: u32,
+        h_out_triangles: *mut f32,
     ) -> i32;
 
     fn truck_cuda_get_device_info(
@@ -833,6 +867,72 @@ impl CudaMeshAnalyzer {
         (pts, nors)
     }
 
+    /// Evaluates a rational NURBS surface on a batch of `(u, v)` coordinates on the GPU via CUDA.
+    ///
+    /// Returns a tuple of `(evaluated_3d_points, evaluated_surface_normals)`.
+    pub fn evaluate_nurbs_surface(
+        &self,
+        u_knots: &[f64],
+        v_knots: &[f64],
+        u_degree: usize,
+        v_degree: usize,
+        control_points: &[Vec<Vector4>],
+        uv_points: &[Point2],
+    ) -> (Vec<Point3>, Vec<Vector3>) {
+        if uv_points.is_empty() || control_points.is_empty() || control_points[0].is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+
+        let num_u_knots = u_knots.len() as u32;
+        let num_v_knots = v_knots.len() as u32;
+        let num_points = uv_points.len() as u32;
+
+        let cp_stride_v = control_points[0].len() as u32;
+        let mut flat_cps: Vec<[f64; 4]> = Vec::with_capacity(control_points.len() * control_points[0].len());
+        for row in control_points {
+            for pt in row {
+                flat_cps.push([pt.x, pt.y, pt.z, pt.w]);
+            }
+        }
+
+        let uv_f64: Vec<[f64; 2]> = uv_points
+            .iter()
+            .map(|p| [p.x, p.y])
+            .collect();
+
+        let mut out_points = vec![[0.0f64; 4]; uv_points.len()];
+        let mut out_normals = vec![[0.0f64; 4]; uv_points.len()];
+
+        let status = unsafe {
+            truck_cuda_evaluate_nurbs_surface_f64(
+                u_knots.as_ptr(),
+                num_u_knots,
+                v_knots.as_ptr(),
+                num_v_knots,
+                u_degree as u32,
+                v_degree as u32,
+                flat_cps.as_ptr() as *const f64,
+                cp_stride_v,
+                uv_f64.as_ptr() as *const f64,
+                num_points,
+                out_points.as_mut_ptr() as *mut f64,
+                out_normals.as_mut_ptr() as *mut f64,
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_evaluate_nurbs_surface_f64 failed with code: {}", status);
+
+        let pts = out_points
+            .into_iter()
+            .map(|p| Point3::new(p[0], p[1], p[2]))
+            .collect();
+        let nors = out_normals
+            .into_iter()
+            .map(|n| Vector3::new(n[0], n[1], n[2]))
+            .collect();
+
+        (pts, nors)
+    }
+
     /// Extracts triangles from a polygon mesh as flat double-precision vertex coordinates `[f64; 4]`.
     pub fn extract_triangles_f64(mesh: &PolygonMesh) -> Vec<[f64; 4]> {
         let pos = mesh.positions();
@@ -1060,5 +1160,84 @@ impl CudaMeshAnalyzer {
     #[inline(always)]
     pub fn center_of_gravity(&self, mesh: &PolygonMesh) -> Point3 {
         self.mass_properties(mesh).1
+    }
+
+    /// Extracts planar faces such that their face normal matches their vertex normal within `tol` via CUDA.
+    pub fn extract_planes(&self, mesh: &PolygonMesh, tol: f64) -> (Vec<usize>, Vec<usize>) {
+        if mesh.faces().is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+        let (offsets, face_pos, face_nor) = super::prepare_extract_planes_buffers_f64(mesh);
+        let num_faces = mesh.faces().len() as u32;
+        let total_vertices = face_pos.len() as u32;
+
+        let mut planar_count: u32 = 0;
+        let mut other_count: u32 = 0;
+        let mut planar_indices = vec![0u32; num_faces as usize];
+        let mut other_indices = vec![0u32; num_faces as usize];
+
+        let status = unsafe {
+            truck_cuda_extract_planes(
+                face_pos.as_ptr() as *const f64,
+                face_nor.as_ptr() as *const f64,
+                offsets.as_ptr(),
+                num_faces,
+                total_vertices,
+                tol,
+                &mut planar_count,
+                planar_indices.as_mut_ptr(),
+                &mut other_count,
+                other_indices.as_mut_ptr(),
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_extract_planes failed with code: {}", status);
+
+        planar_indices.truncate(planar_count as usize);
+        other_indices.truncate(other_count as usize);
+
+        let mut planes: Vec<usize> = planar_indices.into_iter().map(|i| i as usize).collect();
+        let mut others: Vec<usize> = other_indices.into_iter().map(|i| i as usize).collect();
+
+        planes.sort_unstable();
+        others.sort_unstable();
+
+        (planes, others)
+    }
+
+    /// Subdivides triangles into 4-to-1 midpoint-refined triangles on the GPU via CUDA.
+    pub fn subdivide_triangles(&self, triangles: &[GpuTriangle]) -> Vec<GpuTriangle> {
+        if triangles.is_empty() {
+            return Vec::new();
+        }
+        let num_triangles = triangles.len() as u32;
+        let mut out_triangles = vec![
+            GpuTriangle {
+                v0: [0.0; 4],
+                v1: [0.0; 4],
+                v2: [0.0; 4],
+            };
+            triangles.len() * 4
+        ];
+
+        let status = unsafe {
+            truck_cuda_subdivide_triangles(
+                triangles.as_ptr() as *const f32,
+                num_triangles,
+                out_triangles.as_mut_ptr() as *mut f32,
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_subdivide_triangles failed with code: {}", status);
+
+        out_triangles
+    }
+
+    /// Generates a 4-to-1 linearly subdivided mesh on the GPU via CUDA.
+    pub fn linear_subdivide(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        let triangles = super::GpuMeshAnalyzer::extract_triangles(mesh);
+        if triangles.is_empty() {
+            return mesh.clone();
+        }
+        let sub_tris = self.subdivide_triangles(&triangles);
+        super::create_mesh_from_triangles(&sub_tris)
     }
 }

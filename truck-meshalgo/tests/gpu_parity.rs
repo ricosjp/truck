@@ -616,6 +616,185 @@ fn test_cuda_evaluate_bspline_surface() {
 
 #[cfg(feature = "cuda")]
 #[test]
+fn test_cuda_evaluate_nurbs_surface() {
+    use truck_geometry::prelude::*;
+
+    let cuda = CudaMeshAnalyzer::new();
+
+    // Construct a bi-quadratic rational NURBS surface patch with varying weights
+    let u_knots = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    let v_knots = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    let u_degree = 2;
+    let v_degree = 2;
+
+    let w = std::f64::consts::FRAC_1_SQRT_2;
+    let ctrl_pts = vec![
+        vec![
+            Vector4::new(1.0, 0.0, 0.0, 1.0),
+            Vector4::new(w, w * 0.5, 0.0, w),
+            Vector4::new(0.0, 1.0, 0.0, 1.0),
+        ],
+        vec![
+            Vector4::new(w, 0.0, w * 0.8, w),
+            Vector4::new(0.5, 0.5, 1.2, 0.8),
+            Vector4::new(0.0, w, w * 0.8, w),
+        ],
+        vec![
+            Vector4::new(1.0, 0.0, 1.5, 1.0),
+            Vector4::new(w, w * 0.5, 1.5 * w, w),
+            Vector4::new(0.0, 1.0, 1.5, 1.0),
+        ],
+    ];
+
+    let nurbs = NurbsSurface::new(BSplineSurface::new(
+        (KnotVec::from(u_knots.clone()), KnotVec::from(v_knots.clone())),
+        ctrl_pts.clone(),
+    ));
+
+    // Verify as_nurbs trait implementation
+    let nurbs_data = nurbs.as_nurbs();
+    assert!(nurbs_data.is_some());
+    let (uk, vk, ud, vd, cp) = nurbs_data.unwrap();
+    assert_eq!(uk, u_knots.as_slice());
+    assert_eq!(vk, v_knots.as_slice());
+    assert_eq!(ud, u_degree);
+    assert_eq!(vd, v_degree);
+    assert_eq!(cp.len(), 3);
+
+    let mut query_uv = Vec::new();
+    for i in 0..15 {
+        for j in 0..15 {
+            query_uv.push(Point2::new(i as f64 / 14.0, j as f64 / 14.0));
+        }
+    }
+
+    let (cuda_pts, cuda_nors) = cuda.evaluate_nurbs_surface(
+        &u_knots,
+        &v_knots,
+        u_degree,
+        v_degree,
+        &ctrl_pts,
+        &query_uv,
+    );
+
+    assert_eq!(cuda_pts.len(), query_uv.len());
+    assert_eq!(cuda_nors.len(), query_uv.len());
+
+    for (k, &uv) in query_uv.iter().enumerate() {
+        let cpu_pt = nurbs.subs(uv.x, uv.y);
+        let cpu_nor = nurbs.normal(uv.x, uv.y);
+
+        let pt_diff = (cuda_pts[k] - cpu_pt).magnitude();
+        assert!(pt_diff < 1e-10, "NURBS point mismatch at {}: CPU={:?}, CUDA={:?}, diff={:e}", k, cpu_pt, cuda_pts[k], pt_diff);
+
+        let nor_diff = (cuda_nors[k] - cpu_nor).magnitude();
+        assert!(nor_diff < 1e-8, "NURBS normal mismatch at {}: CPU={:?}, CUDA={:?}, diff={:e}", k, cpu_nor, cuda_nors[k], nor_diff);
+    }
+}
+
+#[cfg(feature = "gpu")]
+#[test]
+fn test_vulkan_evaluate_nurbs_surface() {
+    use truck_geometry::prelude::*;
+
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+
+    let u_knots = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    let v_knots = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    let u_degree = 2;
+    let v_degree = 2;
+
+    let w = std::f64::consts::FRAC_1_SQRT_2;
+    let ctrl_pts = vec![
+        vec![
+            Vector4::new(1.0, 0.0, 0.0, 1.0),
+            Vector4::new(w, w * 0.5, 0.0, w),
+            Vector4::new(0.0, 1.0, 0.0, 1.0),
+        ],
+        vec![
+            Vector4::new(w, 0.0, w * 0.8, w),
+            Vector4::new(0.5, 0.5, 1.2, 0.8),
+            Vector4::new(0.0, w, w * 0.8, w),
+        ],
+        vec![
+            Vector4::new(1.0, 0.0, 1.5, 1.0),
+            Vector4::new(w, w * 0.5, 1.5 * w, w),
+            Vector4::new(0.0, 1.0, 1.5, 1.0),
+        ],
+    ];
+
+    let nurbs = NurbsSurface::new(BSplineSurface::new(
+        (KnotVec::from(u_knots.clone()), KnotVec::from(v_knots.clone())),
+        ctrl_pts.clone(),
+    ));
+
+    let mut query_uv = Vec::new();
+    for i in 0..10 {
+        for j in 0..10 {
+            query_uv.push(Point2::new(i as f64 / 9.0, j as f64 / 9.0));
+        }
+    }
+
+    let (vulkan_pts, vulkan_nors) = vulkan.evaluate_nurbs_surface(
+        &u_knots,
+        &v_knots,
+        u_degree,
+        v_degree,
+        &ctrl_pts,
+        &query_uv,
+    );
+
+    assert_eq!(vulkan_pts.len(), query_uv.len());
+    assert_eq!(vulkan_nors.len(), query_uv.len());
+
+    for (k, &uv) in query_uv.iter().enumerate() {
+        let cpu_pt = nurbs.subs(uv.x, uv.y);
+        let cpu_nor = nurbs.normal(uv.x, uv.y);
+
+        let pt_diff = (vulkan_pts[k] - cpu_pt).magnitude();
+        assert!(pt_diff < 1e-3, "Vulkan NURBS point mismatch at {}: CPU={:?}, Vulkan={:?}, diff={:e}", k, cpu_pt, vulkan_pts[k], pt_diff);
+
+        let nor_diff = (vulkan_nors[k] - cpu_nor).magnitude();
+        assert!(nor_diff < 1e-2, "Vulkan NURBS normal mismatch at {}: CPU={:?}, Vulkan={:?}, diff={:e}", k, cpu_nor, vulkan_nors[k], nor_diff);
+    }
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_nurbs_tessellation_hook() {
+    use truck_meshalgo::tessellation::{MeshableShape, MeshedShape};
+    use truck_modeling::*;
+    const PI: cgmath::Rad<f64> = cgmath::Rad(std::f64::consts::PI);
+
+    let v: Vertex = builder::vertex(Point3::new(1.0, 0.0, 0.0));
+    let circle: Wire = builder::rsweep(&v, Point3::origin(), Vector3::unit_z(), PI * 2.0, 4);
+    let cylinder: Shell = builder::tsweep(&circle, Vector3::new(0.0, 0.0, 2.0));
+
+    // Verify at least one face has Surface::NurbsSurface and as_nurbs returns Some
+    let mut has_nurbs = false;
+    for face in cylinder.iter() {
+        if face.oriented_surface().as_nurbs().is_some() {
+            has_nurbs = true;
+            break;
+        }
+    }
+    assert!(has_nurbs, "Cylinder shell should contain rational NURBS surfaces");
+
+    let mesh = cylinder.triangulation(0.01).to_polygon();
+    assert!(!mesh.positions().is_empty());
+    assert!(!mesh.faces().is_empty());
+
+    // Verify all evaluated mesh vertices lie on the cylinder x^2 + y^2 = 1.0
+    for pos in mesh.positions() {
+        let r2 = pos.x * pos.x + pos.y * pos.y;
+        assert!((r2 - 1.0).abs() < 1e-3, "Vertex {:?} not on unit cylinder (r2 = {})", pos, r2);
+        assert!(pos.z >= -1e-4 && pos.z <= 2.0 + 1e-4);
+    }
+}
+
+#[cfg(feature = "cuda")]
+#[test]
 fn test_vulkan_vs_cuda_advanced_candidates_parity() {
     let handler = init_vulkan_device();
     let vulkan = GpuMeshAnalyzer::new(&handler);
@@ -922,6 +1101,171 @@ fn test_cuda_and_vulkan_surface_intersection_seeds_parity() {
             "Vulkan seed distance between surfaces should be within grid resolution bound, got {}",
             dist
         );
+    }
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_extract_planes_parity() {
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+
+    // 1. Canonical mixed tri/quad mesh from Splitting unit test
+    let mesh = PolygonMesh::new(
+        StandardAttributes {
+            positions: vec![
+                Point3::new(-5.0, 0.0, -2.0),
+                Point3::new(-5.0, 0.0, 0.0),
+                Point3::new(0.0, 2.0, -2.0),
+                Point3::new(0.0, 2.0, 0.0),
+                Point3::new(0.0, 2.0, 2.0),
+                Point3::new(5.0, 0.0, 0.0),
+                Point3::new(5.0, 0.0, 2.0),
+            ],
+            normals: vec![
+                Vector3::new(-2.0, 5.0, 0.0).normalize(),
+                Vector3::new(0.0, 1.0, 0.0),
+                Vector3::new(2.0, 5.0, 0.0).normalize(),
+            ],
+            ..Default::default()
+        },
+        Faces::from_iter(&[
+            [
+                (0, None, Some(0)),
+                (1, None, Some(0)),
+                (3, None, Some(1)),
+                (2, None, Some(1)),
+            ]
+            .as_ref(),
+            &[(1, None, Some(1)), (4, None, Some(1)), (3, None, Some(1))],
+            &[(2, None, Some(1)), (3, None, Some(1)), (5, None, Some(2))],
+            &[
+                (3, None, Some(1)),
+                (4, None, Some(1)),
+                (6, None, Some(1)),
+                (5, None, Some(1)),
+            ],
+        ]),
+    );
+
+    let tol = 1.0e-7;
+    let (cuda_planes, cuda_others) = cuda.extract_planes(&mesh, tol);
+    let (vulkan_planes, vulkan_others) = vulkan.extract_planes(&mesh, tol);
+    let (dispatch_planes, dispatch_others) = truck_meshalgo::dispatch::Dispatcher::global().extract_planes(&mesh, tol);
+    let (trait_planes, trait_others) = mesh.extract_planes(tol);
+
+    assert_eq!(cuda_planes, vec![1, 2], "CUDA extract_planes planar indices parity mismatch");
+    assert_eq!(cuda_others, vec![0, 3], "CUDA extract_planes remainder indices parity mismatch");
+
+    assert_eq!(vulkan_planes, vec![1, 2], "Vulkan extract_planes planar indices parity mismatch");
+    assert_eq!(vulkan_others, vec![0, 3], "Vulkan extract_planes remainder indices parity mismatch");
+
+    assert_eq!(dispatch_planes, vec![1, 2], "Dispatcher extract_planes planar indices mismatch");
+    assert_eq!(dispatch_others, vec![0, 3], "Dispatcher extract_planes remainder indices mismatch");
+
+    assert_eq!(trait_planes, vec![1, 2], "Splitting::extract_planes dispatch mismatch");
+    assert_eq!(trait_others, vec![0, 3], "Splitting::extract_planes dispatch mismatch");
+
+    // 2. Larger procedural sphere mesh to verify scaling parity and warp-aggregated atomics
+    let u_div = 32;
+    let v_div = 16;
+    let mut sphere = common::shapes::sphere(Point3::origin(), 1.0, u_div, v_div);
+    sphere.add_naive_normals(true);
+
+    let start_cpu = std::time::Instant::now();
+    truck_meshalgo::dispatch::Dispatcher::global().set_override(Some(truck_meshalgo::dispatch::KernelTarget::CpuSingle));
+    let (cpu_sp_planes, cpu_sp_others) = sphere.extract_planes(0.05);
+    truck_meshalgo::dispatch::Dispatcher::global().reset_override();
+    let dur_cpu = start_cpu.elapsed();
+
+    let start_cuda = std::time::Instant::now();
+    let (cuda_sp_planes, cuda_sp_others) = cuda.extract_planes(&sphere, 0.05);
+    let dur_cuda = start_cuda.elapsed();
+
+    let start_vulkan = std::time::Instant::now();
+    let (vulkan_sp_planes, vulkan_sp_others) = vulkan.extract_planes(&sphere, 0.05);
+    let dur_vulkan = start_vulkan.elapsed();
+
+    println!(
+        "extract_planes on sphere ({} faces): CPU={:?}, CUDA={:?}, Vulkan={:?}",
+        sphere.faces().len(),
+        dur_cpu,
+        dur_cuda,
+        dur_vulkan
+    );
+
+    assert_eq!(cuda_sp_planes, cpu_sp_planes, "CUDA sphere extract_planes planar parity mismatch");
+    assert_eq!(cuda_sp_others, cpu_sp_others, "CUDA sphere extract_planes other parity mismatch");
+    assert_eq!(vulkan_sp_planes, cpu_sp_planes, "Vulkan sphere extract_planes planar parity mismatch");
+    assert_eq!(vulkan_sp_others, cpu_sp_others, "Vulkan sphere extract_planes other parity mismatch");
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_linear_subdivision_parity() {
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+
+    let cube = create_unit_cube();
+    let orig_tri_count = GpuMeshAnalyzer::extract_triangles(&cube).len();
+    assert_eq!(orig_tri_count, 12);
+
+    let start_cuda = std::time::Instant::now();
+    let cuda_sub = cuda.linear_subdivide(&cube);
+    let dur_cuda = start_cuda.elapsed();
+
+    let start_vulkan = std::time::Instant::now();
+    let vulkan_sub = vulkan.linear_subdivide(&cube);
+    let dur_vulkan = start_vulkan.elapsed();
+
+    let start_dispatch = std::time::Instant::now();
+    let dispatch_sub = truck_meshalgo::dispatch::Dispatcher::global().linear_subdivide(&cube);
+    let dur_dispatch = start_dispatch.elapsed();
+
+    let trait_sub = cube.linear_subdivide();
+
+    println!(
+        "linear_subdivide 12 triangles -> 48 triangles: CUDA={:?}, Vulkan={:?}, Dispatcher={:?}",
+        dur_cuda,
+        dur_vulkan,
+        dur_dispatch
+    );
+
+    assert_eq!(cuda_sub.tri_faces().len(), orig_tri_count * 4);
+    assert_eq!(vulkan_sub.tri_faces().len(), orig_tri_count * 4);
+    assert_eq!(dispatch_sub.tri_faces().len(), orig_tri_count * 4);
+    assert_eq!(trait_sub.tri_faces().len(), orig_tri_count * 4);
+
+    // Verify geometric accuracy: volume of unit cube must remain 1.0
+    let (cuda_vol, cuda_cog) = cuda.mass_properties(&cuda_sub);
+    let (vulkan_vol, vulkan_cog) = vulkan.mass_properties(&vulkan_sub);
+    assert!((cuda_vol - 1.0).abs() < 1e-4, "Subdivided cube volume should be 1.0, got {}", cuda_vol);
+    assert!((vulkan_vol - 1.0).abs() < 1e-4, "Subdivided cube volume should be 1.0, got {}", vulkan_vol);
+    assert!((cuda_cog.x - 0.5).abs() < 1e-4 && (cuda_cog.y - 0.5).abs() < 1e-4 && (cuda_cog.z - 0.5).abs() < 1e-4);
+    assert!((vulkan_cog.x - 0.5).abs() < 1e-4 && (vulkan_cog.y - 0.5).abs() < 1e-4 && (vulkan_cog.z - 0.5).abs() < 1e-4);
+
+    // Test subdivide_triangles directly
+    let tris = GpuMeshAnalyzer::extract_triangles(&cube);
+    let cuda_tris = cuda.subdivide_triangles(&tris);
+    let vulkan_tris = vulkan.subdivide_triangles(&tris);
+    let dispatch_tris = truck_meshalgo::dispatch::Dispatcher::global().subdivide_triangles(&tris);
+
+    assert_eq!(cuda_tris.len(), tris.len() * 4);
+    assert_eq!(vulkan_tris.len(), tris.len() * 4);
+    assert_eq!(dispatch_tris.len(), tris.len() * 4);
+
+    for i in 0..cuda_tris.len() {
+        for v in 0..3 {
+            let p_cuda = match v { 0 => cuda_tris[i].v0, 1 => cuda_tris[i].v1, _ => cuda_tris[i].v2 };
+            let p_vulk = match v { 0 => vulkan_tris[i].v0, 1 => vulkan_tris[i].v1, _ => vulkan_tris[i].v2 };
+            let p_disp = match v { 0 => dispatch_tris[i].v0, 1 => dispatch_tris[i].v1, _ => dispatch_tris[i].v2 };
+            for c in 0..3 {
+                assert!((p_cuda[c] - p_vulk[c]).abs() < 1e-5, "CUDA vs Vulkan triangle vertex parity mismatch at tri {} vert {}", i, v);
+                assert!((p_cuda[c] - p_disp[c]).abs() < 1e-5, "CUDA vs Dispatcher triangle vertex parity mismatch at tri {} vert {}", i, v);
+            }
+        }
     }
 }
 
