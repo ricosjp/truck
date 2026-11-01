@@ -2104,6 +2104,129 @@ fn test_cuda_and_vulkan_segment_mesh_distance_parity() {
     println!("3D segment toolpath clearance parity verified across CPU, CUDA, and Vulkan.");
 }
 
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_weld_attributes_parity() {
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+    let dispatcher = Dispatcher::global();
+
+    // 1. Simple cube with duplicate vertices
+    // 6 quad faces, each with 4 independent vertices = 24 vertices total, 8 unique corners
+    let cube_quads: [[Point3; 4]; 6] = [
+        // Front face (z = 0)
+        [Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 1.0, 0.0), Point3::new(0.0, 1.0, 0.0)],
+        // Back face (z = 1)
+        [Point3::new(0.0, 0.0, 1.0), Point3::new(1.0, 0.0, 1.0), Point3::new(1.0, 1.0, 1.0), Point3::new(0.0, 1.0, 1.0)],
+        // Bottom face (y = 0)
+        [Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 1.0), Point3::new(0.0, 0.0, 1.0)],
+        // Top face (y = 1)
+        [Point3::new(0.0, 1.0, 0.0), Point3::new(1.0, 1.0, 0.0), Point3::new(1.0, 1.0, 1.0), Point3::new(0.0, 1.0, 1.0)],
+        // Left face (x = 0)
+        [Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 1.0, 1.0), Point3::new(0.0, 0.0, 1.0)],
+        // Right face (x = 1)
+        [Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 1.0, 0.0), Point3::new(1.0, 1.0, 1.0), Point3::new(1.0, 0.0, 1.0)],
+    ];
+    let cube_verts: Vec<Point3> = cube_quads.iter().flatten().copied().collect();
+    assert_eq!(cube_verts.len(), 24);
+
+    let tol = 1e-3;
+    let cpu_cube_map = truck_meshalgo::filters::sub_put_together_same_attrs(&cube_verts, tol);
+    let cuda_cube_map = cuda.weld_attributes_3d(&cube_verts, tol);
+    let vulk_cube_map = vulkan.weld_attributes_3d(&cube_verts, tol);
+    let disp_cube_map = dispatcher.weld_attributes_3d(&cube_verts, tol);
+
+    assert_eq!(cuda_cube_map, cpu_cube_map, "CUDA vs CPU cube weld parity mismatch");
+    assert_eq!(vulk_cube_map, cpu_cube_map, "Vulkan vs CPU cube weld parity mismatch");
+    assert_eq!(disp_cube_map, cpu_cube_map, "Dispatcher vs CPU cube weld parity mismatch");
+
+    let unique_cube_indices: rustc_hash::FxHashSet<usize> = cpu_cube_map.iter().copied().collect();
+    assert_eq!(unique_cube_indices.len(), 8, "Expected 8 unique corner vertices after welding cube");
+
+    // 2. 2D attribute welding (e.g. UV coordinates with duplicates)
+    let uv_pts = vec![
+        Point2::new(0.0, 0.0),
+        Point2::new(0.5, 0.5),
+        Point2::new(0.0, 0.0),     // duplicate of 0
+        Point2::new(1.0, 1.0),
+        Point2::new(0.5, 0.5),     // duplicate of 1
+        Point2::new(0.0, 0.0001),  // within tol = 1e-3 of 0
+        Point2::new(2.0, 3.0),
+        Point2::new(1.0, 0.9999),  // within tol = 1e-3 of 3
+    ];
+    let cpu_uv_map = truck_meshalgo::filters::sub_put_together_same_attrs(&uv_pts, tol);
+    let cuda_uv_map = cuda.weld_attributes_2d(&uv_pts, tol);
+    let vulk_uv_map = vulkan.weld_attributes_2d(&uv_pts, tol);
+    let disp_uv_map = dispatcher.weld_attributes_2d(&uv_pts, tol);
+
+    assert_eq!(cuda_uv_map, cpu_uv_map, "CUDA vs CPU 2D weld parity mismatch");
+    assert_eq!(vulk_uv_map, cpu_uv_map, "Vulkan vs CPU 2D weld parity mismatch");
+    assert_eq!(disp_uv_map, cpu_uv_map, "Dispatcher vs CPU 2D weld parity mismatch");
+
+    // 3. Randomized 3D point cloud with clustered duplicates
+    let mut rng_state: u64 = 42;
+    let mut rand_f64 = || -> f64 {
+        rng_state = rng_state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        ((rng_state >> 33) as f64) / ((1u64 << 31) as f64)
+    };
+
+    let cluster_tol = 0.05;
+    let mut clustered_pts = Vec::new();
+    // 50 cluster centers spaced well apart
+    for cx in 0..5 {
+        for cy in 0..5 {
+            for cz in 0..2 {
+                let base = Point3::new(
+                    (cx as f64) * 2.0 + rand_f64() * 0.5,
+                    (cy as f64) * 2.0 + rand_f64() * 0.5,
+                    (cz as f64) * 2.0 + rand_f64() * 0.5,
+                );
+                // 3 to 6 duplicate/near-coincident points within cluster_tol * 0.3 of base
+                let count = 3 + (rand_f64() * 3.0) as usize;
+                for _ in 0..count {
+                    let offset = Vector3::new(
+                        (rand_f64() - 0.5) * cluster_tol * 0.3,
+                        (rand_f64() - 0.5) * cluster_tol * 0.3,
+                        (rand_f64() - 0.5) * cluster_tol * 0.3,
+                    );
+                    clustered_pts.push(base + offset);
+                }
+            }
+        }
+    }
+    // Add 100 isolated random points
+    for _ in 0..100 {
+        clustered_pts.push(Point3::new(
+            15.0 + rand_f64() * 10.0,
+            15.0 + rand_f64() * 10.0,
+            15.0 + rand_f64() * 10.0,
+        ));
+    }
+
+    let cpu_rand_map = truck_meshalgo::filters::sub_put_together_same_attrs(&clustered_pts, cluster_tol);
+    let cuda_rand_map = cuda.weld_attributes_3d(&clustered_pts, cluster_tol);
+    let vulk_rand_map = vulkan.weld_attributes_3d(&clustered_pts, cluster_tol);
+    let disp_rand_map = dispatcher.weld_attributes_3d(&clustered_pts, cluster_tol);
+
+    assert_eq!(cuda_rand_map, cpu_rand_map, "CUDA vs CPU random point cloud weld parity mismatch");
+    assert_eq!(vulk_rand_map, cpu_rand_map, "Vulkan vs CPU random point cloud weld parity mismatch");
+    assert_eq!(disp_rand_map, cpu_rand_map, "Dispatcher vs CPU random point cloud weld parity mismatch");
+
+    // 4. Edge cases
+    let empty_3d: Vec<Point3> = Vec::new();
+    assert!(cuda.weld_attributes_3d(&empty_3d, tol).is_empty());
+    assert!(vulkan.weld_attributes_3d(&empty_3d, tol).is_empty());
+    assert!(dispatcher.weld_attributes_3d(&empty_3d, tol).is_empty());
+
+    let single_3d = vec![Point3::new(1.0, 2.0, 3.0)];
+    assert_eq!(cuda.weld_attributes_3d(&single_3d, tol), vec![0]);
+    assert_eq!(vulkan.weld_attributes_3d(&single_3d, tol), vec![0]);
+    assert_eq!(dispatcher.weld_attributes_3d(&single_3d, tol), vec![0]);
+
+    println!("Parallel vertex welding parity verified across CPU, CUDA, and Vulkan.");
+}
+
 
 
 

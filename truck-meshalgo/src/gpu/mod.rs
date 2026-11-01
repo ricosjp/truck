@@ -113,6 +113,19 @@ struct RaycastUniforms {
     _pad: [u32; 2],
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+struct WeldUniforms {
+    num_attrs: u32,
+    dim: u32,
+    tol: f32,
+    table_mask: u32,
+    min_x: f32,
+    min_y: f32,
+    min_z: f32,
+    inv_tol: f32,
+}
+
 /// GPU-compatible sample point representation for B-spline surfaces.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
@@ -2088,6 +2101,100 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 "#;
 
+const WELD_ATTRIBUTES_SHADER: &str = r#"
+struct WeldUniforms {
+    num_attrs: u32,
+    dim: u32,
+    tol: f32,
+    table_mask: u32,
+    min_x: f32,
+    min_y: f32,
+    min_z: f32,
+    inv_tol: f32,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: WeldUniforms;
+@group(0) @binding(1) var<storage, read> attrs: array<vec4<f32>>;
+@group(0) @binding(2) var<storage, read_write> grid_head: array<atomic<u32>>;
+@group(0) @binding(3) var<storage, read_write> grid_next: array<u32>;
+@group(0) @binding(4) var<storage, read_write> labels: array<atomic<u32>>;
+
+@compute @workgroup_size(64, 1, 1)
+fn build_hash(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let i = global_id.x;
+    if (i >= uniforms.num_attrs) {
+        return;
+    }
+    atomicStore(&labels[i], i);
+    let p = attrs[i];
+    let cx = i32(floor((p.x - uniforms.min_x) * uniforms.inv_tol));
+    let cy = i32(floor((p.y - uniforms.min_y) * uniforms.inv_tol));
+    var cz = 0i;
+    if (uniforms.dim == 3u) {
+        cz = i32(floor((p.z - uniforms.min_z) * uniforms.inv_tol));
+    }
+    let nh = ((u32(cx) * 73856093u) ^ (u32(cy) * 19349663u) ^ (u32(cz) * 83492791u)) & uniforms.table_mask;
+    let old_head = atomicExchange(&grid_head[nh], i);
+    grid_next[i] = old_head;
+}
+
+@compute @workgroup_size(64, 1, 1)
+fn propagate_labels(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let i = global_id.x;
+    if (i >= uniforms.num_attrs) {
+        return;
+    }
+    let p = attrs[i];
+    let cx = i32(floor((p.x - uniforms.min_x) * uniforms.inv_tol));
+    let cy = i32(floor((p.y - uniforms.min_y) * uniforms.inv_tol));
+    var cz = 0i;
+    if (uniforms.dim == 3u) {
+        cz = i32(floor((p.z - uniforms.min_z) * uniforms.inv_tol));
+    }
+    let tol2 = uniforms.tol * uniforms.tol;
+    var min_label = atomicLoad(&labels[i]);
+
+    let dz_max = select(0i, 1i, uniforms.dim == 3u);
+    let dz_min = select(0i, -1i, uniforms.dim == 3u);
+
+    for (var dz = dz_min; dz <= dz_max; dz = dz + 1i) {
+        for (var dy = -1i; dy <= 1i; dy = dy + 1i) {
+            for (var dx = -1i; dx <= 1i; dx = dx + 1i) {
+                let ncx = cx + dx;
+                let ncy = cy + dy;
+                let ncz = cz + dz;
+                let nh = ((u32(ncx) * 73856093u) ^ (u32(ncy) * 19349663u) ^ (u32(ncz) * 83492791u)) & uniforms.table_mask;
+                var curr = atomicLoad(&grid_head[nh]);
+                var steps = 0u;
+                while (curr != 0xFFFFFFFFu && steps < 1024u) {
+                    steps = steps + 1u;
+                    let j = curr;
+                    curr = grid_next[j];
+                    if (j != i) {
+                        let q = attrs[j];
+                        let diff = p.xyz - q.xyz;
+                        let d2 = dot(diff, diff);
+                        if (d2 < tol2) {
+                            let lj = atomicLoad(&labels[j]);
+                            if (lj < min_label) {
+                                min_label = lj;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    atomicMin(&labels[i], min_label);
+
+    let parent = atomicLoad(&labels[i]);
+    let root = atomicLoad(&labels[parent]);
+    if (root < parent) {
+        atomicMin(&labels[i], root);
+    }
+}
+"#;
+
 fn qem_layout_entries() -> [BindGroupLayoutEntry; 6] {
     [
         BindGroupLayoutEntry {
@@ -2232,6 +2339,61 @@ fn segment_mesh_dist_layout_entries() -> [BindGroupLayoutEntry; 4] {
         },
         BindGroupLayoutEntry {
             binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
+fn weld_layout_entries() -> [BindGroupLayoutEntry; 5] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 4,
             visibility: ShaderStages::COMPUTE,
             ty: BindingType::Buffer {
                 ty: BufferBindingType::Storage { read_only: false },
@@ -2929,6 +3091,8 @@ pub struct GpuMeshAnalyzer {
     qem_engine: ComputeEngine,
     point_in_2d_loops_engine: ComputeEngine,
     segment_mesh_dist_engine: ComputeEngine,
+    weld_build_engine: ComputeEngine,
+    weld_propagate_engine: ComputeEngine,
 }
 
 impl GpuMeshAnalyzer {
@@ -3008,6 +3172,10 @@ impl GpuMeshAnalyzer {
         let smd_entries = segment_mesh_dist_layout_entries();
         let segment_mesh_dist_engine = ComputeEngine::new(handler, SEGMENT_MESH_DIST_SHADER, "main", &smd_entries);
 
+        let weld_entries = weld_layout_entries();
+        let weld_build_engine = ComputeEngine::new(handler, WELD_ATTRIBUTES_SHADER, "build_hash", &weld_entries);
+        let weld_propagate_engine = ComputeEngine::new(handler, WELD_ATTRIBUTES_SHADER, "propagate_labels", &weld_entries);
+
         Self {
             handler: handler.clone(),
             dist_engine,
@@ -3029,6 +3197,8 @@ impl GpuMeshAnalyzer {
             qem_engine,
             point_in_2d_loops_engine,
             segment_mesh_dist_engine,
+            weld_build_engine,
+            weld_propagate_engine,
         }
     }
 
@@ -4475,6 +4645,108 @@ impl GpuMeshAnalyzer {
 
         let distances: Vec<f32> = dist_buf.read_to_vec_block(&self.handler);
         distances.into_iter().map(|d| d as f64).collect()
+    }
+
+    /// Welds and deduplicates 3D attributes within tolerance `tol` via Vulkan compute.
+    pub fn weld_attributes_3d(&self, attrs: &[Point3], tol: f64) -> Vec<usize> {
+        if attrs.is_empty() {
+            return Vec::new();
+        }
+        if attrs.len() == 1 || tol <= 0.0 {
+            return (0..attrs.len()).collect();
+        }
+        let gpu_attrs: Vec<[f32; 4]> = attrs
+            .iter()
+            .map(|p| [p.x as f32, p.y as f32, p.z as f32, 0.0])
+            .collect();
+        self.weld_attributes_gpu(&gpu_attrs, 3, tol)
+    }
+
+    /// Welds and deduplicates 2D attributes within tolerance `tol` via Vulkan compute.
+    pub fn weld_attributes_2d(&self, attrs: &[Point2], tol: f64) -> Vec<usize> {
+        if attrs.is_empty() {
+            return Vec::new();
+        }
+        if attrs.len() == 1 || tol <= 0.0 {
+            return (0..attrs.len()).collect();
+        }
+        let gpu_attrs: Vec<[f32; 4]> = attrs
+            .iter()
+            .map(|p| [p.x as f32, p.y as f32, 0.0, 0.0])
+            .collect();
+        self.weld_attributes_gpu(&gpu_attrs, 2, tol)
+    }
+
+    fn weld_attributes_gpu(&self, gpu_attrs: &[[f32; 4]], dim: u32, tol: f64) -> Vec<usize> {
+        let num_attrs = gpu_attrs.len() as u32;
+        let mut min_x = gpu_attrs[0][0];
+        let mut min_y = gpu_attrs[0][1];
+        let mut min_z = if dim == 3 { gpu_attrs[0][2] } else { 0.0 };
+        for a in &gpu_attrs[1..] {
+            if a[0] < min_x { min_x = a[0]; }
+            if a[1] < min_y { min_y = a[1]; }
+            if dim == 3 && a[2] < min_z { min_z = a[2]; }
+        }
+
+        let mut table_size = 64u32;
+        while table_size < 2 * num_attrs && table_size < (1u32 << 26) {
+            table_size <<= 1;
+        }
+        let table_mask = table_size - 1;
+
+        let uniforms = WeldUniforms {
+            num_attrs,
+            dim,
+            tol: tol as f32,
+            table_mask,
+            min_x,
+            min_y,
+            min_z,
+            inv_tol: (1.0 / tol) as f32,
+        };
+
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+        let attr_buf = BufferHandler::storage_from_slice(&gpu_attrs, self.handler.device());
+        let initial_heads = vec![0xFFFFFFFFu32; table_size as usize];
+        let head_buf = BufferHandler::storage_from_slice(&initial_heads, self.handler.device());
+        let next_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_attrs as usize * size_of::<u32>()) as u64,
+        );
+        let label_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_attrs as usize * size_of::<u32>()) as u64,
+        );
+
+        let bind_group = self.weld_build_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            attr_buf.binding_resource(),
+            head_buf.binding_resource(),
+            next_buf.binding_resource(),
+            label_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_attrs + 63) / 64, 1, 1);
+        self.weld_build_engine.dispatch(&bind_group, workgroups);
+
+        for _ in 0..8 {
+            self.weld_propagate_engine.dispatch(&bind_group, workgroups);
+        }
+
+        let mut labels: Vec<u32> = label_buf.read_to_vec_block(&self.handler);
+        for i in 0..labels.len() {
+            let mut root = labels[i] as usize;
+            while (labels[root] as usize) != root {
+                root = labels[root] as usize;
+            }
+            labels[i] = root as u32;
+        }
+
+        labels.into_iter().map(|idx| idx as usize).collect()
     }
 }
 

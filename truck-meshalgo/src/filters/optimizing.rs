@@ -182,13 +182,18 @@ impl OptimizingFilter for PolygonMesh {
         let diag = bnd_box.diagonal().map(|a| f64::max(a.abs(), 1.0));
         let normalized_positions = positions
             .iter()
-            .map(move |position| 2.0 * (position - center).zip(diag, |a, b| a / b))
+            .map(move |position| {
+                let v = 2.0 * (position - center).zip(diag, |a, b| a / b);
+                Point3::new(v.x, v.y, v.z)
+            })
             .collect::<Vec<_>>();
-        let pos_map = sub_put_together_same_attrs(&normalized_positions, tol);
+        let pos_map = dispatch::Dispatcher::global().weld_attributes_3d(&normalized_positions, tol);
         all_pos_mut(faces).for_each(|idx| *idx = pos_map[*idx]);
-        let uv_map = sub_put_together_same_attrs(uv_coords, tol);
+        let uv_pts: Vec<Point2> = uv_coords.iter().map(|u| Point2::new(u.x, u.y)).collect();
+        let uv_map = dispatch::Dispatcher::global().weld_attributes_2d(&uv_pts, tol);
         all_uv_mut(faces).for_each(|idx| *idx = uv_map[*idx]);
-        let nor_map = sub_put_together_same_attrs(normals, tol);
+        let nor_pts: Vec<Point3> = normals.iter().map(|n| Point3::new(n.x, n.y, n.z)).collect();
+        let nor_map = dispatch::Dispatcher::global().weld_attributes_3d(&nor_pts, tol);
         all_nor_mut(faces).for_each(|idx| *idx = nor_map[*idx]);
         drop(mesh);
         self
@@ -219,14 +224,35 @@ fn sub_remove_unused_attrs<'a, I: Iterator<Item = &'a mut usize>>(
     new2old
 }
 
-trait SameAttr: Copy + CastIntVector + MetricSpace<Metric = f64> {}
+/// Trait for geometric attributes that can be welded by spatial proximity.
+pub trait SameAttr: Copy + CastIntVector + MetricSpace<Metric = f64> {}
 impl<T> SameAttr for T where T: Copy + CastIntVector + MetricSpace<Metric = f64> {}
 
-fn sub_put_together_same_attrs<T: SameAttr>(attrs: &[T], tol: f64) -> Vec<usize> {
+/// Merges duplicate and near-coincident attributes within tolerance `tol`,
+/// assigning each connected component its canonical minimum attribute index.
+pub fn sub_put_together_same_attrs<T: SameAttr>(attrs: &[T], tol: f64) -> Vec<usize> {
+    if attrs.is_empty() {
+        return Vec::new();
+    }
+    if attrs.len() == 1 || tol <= 0.0 {
+        return (0..attrs.len()).collect();
+    }
     let map = create_blocks(attrs, tol);
     let adj = create_adjacency(map, attrs, tol);
     let components = create_components(adj, attrs);
-    centralize(components, attrs)
+    canonical_min(components, attrs.len())
+}
+
+fn canonical_min(components: impl Iterator<Item = Vec<usize>>, len: usize) -> Vec<usize> {
+    let mut res = (0..len).collect::<Vec<_>>();
+    for component in components {
+        if let Some(&min_idx) = component.iter().min() {
+            for i in component {
+                res[i] = min_idx;
+            }
+        }
+    }
+    res
 }
 
 type BlockMap<'a, T> = HashMap<<T as CastIntVector>::IntVector, Vec<usize>>;
@@ -281,31 +307,6 @@ fn create_components<T: SameAttr>(
     })
 }
 
-fn centralize<T: SameAttr>(
-    components: impl Iterator<Item = Vec<usize>>,
-    attrs: &[T],
-) -> Vec<usize> {
-    let mut res = vec![0; attrs.len()];
-    components.for_each(|component| {
-        let center = component
-            .iter()
-            .fold(T::zero(), |sum, j| sum.add_element_wise(attrs[*j]))
-            / component.len() as f64;
-        let (mut mindist, mut mindx) = (f64::INFINITY, 0);
-        component.iter().copied().for_each(|i| {
-            let dist = attrs[i].distance2(center);
-            if dist < mindist {
-                mindist = dist;
-                mindx = i;
-            }
-        });
-        component.into_iter().for_each(|i| {
-            res[i] = mindx;
-        });
-    });
-    res
-}
-
 fn degenerate_triangle(tri: [Vertex; 3]) -> bool {
     tri[0].pos == tri[1].pos || tri[1].pos == tri[2].pos || tri[2].pos == tri[0].pos
 }
@@ -348,11 +349,16 @@ fn split_into_nondegenerate(poly: Vec<Vertex>) -> Vec<Vec<Vertex>> {
     vec![poly]
 }
 
-trait CastIntVector:
+/// Trait for casting floating-point vectors into spatial integer grid coordinates.
+pub trait CastIntVector:
     Sized + ElementWise<Self> + Mul<f64, Output = Self> + Div<f64, Output = Self> {
+    /// Integer coordinate vector type.
     type IntVector: IntVector;
+    /// Casts this vector into integer grid coordinates.
     fn cast_int(self) -> Self::IntVector;
+    /// Rounds vector into integer grid coordinates with cell size `tol`.
     fn round(self, tol: f64) -> Self::IntVector;
+    /// Returns the zero vector.
     fn zero() -> Self;
 }
 
@@ -372,10 +378,14 @@ macro_rules! impl_cast_int {
 }
 impl_cast_int!(Vector2, 2);
 impl_cast_int!(Vector3, 3);
+impl_cast_int!(Point2, 2);
 impl_cast_int!(Point3, 3);
 
-trait IntVector: Copy + std::hash::Hash + Eq {
+/// Trait for integer coordinate vectors with spatial neighborhood lookup.
+pub trait IntVector: Copy + std::hash::Hash + Eq {
+    /// Neighborhood iterator type.
     type Neighborhood: IntoIterator<Item = Self>;
+    /// Returns neighboring grid cells.
     fn neighborhood(self) -> Self::Neighborhood;
 }
 

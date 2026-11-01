@@ -447,6 +447,7 @@ pub fn run_scaling_microbenchmark() -> DispatchProfile {
         qem_edge_collapse: ScalingThresholds::default_fallback(Operation::QemEdgeCollapse),
         point_in_2d_loops: ScalingThresholds::default_fallback(Operation::PointIn2dLoops),
         segment_mesh_distance: ScalingThresholds::default_fallback(Operation::SegmentMeshDistance),
+        weld_attributes: ScalingThresholds::default_fallback(Operation::WeldAttributes),
     }
 }
 

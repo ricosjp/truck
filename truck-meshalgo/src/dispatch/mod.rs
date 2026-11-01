@@ -1340,6 +1340,76 @@ impl Dispatcher {
     fn segment_mesh_distances_rayon(&self, mesh: &PolygonMesh, segments: &[(Point3, Point3)]) -> Vec<f64> {
         cpu_segment_mesh_distances(mesh, segments, true)
     }
+
+    // ========================================================================
+    // Operation 19: Parallel Vertex Welding & Attribute Deduplication
+    // ========================================================================
+
+    /// Welds and deduplicates 3D attributes within tolerance `tol` using the optimal kernel.
+    pub fn weld_attributes_3d(&self, attrs: &[Point3], tol: f64) -> Vec<usize> {
+        if attrs.is_empty() {
+            return Vec::new();
+        }
+        let target = self.select_kernel(Operation::WeldAttributes, attrs.len());
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().weld_attributes_3d(attrs, tol);
+                #[cfg(not(feature = "cuda"))]
+                self.weld_attributes_3d_rayon(attrs, tol)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.weld_attributes_3d(attrs, tol);
+                }
+                self.weld_attributes_3d_rayon(attrs, tol)
+            }
+            KernelTarget::CpuRayon => self.weld_attributes_3d_rayon(attrs, tol),
+            KernelTarget::CpuSingle => self.weld_attributes_3d_cpu(attrs, tol),
+        }
+    }
+
+    /// Welds and deduplicates 2D attributes within tolerance `tol` using the optimal kernel.
+    pub fn weld_attributes_2d(&self, attrs: &[Point2], tol: f64) -> Vec<usize> {
+        if attrs.is_empty() {
+            return Vec::new();
+        }
+        let target = self.select_kernel(Operation::WeldAttributes, attrs.len());
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().weld_attributes_2d(attrs, tol);
+                #[cfg(not(feature = "cuda"))]
+                self.weld_attributes_2d_rayon(attrs, tol)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.weld_attributes_2d(attrs, tol);
+                }
+                self.weld_attributes_2d_rayon(attrs, tol)
+            }
+            KernelTarget::CpuRayon => self.weld_attributes_2d_rayon(attrs, tol),
+            KernelTarget::CpuSingle => self.weld_attributes_2d_cpu(attrs, tol),
+        }
+    }
+
+    fn weld_attributes_3d_cpu(&self, attrs: &[Point3], tol: f64) -> Vec<usize> {
+        crate::filters::sub_put_together_same_attrs(attrs, tol)
+    }
+
+    fn weld_attributes_3d_rayon(&self, attrs: &[Point3], tol: f64) -> Vec<usize> {
+        crate::filters::sub_put_together_same_attrs(attrs, tol)
+    }
+
+    fn weld_attributes_2d_cpu(&self, attrs: &[Point2], tol: f64) -> Vec<usize> {
+        crate::filters::sub_put_together_same_attrs(attrs, tol)
+    }
+
+    fn weld_attributes_2d_rayon(&self, attrs: &[Point2], tol: f64) -> Vec<usize> {
+        crate::filters::sub_put_together_same_attrs(attrs, tol)
+    }
 }
 
 // Helpers

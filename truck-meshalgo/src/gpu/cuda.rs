@@ -302,6 +302,14 @@ extern "C" {
         h_out_min_distances: *mut f64,
     ) -> i32;
 
+    fn truck_cuda_weld_attributes_f64(
+        h_attrs: *const f64,
+        num_attrs: u32,
+        dim: u32,
+        tol: f64,
+        h_out_map: *mut u32,
+    ) -> i32;
+
     fn truck_cuda_get_device_info(
         name_buf: *mut std::os::raw::c_char,
         name_buf_len: i32,
@@ -1788,5 +1796,47 @@ impl CudaMeshAnalyzer {
         assert_eq!(status, 0, "truck_cuda_segment_mesh_distances failed with code: {}", status);
 
         out_min_distances
+    }
+
+    /// Welds and deduplicates 3D attributes within tolerance `tol` using Ampere SM 8.6 CUDA.
+    pub fn weld_attributes_3d(&self, attrs: &[Point3], tol: f64) -> Vec<usize> {
+        if attrs.is_empty() {
+            return Vec::new();
+        }
+        let num_attrs = attrs.len() as u32;
+        let flat_attrs: Vec<f64> = attrs.iter().flat_map(|p| [p.x, p.y, p.z]).collect();
+        let mut out_map = vec![0u32; attrs.len()];
+        let status = unsafe {
+            truck_cuda_weld_attributes_f64(
+                flat_attrs.as_ptr(),
+                num_attrs,
+                3,
+                tol,
+                out_map.as_mut_ptr(),
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_weld_attributes_f64 failed with code: {}", status);
+        out_map.into_iter().map(|idx| idx as usize).collect()
+    }
+
+    /// Welds and deduplicates 2D attributes within tolerance `tol` using Ampere SM 8.6 CUDA.
+    pub fn weld_attributes_2d(&self, attrs: &[Point2], tol: f64) -> Vec<usize> {
+        if attrs.is_empty() {
+            return Vec::new();
+        }
+        let num_attrs = attrs.len() as u32;
+        let flat_attrs: Vec<f64> = attrs.iter().flat_map(|p| [p.x, p.y]).collect();
+        let mut out_map = vec![0u32; attrs.len()];
+        let status = unsafe {
+            truck_cuda_weld_attributes_f64(
+                flat_attrs.as_ptr(),
+                num_attrs,
+                2,
+                tol,
+                out_map.as_mut_ptr(),
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_weld_attributes_f64 failed with code: {}", status);
+        out_map.into_iter().map(|idx| idx as usize).collect()
     }
 }

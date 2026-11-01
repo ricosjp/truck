@@ -68,6 +68,8 @@ pub enum Operation {
     PointIn2dLoops,
     /// 3D line segment to mesh clearance distances.
     SegmentMeshDistance,
+    /// Parallel vertex welding and attribute deduplication.
+    WeldAttributes,
 }
 
 /// Recorded microbenchmark measurement sample.
@@ -206,6 +208,12 @@ impl ScalingThresholds {
                 preferred_gpu: KernelTarget::GpuCuda,
                 sample_timings: Vec::new(),
             },
+            Operation::WeldAttributes => Self {
+                cpu_single_max: 64,
+                cpu_rayon_max: 256,
+                preferred_gpu: KernelTarget::GpuPtxSm86,
+                sample_timings: Vec::new(),
+            },
         }
     }
 
@@ -288,6 +296,8 @@ pub struct DispatchProfile {
     pub point_in_2d_loops: ScalingThresholds,
     /// Thresholds for 3D segment-to-mesh clearance distances.
     pub segment_mesh_distance: ScalingThresholds,
+    /// Thresholds for parallel vertex welding and attribute deduplication.
+    pub weld_attributes: ScalingThresholds,
 }
 
 impl Default for DispatchProfile {
@@ -311,6 +321,7 @@ impl Default for DispatchProfile {
             qem_edge_collapse: ScalingThresholds::default_fallback(Operation::QemEdgeCollapse),
             point_in_2d_loops: ScalingThresholds::default_fallback(Operation::PointIn2dLoops),
             segment_mesh_distance: ScalingThresholds::default_fallback(Operation::SegmentMeshDistance),
+            weld_attributes: ScalingThresholds::default_fallback(Operation::WeldAttributes),
         }
     }
 }
@@ -337,6 +348,7 @@ impl DispatchProfile {
             qem_edge_collapse: ScalingThresholds::cpu_only(64),
             point_in_2d_loops: ScalingThresholds::cpu_only(64),
             segment_mesh_distance: ScalingThresholds::cpu_only(32),
+            weld_attributes: ScalingThresholds::cpu_only(64),
         }
     }
 
@@ -361,6 +373,7 @@ impl DispatchProfile {
             Operation::QemEdgeCollapse => self.qem_edge_collapse.select_kernel(size),
             Operation::PointIn2dLoops => self.point_in_2d_loops.select_kernel(size),
             Operation::SegmentMeshDistance => self.segment_mesh_distance.select_kernel(size),
+            Operation::WeldAttributes => self.weld_attributes.select_kernel(size),
         }
     }
 }

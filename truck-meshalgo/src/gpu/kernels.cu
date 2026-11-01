@@ -410,15 +410,15 @@ static CUfunction g_driver_ptx_cross_fn = nullptr;
 static bool g_driver_initialized = false;
 
 static void ensure_driver_ptx_loaded() {
-    if (g_driver_initialized) return;
-
     cuInit(0);
-    // Retain primary context for current CUDA device
+    // Retain primary context for current CUDA device on the calling thread
     int current_dev = 0;
     cudaGetDevice(&current_dev);
     CUcontext ctx;
     cuDevicePrimaryCtxRetain(&ctx, current_dev);
     cuCtxSetCurrent(ctx);
+
+    if (g_driver_initialized) return;
 
     char* ptx_null_term = (char*)malloc(truck_meshalgo_src_gpu_kernels_sm86_ptx_len + 1);
     if (!ptx_null_term) return;
@@ -624,6 +624,7 @@ int cuda_compute_distance2_point_cloud_ptx(
         }
         return 0;
     }
+    std::lock_guard<std::mutex> lock(g_dist_mutex);
     ensure_best_device();
     ensure_driver_ptx_loaded();
     if (!g_driver_ptx_dist_fn) return -10;
@@ -800,6 +801,7 @@ int cuda_compute_signed_crossing_rays_ptx(
         }
         return 0;
     }
+    std::lock_guard<std::mutex> lock(g_cross_mutex);
     ensure_best_device();
     ensure_driver_ptx_loaded();
     if (!g_driver_ptx_cross_fn) return -10;
@@ -4352,6 +4354,229 @@ int truck_cuda_segment_mesh_distances(
     cudaFree(d_segments);
     cudaFree(d_triangles);
     cudaFree(d_distances);
+    return 0;
+}
+
+// ============================================================================
+// Vertex Welding & Attribute Deduplication (SM 8.6 PTX & Spatial Hashing)
+// ============================================================================
+
+__global__ void truck_cuda_weld_build_hash_kernel(
+    const double* __restrict__ attrs,
+    unsigned int num_attrs,
+    unsigned int dim,
+    double min_x,
+    double min_y,
+    double min_z,
+    double inv_tol,
+    unsigned int table_mask,
+    int* __restrict__ d_head,
+    int* __restrict__ d_next,
+    unsigned int* __restrict__ d_labels
+) {
+    unsigned int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i >= num_attrs) return;
+
+    d_labels[i] = i;
+
+    double x = attrs[i * dim];
+    double y = attrs[i * dim + 1];
+    double z = (dim == 3) ? attrs[i * dim + 2] : 0.0;
+
+    int cx = (int)floor((x - min_x) * inv_tol);
+    int cy = (int)floor((y - min_y) * inv_tol);
+    int cz = (dim == 3) ? (int)floor((z - min_z) * inv_tol) : 0;
+
+    uint32_t h = ((uint32_t)cx * 73856093u) ^ ((uint32_t)cy * 19349663u) ^ ((uint32_t)cz * 83492791u);
+    uint32_t bucket = h & table_mask;
+
+    int old_head = atomicExch(&d_head[bucket], (int)i);
+    d_next[i] = old_head;
+}
+
+__global__ void truck_cuda_weld_propagate_kernel(
+    const double* __restrict__ attrs,
+    unsigned int num_attrs,
+    unsigned int dim,
+    double min_x,
+    double min_y,
+    double min_z,
+    double inv_tol,
+    double tol2,
+    unsigned int table_mask,
+    const int* __restrict__ d_head,
+    const int* __restrict__ d_next,
+    unsigned int* __restrict__ d_labels,
+    int* __restrict__ d_changed
+) {
+    unsigned int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i >= num_attrs) return;
+
+    double xi = attrs[i * dim];
+    double yi = attrs[i * dim + 1];
+    double zi = (dim == 3) ? attrs[i * dim + 2] : 0.0;
+
+    int cx = (int)floor((xi - min_x) * inv_tol);
+    int cy = (int)floor((yi - min_y) * inv_tol);
+    int cz = (dim == 3) ? (int)floor((zi - min_z) * inv_tol) : 0;
+
+    unsigned int cur_label = d_labels[i];
+    unsigned int min_label = cur_label;
+
+    int dz_min = (dim == 3) ? -1 : 0;
+    int dz_max = (dim == 3) ? 1 : 0;
+
+    for (int dz = dz_min; dz <= dz_max; ++dz) {
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                int ncx = cx + dx;
+                int ncy = cy + dy;
+                int ncz = cz + dz;
+
+                uint32_t nh = ((uint32_t)ncx * 73856093u) ^ ((uint32_t)ncy * 19349663u) ^ ((uint32_t)ncz * 83492791u);
+                uint32_t nbucket = nh & table_mask;
+
+                int curr = d_head[nbucket];
+                int steps = 0;
+                while (curr != -1 && steps < 2048) {
+                    steps++;
+                    int j = curr;
+                    curr = d_next[j];
+                    if (j != (int)i) {
+                        double xj = attrs[j * dim];
+                        double yj = attrs[j * dim + 1];
+                        double zj = (dim == 3) ? attrs[j * dim + 2] : 0.0;
+
+                        double d_x = xi - xj;
+                        double d_y = yi - yj;
+                        double d_z = zi - zj;
+                        double d2 = d_x * d_x + d_y * d_y + d_z * d_z;
+
+                        if (d2 < tol2) {
+                            unsigned int lj = d_labels[j];
+                            if (lj < min_label) {
+                                min_label = lj;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (min_label < cur_label) {
+        atomicMin(&d_labels[i], min_label);
+        *d_changed = 1;
+    }
+}
+
+__global__ void truck_cuda_weld_compress_kernel(
+    unsigned int num_attrs,
+    unsigned int* __restrict__ d_labels,
+    int* __restrict__ d_changed
+) {
+    unsigned int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i >= num_attrs) return;
+
+    unsigned int p = d_labels[i];
+    unsigned int root = d_labels[p];
+    if (root != p) {
+        d_labels[i] = root;
+        *d_changed = 1;
+    }
+}
+
+int truck_cuda_weld_attributes_f64(
+    const double* h_attrs,
+    unsigned int num_attrs,
+    unsigned int dim,
+    double tol,
+    unsigned int* h_out_map
+) {
+    if (num_attrs == 0) return 0;
+    if (num_attrs == 1 || tol <= 0.0) {
+        for (unsigned int i = 0; i < num_attrs; ++i) {
+            h_out_map[i] = i;
+        }
+        return 0;
+    }
+    ensure_best_device();
+
+    // Compute bounding box on host
+    double min_x = h_attrs[0];
+    double min_y = h_attrs[1];
+    double min_z = (dim == 3) ? h_attrs[2] : 0.0;
+    for (unsigned int i = 1; i < num_attrs; ++i) {
+        double x = h_attrs[i * dim];
+        double y = h_attrs[i * dim + 1];
+        if (x < min_x) min_x = x;
+        if (y < min_y) min_y = y;
+        if (dim == 3) {
+            double z = h_attrs[i * dim + 2];
+            if (z < min_z) min_z = z;
+        }
+    }
+
+    double inv_tol = 1.0 / tol;
+    double tol2 = tol * tol;
+
+    unsigned int table_size = 64;
+    while (table_size < 2 * num_attrs && table_size < (1u << 26)) {
+        table_size <<= 1;
+    }
+    unsigned int table_mask = table_size - 1;
+
+    size_t attrs_bytes = (size_t)num_attrs * dim * sizeof(double);
+    size_t head_bytes = (size_t)table_size * sizeof(int);
+    size_t next_bytes = (size_t)num_attrs * sizeof(int);
+    size_t label_bytes = (size_t)num_attrs * sizeof(unsigned int);
+    size_t changed_bytes = sizeof(int);
+
+    size_t total_bytes = attrs_bytes + head_bytes + next_bytes + label_bytes + changed_bytes;
+
+    void* d_buffer = NULL;
+    if (cudaMalloc(&d_buffer, total_bytes) != cudaSuccess) return -1;
+
+    char* ptr = (char*)d_buffer;
+    double* d_attrs = (double*)ptr; ptr += attrs_bytes;
+    int* d_head = (int*)ptr; ptr += head_bytes;
+    int* d_next = (int*)ptr; ptr += next_bytes;
+    unsigned int* d_labels = (unsigned int*)ptr; ptr += label_bytes;
+    int* d_changed = (int*)ptr;
+
+    cudaMemcpy(d_attrs, h_attrs, attrs_bytes, cudaMemcpyHostToDevice);
+    cudaMemset(d_head, 0xFF, head_bytes);
+
+    unsigned int block_size = 256;
+    unsigned int grid_size = (num_attrs + block_size - 1) / block_size;
+
+    truck_cuda_weld_build_hash_kernel<<<grid_size, block_size>>>(
+        d_attrs, num_attrs, dim, min_x, min_y, min_z, inv_tol, table_mask,
+        d_head, d_next, d_labels
+    );
+    cudaDeviceSynchronize();
+
+    int changed = 1;
+    int iter = 0;
+    while (changed && iter < 64) {
+        cudaMemset(d_changed, 0, sizeof(int));
+        truck_cuda_weld_propagate_kernel<<<grid_size, block_size>>>(
+            d_attrs, num_attrs, dim, min_x, min_y, min_z, inv_tol, tol2, table_mask,
+            d_head, d_next, d_labels, d_changed
+        );
+        truck_cuda_weld_compress_kernel<<<grid_size, block_size>>>(
+            num_attrs, d_labels, d_changed
+        );
+        cudaDeviceSynchronize();
+        cudaMemcpy(&changed, d_changed, sizeof(int), cudaMemcpyDeviceToHost);
+        iter++;
+    }
+
+    if (h_out_map) {
+        cudaMemcpy(h_out_map, d_labels, label_bytes, cudaMemcpyDeviceToHost);
+    }
+
+    cudaFree(d_buffer);
     return 0;
 }
 
