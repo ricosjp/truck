@@ -903,6 +903,322 @@ impl Dispatcher {
     ) -> Vec<Option<(f64, Point3, Vector3)>> {
         self.raycast_mesh(mesh, rays)
     }
+
+    // ========================================================================
+    // Operation 14: Loop Subdivision
+    // ========================================================================
+
+    /// Performs full smooth Loop subdivision refinement on the mesh.
+    pub fn loop_subdivide(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        let total_faces = mesh.faces().len();
+        let target = self.select_kernel(Operation::LoopSubdivision, total_faces);
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().loop_subdivide(mesh);
+                #[cfg(not(feature = "cuda"))]
+                self.loop_subdivide_rayon(mesh)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.loop_subdivide(mesh);
+                }
+                self.loop_subdivide_rayon(mesh)
+            }
+            KernelTarget::CpuRayon => self.loop_subdivide_rayon(mesh),
+            KernelTarget::CpuSingle => self.loop_subdivide_cpu(mesh),
+        }
+    }
+
+    /// In-place smooth Loop subdivision refinement on the mesh.
+    pub fn loop_subdivision<'a>(&self, mesh: &'a mut PolygonMesh) -> &'a mut PolygonMesh {
+        *mesh = self.loop_subdivide(mesh);
+        mesh
+    }
+
+    fn loop_subdivide_cpu(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return mesh.clone();
+        }
+        let topo = crate::gpu::prepare_loop_subdivision_topology(mesh);
+        let num_vertices = mesh.positions().len();
+        let in_positions = mesh.positions();
+
+        let mut positions = Vec::with_capacity(num_vertices + topo.edges_f64.len());
+        // Even vertices
+        for (v, info) in topo.vertex_info.iter().enumerate() {
+            let p = in_positions[v];
+            let new_p = match info.boundary_type {
+                2 => p, // Corner
+                1 => p + ((in_positions[info.b0 as usize] - p) + (in_positions[info.b1 as usize] - p)) / 8.0,
+                _ => {
+                    let n = info.valence as f64;
+                    if n > 0.0 {
+                        let alpha = 3.0 / 8.0 + (2.0 * std::f64::consts::PI / n).cos() / 4.0;
+                        let beta = (5.0 / 8.0 - alpha * alpha) / n;
+                        let mut sum_v = Vector3::zero();
+                        for j in 0..info.valence {
+                            let nb = topo.vertex_neighbors[(info.offset + j) as usize] as usize;
+                            sum_v += in_positions[nb] - p;
+                        }
+                        p + sum_v * beta
+                    } else {
+                        p
+                    }
+                }
+            };
+            positions.push(new_p);
+        }
+
+        // Odd vertices
+        for edge in topo.edges_f64.iter() {
+            let p0 = in_positions[edge.v0 as usize];
+            let p1 = in_positions[edge.v1 as usize];
+            let new_p = if edge.is_boundary != 0 {
+                p0.midpoint(p1)
+            } else {
+                let pw0 = in_positions[edge.w0 as usize];
+                let pw1 = in_positions[edge.w1 as usize];
+                p0 + (p1 - p0) * edge.gamma + (pw0 - p0) / 8.0 + (pw1 - p1) / 8.0
+            };
+            positions.push(new_p);
+        }
+
+        let mut out_mesh = mesh.clone();
+        {
+            let editor = out_mesh.debug_editor();
+            editor.attributes.positions = positions;
+            *editor.faces = Faces::from_tri_and_quad_faces(topo.new_tri_faces, Vec::new());
+        }
+        out_mesh
+    }
+
+    fn loop_subdivide_rayon(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return mesh.clone();
+        }
+        let topo = crate::gpu::prepare_loop_subdivision_topology(mesh);
+        let in_positions = mesh.positions();
+
+        // Even vertices in parallel
+        let mut even_positions: Vec<Point3> = topo.vertex_info
+            .par_iter()
+            .enumerate()
+            .map(|(v, info)| {
+                let p = in_positions[v];
+                match info.boundary_type {
+                    2 => p,
+                    1 => p + ((in_positions[info.b0 as usize] - p) + (in_positions[info.b1 as usize] - p)) / 8.0,
+                    _ => {
+                        let n = info.valence as f64;
+                        if n > 0.0 {
+                            let alpha = 3.0 / 8.0 + (2.0 * std::f64::consts::PI / n).cos() / 4.0;
+                            let beta = (5.0 / 8.0 - alpha * alpha) / n;
+                            let mut sum_v = Vector3::zero();
+                            for j in 0..info.valence {
+                                let nb = topo.vertex_neighbors[(info.offset + j) as usize] as usize;
+                                sum_v += in_positions[nb] - p;
+                            }
+                            p + sum_v * beta
+                        } else {
+                            p
+                        }
+                    }
+                }
+            })
+            .collect();
+
+        // Odd vertices in parallel
+        let odd_positions: Vec<Point3> = topo.edges_f64
+            .par_iter()
+            .map(|edge| {
+                let p0 = in_positions[edge.v0 as usize];
+                let p1 = in_positions[edge.v1 as usize];
+                if edge.is_boundary != 0 {
+                    p0.midpoint(p1)
+                } else {
+                    let pw0 = in_positions[edge.w0 as usize];
+                    let pw1 = in_positions[edge.w1 as usize];
+                    p0 + (p1 - p0) * edge.gamma + (pw0 - p0) / 8.0 + (pw1 - p1) / 8.0
+                }
+            })
+            .collect();
+
+        even_positions.extend(odd_positions);
+
+        let mut out_mesh = mesh.clone();
+        {
+            let editor = out_mesh.debug_editor();
+            editor.attributes.positions = even_positions;
+            *editor.faces = Faces::from_tri_and_quad_faces(topo.new_tri_faces, Vec::new());
+        }
+        out_mesh
+    }
+
+    // ========================================================================
+    // Operation 15: Feature Edges & Boundaries
+    // ========================================================================
+
+    /// Extracts crease edges and open boundary feature edges as 3D line segments.
+    pub fn extract_feature_edges(&self, mesh: &PolygonMesh, crease_angle_rad: f64) -> Vec<(Point3, Point3)> {
+        let total_faces = mesh.faces().len();
+        let target = self.select_kernel(Operation::FeatureEdges, total_faces);
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().extract_feature_edges(mesh, crease_angle_rad);
+                #[cfg(not(feature = "cuda"))]
+                self.extract_feature_edges_rayon(mesh, crease_angle_rad)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.extract_feature_edges(mesh, crease_angle_rad);
+                }
+                self.extract_feature_edges_rayon(mesh, crease_angle_rad)
+            }
+            KernelTarget::CpuRayon => self.extract_feature_edges_rayon(mesh, crease_angle_rad),
+            KernelTarget::CpuSingle => self.extract_feature_edges_cpu(mesh, crease_angle_rad),
+        }
+    }
+
+    /// Extracts open boundary edges as 3D line segments.
+    pub fn extract_boundary_edges(&self, mesh: &PolygonMesh) -> Vec<(Point3, Point3)> {
+        let total_faces = mesh.faces().len();
+        let target = self.select_kernel(Operation::FeatureEdges, total_faces);
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().extract_boundary_edges(mesh);
+                #[cfg(not(feature = "cuda"))]
+                self.extract_boundary_edges_rayon(mesh)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.extract_boundary_edges(mesh);
+                }
+                self.extract_boundary_edges_rayon(mesh)
+            }
+            KernelTarget::CpuRayon => self.extract_boundary_edges_rayon(mesh),
+            KernelTarget::CpuSingle => self.extract_boundary_edges_cpu(mesh),
+        }
+    }
+
+    fn extract_feature_edges_cpu(&self, mesh: &PolygonMesh, crease_angle_rad: f64) -> Vec<(Point3, Point3)> {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return Vec::new();
+        }
+        let topo = crate::gpu::prepare_feature_edges_topology(mesh);
+        let positions = mesh.positions();
+        let cos_crease = crease_angle_rad.cos();
+
+        topo.edges
+            .into_iter()
+            .filter_map(|e| {
+                let is_feature = if e.f1 < 0 {
+                    true
+                } else {
+                    let n0 = Vector3::new(
+                        topo.face_normals_f64[e.f0 as usize][0],
+                        topo.face_normals_f64[e.f0 as usize][1],
+                        topo.face_normals_f64[e.f0 as usize][2],
+                    );
+                    let n1 = Vector3::new(
+                        topo.face_normals_f64[e.f1 as usize][0],
+                        topo.face_normals_f64[e.f1 as usize][1],
+                        topo.face_normals_f64[e.f1 as usize][2],
+                    );
+                    n0.dot(n1) < cos_crease
+                };
+                if is_feature {
+                    Some((positions[e.v0 as usize], positions[e.v1 as usize]))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn extract_feature_edges_rayon(&self, mesh: &PolygonMesh, crease_angle_rad: f64) -> Vec<(Point3, Point3)> {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return Vec::new();
+        }
+        let topo = crate::gpu::prepare_feature_edges_topology(mesh);
+        let positions = mesh.positions();
+        let cos_crease = crease_angle_rad.cos();
+
+        topo.edges
+            .into_par_iter()
+            .filter_map(|e| {
+                let is_feature = if e.f1 < 0 {
+                    true
+                } else {
+                    let n0 = Vector3::new(
+                        topo.face_normals_f64[e.f0 as usize][0],
+                        topo.face_normals_f64[e.f0 as usize][1],
+                        topo.face_normals_f64[e.f0 as usize][2],
+                    );
+                    let n1 = Vector3::new(
+                        topo.face_normals_f64[e.f1 as usize][0],
+                        topo.face_normals_f64[e.f1 as usize][1],
+                        topo.face_normals_f64[e.f1 as usize][2],
+                    );
+                    n0.dot(n1) < cos_crease
+                };
+                if is_feature {
+                    Some((positions[e.v0 as usize], positions[e.v1 as usize]))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn extract_boundary_edges_cpu(&self, mesh: &PolygonMesh) -> Vec<(Point3, Point3)> {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return Vec::new();
+        }
+        let topo = crate::gpu::prepare_feature_edges_topology(mesh);
+        let positions = mesh.positions();
+
+        topo.edges
+            .into_iter()
+            .filter_map(|e| {
+                if e.f1 < 0 {
+                    Some((positions[e.v0 as usize], positions[e.v1 as usize]))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn extract_boundary_edges_rayon(&self, mesh: &PolygonMesh) -> Vec<(Point3, Point3)> {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return Vec::new();
+        }
+        let topo = crate::gpu::prepare_feature_edges_topology(mesh);
+        let positions = mesh.positions();
+
+        topo.edges
+            .into_par_iter()
+            .filter_map(|e| {
+                if e.f1 < 0 {
+                    Some((positions[e.v0 as usize], positions[e.v1 as usize]))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
 }
 
 // Helpers

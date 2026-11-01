@@ -5,7 +5,7 @@ use super::{filter_and_cluster_seeds, sample_surface_grid, GpuTriangle};
 use truck_base::cgmath64::*;
 use truck_base::hash::{self, HashGen};
 use truck_geometry::prelude::*;
-use truck_polymesh::PolygonMesh;
+use truck_polymesh::{Faces, PolygonMesh};
 
 extern "C" {
     // Default optimized SM 8.6 PTX kernel with buffer pooling
@@ -247,6 +247,31 @@ extern "C" {
         h_out_tri_indices: *mut i32,
         h_out_hit_points: *mut f32,
         h_out_normals: *mut f32,
+    ) -> i32;
+
+    fn truck_cuda_loop_subdivision(
+        h_vertices: *const f64,
+        num_vertices: u32,
+        h_vertex_info: *const std::ffi::c_void,
+        h_vertex_neighbors: *const u32,
+        num_neighbors: u32,
+        h_edges: *const std::ffi::c_void,
+        num_edges: u32,
+        h_out_vertices: *mut f64,
+    ) -> i32;
+
+    fn truck_cuda_extract_feature_edges(
+        h_vertices: *const f64,
+        num_vertices: u32,
+        h_face_normals: *const f64,
+        num_faces: u32,
+        h_edges: *const std::ffi::c_void,
+        num_edges: u32,
+        cos_crease_angle: f64,
+        include_creases: i32,
+        include_boundaries: i32,
+        h_out_segments: *mut f64,
+        h_out_count: *mut u32,
     ) -> i32;
 
     fn truck_cuda_get_device_info(
@@ -1405,6 +1430,169 @@ impl CudaMeshAnalyzer {
                     None
                 }
             })
+            .collect()
+    }
+
+    /// Smooth Loop subdivision surface refinement on the GPU via CUDA (FP64 precision).
+    #[allow(clippy::chunks_exact_to_as_chunks)]
+    pub fn loop_subdivide(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return mesh.clone();
+        }
+        let topo = super::prepare_loop_subdivision_topology(mesh);
+        let num_vertices = mesh.positions().len() as u32;
+        let num_edges = topo.edges_f64.len() as u32;
+        let num_neighbors = topo.vertex_neighbors.len() as u32;
+
+        let flat_positions: Vec<f64> = mesh
+            .positions()
+            .iter()
+            .flat_map(|p| [p.x, p.y, p.z])
+            .collect();
+
+        let mut out_positions_flat = vec![0.0f64; (num_vertices as usize + num_edges as usize) * 3];
+
+        let status = unsafe {
+            truck_cuda_loop_subdivision(
+                flat_positions.as_ptr(),
+                num_vertices,
+                topo.vertex_info.as_ptr() as *const std::ffi::c_void,
+                topo.vertex_neighbors.as_ptr(),
+                num_neighbors,
+                topo.edges_f64.as_ptr() as *const std::ffi::c_void,
+                num_edges,
+                out_positions_flat.as_mut_ptr(),
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_loop_subdivision failed with code: {}", status);
+
+        let positions: Vec<Point3> = out_positions_flat
+            .chunks_exact(3)
+            .map(|c| Point3::new(c[0], c[1], c[2]))
+            .collect();
+
+        let mut out_mesh = mesh.clone();
+        {
+            let editor = out_mesh.debug_editor();
+            editor.attributes.positions = positions;
+            *editor.faces = Faces::from_tri_and_quad_faces(topo.new_tri_faces, Vec::new());
+        }
+        out_mesh
+    }
+
+    /// Alias for [`Self::loop_subdivide`].
+    #[inline(always)]
+    pub fn loop_subdivision(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        self.loop_subdivide(mesh)
+    }
+
+    /// Extracts crease edges and open boundary feature edges as 3D line segments via CUDA.
+    #[allow(clippy::chunks_exact_to_as_chunks)]
+    pub fn extract_feature_edges(&self, mesh: &PolygonMesh, crease_angle_rad: f64) -> Vec<(Point3, Point3)> {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return Vec::new();
+        }
+        let topo = super::prepare_feature_edges_topology(mesh);
+        if topo.edges.is_empty() {
+            return Vec::new();
+        }
+        let num_vertices = mesh.positions().len() as u32;
+        let num_faces = topo.face_normals_f64.len() as u32;
+        let num_edges = topo.edges.len() as u32;
+
+        let flat_positions: Vec<f64> = mesh
+            .positions()
+            .iter()
+            .flat_map(|p| [p.x, p.y, p.z])
+            .collect();
+
+        let flat_normals: Vec<f64> = topo
+            .face_normals_f64
+            .iter()
+            .flat_map(|n| [n[0], n[1], n[2]])
+            .collect();
+
+        let mut out_segments = vec![0.0f64; num_edges as usize * 6];
+        let mut out_count = 0u32;
+        let cos_crease = crease_angle_rad.cos();
+
+        let status = unsafe {
+            truck_cuda_extract_feature_edges(
+                flat_positions.as_ptr(),
+                num_vertices,
+                flat_normals.as_ptr(),
+                num_faces,
+                topo.edges.as_ptr() as *const std::ffi::c_void,
+                num_edges,
+                cos_crease,
+                1, // include_creases
+                1, // include_boundaries
+                out_segments.as_mut_ptr(),
+                &mut out_count,
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_extract_feature_edges failed with code: {}", status);
+
+        out_segments.truncate(out_count as usize * 6);
+        out_segments
+            .chunks_exact(6)
+            .map(|c| (Point3::new(c[0], c[1], c[2]), Point3::new(c[3], c[4], c[5])))
+            .collect()
+    }
+
+    /// Extracts open boundary edges as 3D line segments via CUDA.
+    #[allow(clippy::chunks_exact_to_as_chunks)]
+    pub fn extract_boundary_edges(&self, mesh: &PolygonMesh) -> Vec<(Point3, Point3)> {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return Vec::new();
+        }
+        let topo = super::prepare_feature_edges_topology(mesh);
+        if topo.edges.is_empty() {
+            return Vec::new();
+        }
+        let num_vertices = mesh.positions().len() as u32;
+        let num_faces = topo.face_normals_f64.len() as u32;
+        let num_edges = topo.edges.len() as u32;
+
+        let flat_positions: Vec<f64> = mesh
+            .positions()
+            .iter()
+            .flat_map(|p| [p.x, p.y, p.z])
+            .collect();
+
+        let flat_normals: Vec<f64> = topo
+            .face_normals_f64
+            .iter()
+            .flat_map(|n| [n[0], n[1], n[2]])
+            .collect();
+
+        let mut out_segments = vec![0.0f64; num_edges as usize * 6];
+        let mut out_count = 0u32;
+
+        let status = unsafe {
+            truck_cuda_extract_feature_edges(
+                flat_positions.as_ptr(),
+                num_vertices,
+                flat_normals.as_ptr(),
+                num_faces,
+                topo.edges.as_ptr() as *const std::ffi::c_void,
+                num_edges,
+                1.0,
+                0, // include_creases = 0
+                1, // include_boundaries = 1
+                out_segments.as_mut_ptr(),
+                &mut out_count,
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_extract_feature_edges failed with code: {}", status);
+
+        out_segments.truncate(out_count as usize * 6);
+        out_segments
+            .chunks_exact(6)
+            .map(|c| (Point3::new(c[0], c[1], c[2]), Point3::new(c[3], c[4], c[5])))
             .collect()
     }
 }

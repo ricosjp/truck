@@ -3446,6 +3446,351 @@ int truck_cuda_raycast_mesh(
     return 0;
 }
 
+// ============================================================================
+// Loop Subdivision (FP64 Precision)
+// ============================================================================
+
+struct GpuLoopVertexInfo {
+    unsigned int offset;
+    unsigned int valence;
+    unsigned int boundary_type; // 0 = Inner, 1 = Boundary, 2 = Corner
+    unsigned int b0;
+    unsigned int b1;
+    unsigned int _pad;
+};
+
+struct GpuLoopEdgeInfo {
+    unsigned int v0;
+    unsigned int v1;
+    unsigned int w0;
+    unsigned int w1;
+    double gamma;
+    unsigned int is_boundary;
+    unsigned int _pad;
+};
+
+extern "C" __global__ void truck_cuda_loop_subdivision_kernel(
+    const double* __restrict__ in_vertices,
+    const GpuLoopVertexInfo* __restrict__ vertex_info,
+    const unsigned int* __restrict__ vertex_neighbors,
+    unsigned int num_vertices,
+    const GpuLoopEdgeInfo* __restrict__ edges,
+    unsigned int num_edges,
+    double* __restrict__ out_vertices
+) {
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_vertices + num_edges) return;
+
+    if (idx < num_vertices) {
+        GpuLoopVertexInfo info = vertex_info[idx];
+        double vx = in_vertices[idx * 3 + 0];
+        double vy = in_vertices[idx * 3 + 1];
+        double vz = in_vertices[idx * 3 + 2];
+
+        double out_x = vx, out_y = vy, out_z = vz;
+
+        if (info.boundary_type == 2) {
+            // Corner: remains unchanged
+        } else if (info.boundary_type == 1) {
+            // Boundary: 3/4 * v + 1/8 * (b0 + b1)
+            double b0x = in_vertices[info.b0 * 3 + 0];
+            double b0y = in_vertices[info.b0 * 3 + 1];
+            double b0z = in_vertices[info.b0 * 3 + 2];
+            double b1x = in_vertices[info.b1 * 3 + 0];
+            double b1y = in_vertices[info.b1 * 3 + 1];
+            double b1z = in_vertices[info.b1 * 3 + 2];
+            out_x = 0.75 * vx + 0.125 * (b0x + b1x);
+            out_y = 0.75 * vy + 0.125 * (b0y + b1y);
+            out_z = 0.75 * vz + 0.125 * (b0z + b1z);
+        } else {
+            // Inner:
+            double n = (double)info.valence;
+            if (n > 0.0) {
+                const double PI = 3.14159265358979323846;
+                double alpha = 0.375 + 0.25 * cos(2.0 * PI / n);
+                double beta = (0.625 - alpha * alpha) / n;
+                double sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
+                for (unsigned int j = 0; j < info.valence; ++j) {
+                    unsigned int nb = vertex_neighbors[info.offset + j];
+                    sum_x += in_vertices[nb * 3 + 0] - vx;
+                    sum_y += in_vertices[nb * 3 + 1] - vy;
+                    sum_z += in_vertices[nb * 3 + 2] - vz;
+                }
+                out_x = vx + beta * sum_x;
+                out_y = vy + beta * sum_y;
+                out_z = vz + beta * sum_z;
+            }
+        }
+        out_vertices[idx * 3 + 0] = out_x;
+        out_vertices[idx * 3 + 1] = out_y;
+        out_vertices[idx * 3 + 2] = out_z;
+    } else {
+        unsigned int e_idx = idx - num_vertices;
+        GpuLoopEdgeInfo edge = edges[e_idx];
+        double v0x = in_vertices[edge.v0 * 3 + 0];
+        double v0y = in_vertices[edge.v0 * 3 + 1];
+        double v0z = in_vertices[edge.v0 * 3 + 2];
+        double v1x = in_vertices[edge.v1 * 3 + 0];
+        double v1y = in_vertices[edge.v1 * 3 + 1];
+        double v1z = in_vertices[edge.v1 * 3 + 2];
+
+        double out_x, out_y, out_z;
+        if (edge.is_boundary) {
+            out_x = 0.5 * (v0x + v1x);
+            out_y = 0.5 * (v0y + v1y);
+            out_z = 0.5 * (v0z + v1z);
+        } else {
+            double w0x = in_vertices[edge.w0 * 3 + 0];
+            double w0y = in_vertices[edge.w0 * 3 + 1];
+            double w0z = in_vertices[edge.w0 * 3 + 2];
+            double w1x = in_vertices[edge.w1 * 3 + 0];
+            double w1y = in_vertices[edge.w1 * 3 + 1];
+            double w1z = in_vertices[edge.w1 * 3 + 2];
+
+            double gamma = edge.gamma;
+            out_x = v0x + (v1x - v0x) * gamma + 0.125 * (w0x - v0x) + 0.125 * (w1x - v1x);
+            out_y = v0y + (v1y - v0y) * gamma + 0.125 * (w0y - v0y) + 0.125 * (w1y - v1y);
+            out_z = v0z + (v1z - v0z) * gamma + 0.125 * (w0z - v0z) + 0.125 * (w1z - v1z);
+        }
+        out_vertices[idx * 3 + 0] = out_x;
+        out_vertices[idx * 3 + 1] = out_y;
+        out_vertices[idx * 3 + 2] = out_z;
+    }
+}
+
+int truck_cuda_loop_subdivision(
+    const double* h_vertices,
+    unsigned int num_vertices,
+    const void* h_vertex_info,
+    const unsigned int* h_vertex_neighbors,
+    unsigned int num_neighbors,
+    const void* h_edges,
+    unsigned int num_edges,
+    double* h_out_vertices
+) {
+    if (num_vertices == 0) return 0;
+    ensure_best_device();
+
+    size_t vert_bytes = (size_t)num_vertices * 3 * sizeof(double);
+    size_t info_bytes = (size_t)num_vertices * sizeof(GpuLoopVertexInfo);
+    size_t nb_bytes = (size_t)num_neighbors * sizeof(unsigned int);
+    size_t edge_bytes = (size_t)num_edges * sizeof(GpuLoopEdgeInfo);
+    size_t out_bytes = ((size_t)num_vertices + num_edges) * 3 * sizeof(double);
+
+    double* d_vertices = NULL;
+    GpuLoopVertexInfo* d_info = NULL;
+    unsigned int* d_neighbors = NULL;
+    GpuLoopEdgeInfo* d_edges = NULL;
+    double* d_out = NULL;
+
+    if (cudaMalloc(&d_vertices, vert_bytes) != cudaSuccess) return -1;
+    if (cudaMalloc(&d_info, info_bytes) != cudaSuccess) { cudaFree(d_vertices); return -2; }
+    if (num_neighbors > 0 && cudaMalloc(&d_neighbors, nb_bytes) != cudaSuccess) {
+        cudaFree(d_vertices); cudaFree(d_info); return -3;
+    }
+    if (num_edges > 0 && cudaMalloc(&d_edges, edge_bytes) != cudaSuccess) {
+        cudaFree(d_vertices); cudaFree(d_info); if (d_neighbors) cudaFree(d_neighbors); return -4;
+    }
+    if (cudaMalloc(&d_out, out_bytes) != cudaSuccess) {
+        cudaFree(d_vertices); cudaFree(d_info);
+        if (d_neighbors) cudaFree(d_neighbors);
+        if (d_edges) cudaFree(d_edges);
+        return -5;
+    }
+
+    cudaMemcpy(d_vertices, h_vertices, vert_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_info, h_vertex_info, info_bytes, cudaMemcpyHostToDevice);
+    if (num_neighbors > 0) {
+        cudaMemcpy(d_neighbors, h_vertex_neighbors, nb_bytes, cudaMemcpyHostToDevice);
+    }
+    if (num_edges > 0) {
+        cudaMemcpy(d_edges, h_edges, edge_bytes, cudaMemcpyHostToDevice);
+    }
+
+    unsigned int total_threads = num_vertices + num_edges;
+    unsigned int block_size = 256;
+    unsigned int grid_size = (total_threads + block_size - 1) / block_size;
+
+    truck_cuda_loop_subdivision_kernel<<<grid_size, block_size>>>(
+        d_vertices, d_info, d_neighbors, num_vertices,
+        d_edges, num_edges, d_out
+    );
+    cudaDeviceSynchronize();
+
+    if (h_out_vertices) {
+        cudaMemcpy(h_out_vertices, d_out, out_bytes, cudaMemcpyDeviceToHost);
+    }
+
+    cudaFree(d_vertices);
+    cudaFree(d_info);
+    if (d_neighbors) cudaFree(d_neighbors);
+    if (d_edges) cudaFree(d_edges);
+    cudaFree(d_out);
+    return 0;
+}
+
+// ============================================================================
+// Feature Edges, Creases & Boundary Extraction (SM 8.6 Warp-Aggregated Atomics)
+// ============================================================================
+
+struct GpuFeatureEdgeInput {
+    unsigned int v0;
+    unsigned int v1;
+    int f0;
+    int f1;
+};
+
+extern "C" __global__ void truck_cuda_extract_feature_edges_kernel(
+    const double* __restrict__ vertices,
+    unsigned int num_vertices,
+    const double* __restrict__ face_normals,
+    unsigned int num_faces,
+    const GpuFeatureEdgeInput* __restrict__ edges,
+    unsigned int num_edges,
+    double cos_crease_angle,
+    int include_creases,
+    int include_boundaries,
+    double* __restrict__ out_segments,
+    unsigned int* __restrict__ out_count
+) {
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    bool is_feature = false;
+    unsigned int v0 = 0, v1 = 0;
+
+    if (idx < num_edges) {
+        GpuFeatureEdgeInput e = edges[idx];
+        v0 = e.v0;
+        v1 = e.v1;
+        if (e.f1 < 0) {
+            // Boundary edge
+            if (include_boundaries) {
+                is_feature = true;
+            }
+        } else if (include_creases) {
+            if (e.f0 >= 0 && (unsigned int)e.f0 < num_faces && (unsigned int)e.f1 < num_faces) {
+                double n0x = face_normals[e.f0 * 3 + 0];
+                double n0y = face_normals[e.f0 * 3 + 1];
+                double n0z = face_normals[e.f0 * 3 + 2];
+
+                double n1x = face_normals[e.f1 * 3 + 0];
+                double n1y = face_normals[e.f1 * 3 + 1];
+                double n1z = face_normals[e.f1 * 3 + 2];
+
+                double dot = n0x * n1x + n0y * n1y + n0z * n1z;
+                if (dot < cos_crease_angle) {
+                    is_feature = true;
+                }
+            }
+        }
+    }
+
+    // Warp-aggregated atomic insertion targeting Ampere SM 8.6
+    unsigned int active = __ballot_sync(0xFFFFFFFF, is_feature);
+    if (is_feature) {
+        unsigned int lane_id = threadIdx.x & 31;
+        unsigned int warp_count = __popc(active);
+        unsigned int lane_offset = __popc(active & ((1u << lane_id) - 1));
+        unsigned int leader = __ffs(active) - 1;
+        unsigned int warp_base = 0;
+        if (lane_id == leader) {
+            warp_base = atomicAdd(out_count, warp_count);
+        }
+        warp_base = __shfl_sync(active, warp_base, leader);
+        unsigned int out_idx = warp_base + lane_offset;
+
+        if (out_segments) {
+            out_segments[out_idx * 6 + 0] = vertices[v0 * 3 + 0];
+            out_segments[out_idx * 6 + 1] = vertices[v0 * 3 + 1];
+            out_segments[out_idx * 6 + 2] = vertices[v0 * 3 + 2];
+            out_segments[out_idx * 6 + 3] = vertices[v1 * 3 + 0];
+            out_segments[out_idx * 6 + 4] = vertices[v1 * 3 + 1];
+            out_segments[out_idx * 6 + 5] = vertices[v1 * 3 + 2];
+        }
+    }
+}
+
+int truck_cuda_extract_feature_edges(
+    const double* h_vertices,
+    unsigned int num_vertices,
+    const double* h_face_normals,
+    unsigned int num_faces,
+    const void* h_edges,
+    unsigned int num_edges,
+    double cos_crease_angle,
+    int include_creases,
+    int include_boundaries,
+    double* h_out_segments,
+    unsigned int* h_out_count
+) {
+    if (num_edges == 0) {
+        if (h_out_count) *h_out_count = 0;
+        return 0;
+    }
+    ensure_best_device();
+
+    size_t vert_bytes = (size_t)num_vertices * 3 * sizeof(double);
+    size_t norm_bytes = (size_t)num_faces * 3 * sizeof(double);
+    size_t edge_bytes = (size_t)num_edges * sizeof(GpuFeatureEdgeInput);
+    size_t seg_bytes = (size_t)num_edges * 6 * sizeof(double);
+
+    double* d_vertices = NULL;
+    double* d_normals = NULL;
+    GpuFeatureEdgeInput* d_edges = NULL;
+    double* d_segments = NULL;
+    unsigned int* d_count = NULL;
+
+    if (cudaMalloc(&d_vertices, vert_bytes) != cudaSuccess) return -1;
+    if (num_faces > 0 && cudaMalloc(&d_normals, norm_bytes) != cudaSuccess) {
+        cudaFree(d_vertices); return -2;
+    }
+    if (cudaMalloc(&d_edges, edge_bytes) != cudaSuccess) {
+        cudaFree(d_vertices); if (d_normals) cudaFree(d_normals); return -3;
+    }
+    if (cudaMalloc(&d_segments, seg_bytes) != cudaSuccess) {
+        cudaFree(d_vertices); if (d_normals) cudaFree(d_normals); cudaFree(d_edges); return -4;
+    }
+    if (cudaMalloc(&d_count, sizeof(unsigned int)) != cudaSuccess) {
+        cudaFree(d_vertices); if (d_normals) cudaFree(d_normals); cudaFree(d_edges); cudaFree(d_segments); return -5;
+    }
+
+    cudaMemset(d_count, 0, sizeof(unsigned int));
+    cudaMemcpy(d_vertices, h_vertices, vert_bytes, cudaMemcpyHostToDevice);
+    if (num_faces > 0) {
+        cudaMemcpy(d_normals, h_face_normals, norm_bytes, cudaMemcpyHostToDevice);
+    }
+    cudaMemcpy(d_edges, h_edges, edge_bytes, cudaMemcpyHostToDevice);
+
+    unsigned int block_size = 256;
+    unsigned int grid_size = (num_edges + block_size - 1) / block_size;
+
+    truck_cuda_extract_feature_edges_kernel<<<grid_size, block_size>>>(
+        d_vertices, num_vertices,
+        d_normals, num_faces,
+        d_edges, num_edges,
+        cos_crease_angle,
+        include_creases,
+        include_boundaries,
+        d_segments,
+        d_count
+    );
+    cudaDeviceSynchronize();
+
+    unsigned int count = 0;
+    cudaMemcpy(&count, d_count, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+    if (h_out_count) *h_out_count = count;
+
+    if (h_out_segments && count > 0) {
+        cudaMemcpy(h_out_segments, d_segments, (size_t)count * 6 * sizeof(double), cudaMemcpyDeviceToHost);
+    }
+
+    cudaFree(d_vertices);
+    if (d_normals) cudaFree(d_normals);
+    cudaFree(d_edges);
+    cudaFree(d_segments);
+    cudaFree(d_count);
+    return 0;
+}
+
 int truck_cuda_get_device_info(
     char* name_buf,
     int name_buf_len,

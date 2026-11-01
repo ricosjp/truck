@@ -58,6 +58,10 @@ pub enum Operation {
     NurbsCurveEvaluation,
     /// Batch ray-to-mesh intersection and normal queries.
     RaycastMesh,
+    /// Full smooth Loop subdivision surface refinement.
+    LoopSubdivision,
+    /// Mesh feature edges, creases, and boundary extraction.
+    FeatureEdges,
 }
 
 /// Recorded microbenchmark measurement sample.
@@ -166,6 +170,18 @@ impl ScalingThresholds {
                 preferred_gpu: KernelTarget::GpuCuda,
                 sample_timings: Vec::new(),
             },
+            Operation::LoopSubdivision => Self {
+                cpu_single_max: 32,
+                cpu_rayon_max: 128,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
+            Operation::FeatureEdges => Self {
+                cpu_single_max: 64,
+                cpu_rayon_max: 256,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
         }
     }
 
@@ -194,6 +210,17 @@ impl ScalingThresholds {
             KernelTarget::CpuRayon
         } else {
             self.preferred_gpu
+        }
+    }
+}
+
+impl Default for ScalingThresholds {
+    fn default() -> Self {
+        Self {
+            cpu_single_max: 64,
+            cpu_rayon_max: 256,
+            preferred_gpu: KernelTarget::GpuCuda,
+            sample_timings: Vec::new(),
         }
     }
 }
@@ -227,6 +254,10 @@ pub struct DispatchProfile {
     pub nurbs_curve_evaluation: ScalingThresholds,
     /// Thresholds for batch raycast queries.
     pub raycast_mesh: ScalingThresholds,
+    /// Thresholds for Loop subdivision.
+    pub loop_subdivision: ScalingThresholds,
+    /// Thresholds for feature edge extraction.
+    pub feature_edges: ScalingThresholds,
 }
 
 impl Default for DispatchProfile {
@@ -245,6 +276,8 @@ impl Default for DispatchProfile {
             linear_subdivision: ScalingThresholds::default_fallback(Operation::LinearSubdivision),
             nurbs_curve_evaluation: ScalingThresholds::default_fallback(Operation::NurbsCurveEvaluation),
             raycast_mesh: ScalingThresholds::default_fallback(Operation::RaycastMesh),
+            loop_subdivision: ScalingThresholds::default_fallback(Operation::LoopSubdivision),
+            feature_edges: ScalingThresholds::default_fallback(Operation::FeatureEdges),
         }
     }
 }
@@ -266,6 +299,8 @@ impl DispatchProfile {
             linear_subdivision: ScalingThresholds::cpu_only(64),
             nurbs_curve_evaluation: ScalingThresholds::cpu_only(128),
             raycast_mesh: ScalingThresholds::cpu_only(64),
+            loop_subdivision: ScalingThresholds::cpu_only(32),
+            feature_edges: ScalingThresholds::cpu_only(64),
         }
     }
 
@@ -285,6 +320,8 @@ impl DispatchProfile {
             Operation::LinearSubdivision => self.linear_subdivision.select_kernel(size),
             Operation::NurbsCurveEvaluation => self.nurbs_curve_evaluation.select_kernel(size),
             Operation::RaycastMesh => self.raycast_mesh.select_kernel(size),
+            Operation::LoopSubdivision => self.loop_subdivision.select_kernel(size),
+            Operation::FeatureEdges => self.feature_edges.select_kernel(size),
         }
     }
 }

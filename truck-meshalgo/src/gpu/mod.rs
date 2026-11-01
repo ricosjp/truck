@@ -6,7 +6,8 @@ use truck_base::hash;
 use truck_geometry::prelude::*;
 use truck_platform::wgpu::*;
 use truck_platform::*;
-use truck_polymesh::PolygonMesh;
+use std::mem::size_of;
+use truck_polymesh::{Faces, PolygonMesh, StandardVertex};
 
 #[cfg(feature = "cuda")]
 pub mod cuda;
@@ -1584,10 +1585,291 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         out_distances[idx] = -1.0;
         out_tri_indices[idx] = -1;
         out_hit_points[idx] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-        out_normals[idx] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
 }
 "#;
+
+const LOOP_SUBDIVISION_SHADER: &str = r#"
+struct LoopSubdivisionUniforms {
+    num_vertices: u32,
+    num_edges: u32,
+    _pad0: u32,
+    _pad1: u32,
+};
+
+struct GpuLoopVertexInfo {
+    offset: u32,
+    valence: u32,
+    boundary_type: u32,
+    b0: u32,
+    b1: u32,
+    _pad: u32,
+};
+
+struct GpuLoopEdgeInfo {
+    v0: u32,
+    v1: u32,
+    w0: u32,
+    w1: u32,
+    gamma: f32,
+    is_boundary: u32,
+    _pad0: u32,
+    _pad1: u32,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: LoopSubdivisionUniforms;
+@group(0) @binding(1) var<storage, read> in_vertices: array<vec4<f32>>;
+@group(0) @binding(2) var<storage, read> vertex_info: array<GpuLoopVertexInfo>;
+@group(0) @binding(3) var<storage, read> vertex_neighbors: array<u32>;
+@group(0) @binding(4) var<storage, read> edges: array<GpuLoopEdgeInfo>;
+@group(0) @binding(5) var<storage, read_write> out_vertices: array<vec4<f32>>;
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    if (idx >= uniforms.num_vertices + uniforms.num_edges) {
+        return;
+    }
+
+    if (idx < uniforms.num_vertices) {
+        let info = vertex_info[idx];
+        let v = in_vertices[idx].xyz;
+        if (info.boundary_type == 2u) {
+            out_vertices[idx] = vec4<f32>(v, 1.0);
+        } else if (info.boundary_type == 1u) {
+            let b0 = in_vertices[info.b0].xyz;
+            let b1 = in_vertices[info.b1].xyz;
+            out_vertices[idx] = vec4<f32>(0.75 * v + 0.125 * (b0 + b1), 1.0);
+        } else {
+            let n = f32(info.valence);
+            if (n > 0.0) {
+                let pi = 3.141592653589793;
+                let alpha = 0.375 + 0.25 * cos(2.0 * pi / n);
+                let beta = (0.625 - alpha * alpha) / n;
+                var sum_v = vec3<f32>(0.0, 0.0, 0.0);
+                for (var j = 0u; j < info.valence; j = j + 1u) {
+                    let nb = vertex_neighbors[info.offset + j];
+                    sum_v = sum_v + (in_vertices[nb].xyz - v);
+                }
+                out_vertices[idx] = vec4<f32>(v + beta * sum_v, 1.0);
+            } else {
+                out_vertices[idx] = vec4<f32>(v, 1.0);
+            }
+        }
+    } else {
+        let e_idx = idx - uniforms.num_vertices;
+        let edge = edges[e_idx];
+        let v0 = in_vertices[edge.v0].xyz;
+        let v1 = in_vertices[edge.v1].xyz;
+        if (edge.is_boundary != 0u) {
+            out_vertices[idx] = vec4<f32>(0.5 * (v0 + v1), 1.0);
+        } else {
+            let w0 = in_vertices[edge.w0].xyz;
+            let w1 = in_vertices[edge.w1].xyz;
+            let gamma = edge.gamma;
+            let out_v = v0 + (v1 - v0) * gamma + 0.125 * (w0 - v0) + 0.125 * (w1 - v1);
+            out_vertices[idx] = vec4<f32>(out_v, 1.0);
+        }
+    }
+}
+"#;
+
+const FEATURE_EDGES_SHADER: &str = r#"
+struct FeatureEdgeUniforms {
+    num_edges: u32,
+    num_faces: u32,
+    cos_crease_angle: f32,
+    include_creases: u32,
+    include_boundaries: u32,
+    _pad0: u32,
+    _pad1: u32,
+    _pad2: u32,
+};
+
+struct GpuFeatureEdgeInput {
+    v0: u32,
+    v1: u32,
+    f0: i32,
+    f1: i32,
+};
+
+struct GpuEdgeSegment {
+    p0: vec4<f32>,
+    p1: vec4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: FeatureEdgeUniforms;
+@group(0) @binding(1) var<storage, read> vertices: array<vec4<f32>>;
+@group(0) @binding(2) var<storage, read> face_normals: array<vec4<f32>>;
+@group(0) @binding(3) var<storage, read> edges: array<GpuFeatureEdgeInput>;
+@group(0) @binding(4) var<storage, read_write> out_count: atomic<u32>;
+@group(0) @binding(5) var<storage, read_write> out_segments: array<GpuEdgeSegment>;
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    if (idx >= uniforms.num_edges) {
+        return;
+    }
+
+    let edge = edges[idx];
+    var is_feature = false;
+
+    if (edge.f1 < 0) {
+        if (uniforms.include_boundaries != 0u) {
+            is_feature = true;
+        }
+    } else if (uniforms.include_creases != 0u) {
+        let f0 = u32(edge.f0);
+        let f1 = u32(edge.f1);
+        if (f0 < uniforms.num_faces && f1 < uniforms.num_faces) {
+            let n0 = face_normals[f0].xyz;
+            let n1 = face_normals[f1].xyz;
+            let d = dot(n0, n1);
+            if (d < uniforms.cos_crease_angle) {
+                is_feature = true;
+            }
+        }
+    }
+
+    if (is_feature) {
+        let slot = atomicAdd(&out_count, 1u);
+        let p0 = vertices[edge.v0];
+        let p1 = vertices[edge.v1];
+        out_segments[slot] = GpuEdgeSegment(p0, p1);
+    }
+}
+"#;
+
+fn loop_subdivision_layout_entries() -> [BindGroupLayoutEntry; 6] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 4,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 5,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
+fn feature_edges_layout_entries() -> [BindGroupLayoutEntry; 6] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 4,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 5,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
 
 fn nurbs_curve_layout_entries() -> [BindGroupLayoutEntry; 6] {
     [
@@ -2140,6 +2422,8 @@ pub struct GpuMeshAnalyzer {
     nurbs_surface_engine: ComputeEngine,
     nurbs_curve_engine: ComputeEngine,
     raycast_mesh_engine: ComputeEngine,
+    loop_subdivision_engine: ComputeEngine,
+    feature_edges_engine: ComputeEngine,
 }
 
 impl GpuMeshAnalyzer {
@@ -2204,6 +2488,12 @@ impl GpuMeshAnalyzer {
         let raycast_entries = raycast_mesh_layout_entries();
         let raycast_mesh_engine = ComputeEngine::new(handler, RAYCAST_MESH_SHADER, "main", &raycast_entries);
 
+        let loop_entries = loop_subdivision_layout_entries();
+        let loop_subdivision_engine = ComputeEngine::new(handler, LOOP_SUBDIVISION_SHADER, "main", &loop_entries);
+
+        let fe_entries = feature_edges_layout_entries();
+        let feature_edges_engine = ComputeEngine::new(handler, FEATURE_EDGES_SHADER, "main", &fe_entries);
+
         Self {
             handler: handler.clone(),
             dist_engine,
@@ -2220,6 +2510,8 @@ impl GpuMeshAnalyzer {
             nurbs_surface_engine,
             nurbs_curve_engine,
             raycast_mesh_engine,
+            loop_subdivision_engine,
+            feature_edges_engine,
         }
     }
 
@@ -3208,6 +3500,587 @@ impl GpuMeshAnalyzer {
                 }
             })
             .collect()
+    }
+
+    /// Smooth Loop subdivision surface refinement on the GPU via Vulkan compute.
+    pub fn loop_subdivide(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return mesh.clone();
+        }
+        let topo = prepare_loop_subdivision_topology(mesh);
+        let num_vertices = mesh.positions().len() as u32;
+        let num_edges = topo.edges_f32.len() as u32;
+
+        let in_pos_f32: Vec<[f32; 4]> = mesh
+            .positions()
+            .iter()
+            .map(|p| [p.x as f32, p.y as f32, p.z as f32, 1.0])
+            .collect();
+
+        let uniforms = LoopSubdivisionUniforms {
+            num_vertices,
+            num_edges,
+            _pad0: 0,
+            _pad1: 0,
+        };
+
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+        let in_vertices_buf = BufferHandler::storage_from_slice(&in_pos_f32, self.handler.device());
+        let vertex_info_buf = BufferHandler::storage_from_slice(&topo.vertex_info, self.handler.device());
+        let vertex_neighbors_buf = BufferHandler::storage_from_slice(&topo.vertex_neighbors, self.handler.device());
+        let edges_buf = BufferHandler::storage_from_slice(&topo.edges_f32, self.handler.device());
+        let out_vertices_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            ((num_vertices + num_edges) as usize * size_of::<[f32; 4]>()) as u64,
+        );
+
+        let bind_group = self.loop_subdivision_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            in_vertices_buf.binding_resource(),
+            vertex_info_buf.binding_resource(),
+            vertex_neighbors_buf.binding_resource(),
+            edges_buf.binding_resource(),
+            out_vertices_buf.binding_resource(),
+        ]);
+
+        let total_work = num_vertices + num_edges;
+        let workgroups = ((total_work + 63) / 64, 1, 1);
+        self.loop_subdivision_engine.dispatch(&bind_group, workgroups);
+
+        let out_f32: Vec<[f32; 4]> = out_vertices_buf.read_to_vec_block(&self.handler);
+        let positions: Vec<Point3> = out_f32
+            .into_iter()
+            .map(|p| Point3::new(p[0] as f64, p[1] as f64, p[2] as f64))
+            .collect();
+
+        let mut out_mesh = mesh.clone();
+        {
+            let editor = out_mesh.debug_editor();
+            editor.attributes.positions = positions;
+            *editor.faces = Faces::from_tri_and_quad_faces(topo.new_tri_faces, Vec::new());
+        }
+        out_mesh
+    }
+
+    /// Alias for [`Self::loop_subdivide`].
+    #[inline(always)]
+    pub fn loop_subdivision(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        self.loop_subdivide(mesh)
+    }
+
+    /// Extracts crease edges and open boundary feature edges as 3D line segments via Vulkan compute.
+    pub fn extract_feature_edges(&self, mesh: &PolygonMesh, crease_angle_rad: f64) -> Vec<(Point3, Point3)> {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return Vec::new();
+        }
+        let topo = prepare_feature_edges_topology(mesh);
+        if topo.edges.is_empty() {
+            return Vec::new();
+        }
+        let num_edges = topo.edges.len() as u32;
+        let num_faces = topo.face_normals_f32.len() as u32;
+
+        let vert_f32: Vec<[f32; 4]> = mesh
+            .positions()
+            .iter()
+            .map(|p| [p.x as f32, p.y as f32, p.z as f32, 1.0])
+            .collect();
+
+        let uniforms = FeatureEdgeUniforms {
+            num_edges,
+            num_faces,
+            cos_crease_angle: crease_angle_rad.cos() as f32,
+            include_creases: 1,
+            include_boundaries: 1,
+            _pad0: 0,
+            _pad1: 0,
+            _pad2: 0,
+        };
+
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+        let vert_buf = BufferHandler::storage_from_slice(&vert_f32, self.handler.device());
+        let norm_buf = BufferHandler::storage_from_slice(&topo.face_normals_f32, self.handler.device());
+        let edge_buf = BufferHandler::storage_from_slice(&topo.edges, self.handler.device());
+        let count_buf = BufferHandler::from_slice(
+            &[0u32],
+            self.handler.device(),
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        );
+        let seg_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_edges as usize * size_of::<GpuEdgeSegment>()) as u64,
+        );
+
+        let bind_group = self.feature_edges_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            vert_buf.binding_resource(),
+            norm_buf.binding_resource(),
+            edge_buf.binding_resource(),
+            count_buf.binding_resource(),
+            seg_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_edges + 63) / 64, 1, 1);
+        self.feature_edges_engine.dispatch(&bind_group, workgroups);
+
+        let count = count_buf.read_to_vec_block::<u32>(&self.handler)[0] as usize;
+        let segs: Vec<GpuEdgeSegment> = seg_buf.read_to_vec_block(&self.handler);
+        let valid_segs = &segs[..count.min(num_edges as usize)];
+
+        valid_segs
+            .iter()
+            .map(|s| {
+                (
+                    Point3::new(s.p0[0] as f64, s.p0[1] as f64, s.p0[2] as f64),
+                    Point3::new(s.p1[0] as f64, s.p1[1] as f64, s.p1[2] as f64),
+                )
+            })
+            .collect()
+    }
+
+    /// Extracts open boundary edges as 3D line segments via Vulkan compute.
+    pub fn extract_boundary_edges(&self, mesh: &PolygonMesh) -> Vec<(Point3, Point3)> {
+        let tri_faces = mesh.tri_faces();
+        if tri_faces.is_empty() {
+            return Vec::new();
+        }
+        let topo = prepare_feature_edges_topology(mesh);
+        if topo.edges.is_empty() {
+            return Vec::new();
+        }
+        let num_edges = topo.edges.len() as u32;
+        let num_faces = topo.face_normals_f32.len() as u32;
+
+        let vert_f32: Vec<[f32; 4]> = mesh
+            .positions()
+            .iter()
+            .map(|p| [p.x as f32, p.y as f32, p.z as f32, 1.0])
+            .collect();
+
+        let uniforms = FeatureEdgeUniforms {
+            num_edges,
+            num_faces,
+            cos_crease_angle: 1.0,
+            include_creases: 0,
+            include_boundaries: 1,
+            _pad0: 0,
+            _pad1: 0,
+            _pad2: 0,
+        };
+
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+        let vert_buf = BufferHandler::storage_from_slice(&vert_f32, self.handler.device());
+        let norm_buf = BufferHandler::storage_from_slice(&topo.face_normals_f32, self.handler.device());
+        let edge_buf = BufferHandler::storage_from_slice(&topo.edges, self.handler.device());
+        let count_buf = BufferHandler::from_slice(
+            &[0u32],
+            self.handler.device(),
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        );
+        let seg_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_edges as usize * size_of::<GpuEdgeSegment>()) as u64,
+        );
+
+        let bind_group = self.feature_edges_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            vert_buf.binding_resource(),
+            norm_buf.binding_resource(),
+            edge_buf.binding_resource(),
+            count_buf.binding_resource(),
+            seg_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_edges + 63) / 64, 1, 1);
+        self.feature_edges_engine.dispatch(&bind_group, workgroups);
+
+        let count = count_buf.read_to_vec_block::<u32>(&self.handler)[0] as usize;
+        let segs: Vec<GpuEdgeSegment> = seg_buf.read_to_vec_block(&self.handler);
+        let valid_segs = &segs[..count.min(num_edges as usize)];
+
+        valid_segs
+            .iter()
+            .map(|s| {
+                (
+                    Point3::new(s.p0[0] as f64, s.p0[1] as f64, s.p0[2] as f64),
+                    Point3::new(s.p1[0] as f64, s.p1[1] as f64, s.p1[2] as f64),
+                )
+            })
+            .collect()
+    }
+}
+
+/// Uniforms for Loop subdivision compute shader.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct LoopSubdivisionUniforms {
+    /// Number of vertices in the original mesh.
+    pub num_vertices: u32,
+    /// Number of unique edges in the original mesh.
+    pub num_edges: u32,
+    /// Alignment padding.
+    pub _pad0: u32,
+    /// Alignment padding.
+    pub _pad1: u32,
+}
+
+/// Topology and boundary condition metadata for an original vertex.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Pod, Zeroable)]
+pub struct GpuLoopVertexInfo {
+    /// Offset into the vertex neighbors CSR array.
+    pub offset: u32,
+    /// Valence (number of adjacent neighbors).
+    pub valence: u32,
+    /// Boundary classification: 0 = Inner, 1 = Boundary, 2 = Corner.
+    pub boundary_type: u32,
+    /// First adjacent boundary neighbor vertex index (if boundary).
+    pub b0: u32,
+    /// Second adjacent boundary neighbor vertex index (if boundary).
+    pub b1: u32,
+    /// Struct alignment padding.
+    pub _pad: u32,
+}
+
+/// Edge connectivity and weighting metadata for Loop subdivision (f32 for Vulkan).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Pod, Zeroable)]
+pub struct GpuLoopEdgeInfoF32 {
+    /// Index of first endpoint vertex.
+    pub v0: u32,
+    /// Index of second endpoint vertex.
+    pub v1: u32,
+    /// Index of first opposite wing vertex.
+    pub w0: u32,
+    /// Index of second opposite wing vertex (or 0xFFFFFFFF if boundary).
+    pub w1: u32,
+    /// Weighting factor gamma.
+    pub gamma: f32,
+    /// 1 if open boundary edge, 0 if interior.
+    pub is_boundary: u32,
+    /// Alignment padding.
+    pub _pad0: u32,
+    /// Alignment padding.
+    pub _pad1: u32,
+}
+
+/// Edge connectivity and weighting metadata for Loop subdivision (f64 for CUDA).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct GpuLoopEdgeInfoF64 {
+    /// Index of first endpoint vertex.
+    pub v0: u32,
+    /// Index of second endpoint vertex.
+    pub v1: u32,
+    /// Index of first opposite wing vertex.
+    pub w0: u32,
+    /// Index of second opposite wing vertex (or 0xFFFFFFFF if boundary).
+    pub w1: u32,
+    /// Weighting factor gamma (FP64 precision).
+    pub gamma: f64,
+    /// 1 if open boundary edge, 0 if interior.
+    pub is_boundary: u32,
+    /// Alignment padding.
+    pub _pad: u32,
+}
+
+/// Uniform parameters for feature edge extraction.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+pub struct FeatureEdgeUniforms {
+    /// Total number of unique mesh edges.
+    pub num_edges: u32,
+    /// Total number of triangle faces.
+    pub num_faces: u32,
+    /// Cosine of the crease threshold angle.
+    pub cos_crease_angle: f32,
+    /// 1 to include crease edges, 0 to ignore.
+    pub include_creases: u32,
+    /// 1 to include open boundary edges, 0 to ignore.
+    pub include_boundaries: u32,
+    /// Alignment padding.
+    pub _pad0: u32,
+    /// Alignment padding.
+    pub _pad1: u32,
+    /// Alignment padding.
+    pub _pad2: u32,
+}
+
+/// Feature edge input struct describing edge endpoints and adjacent faces.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Pod, Zeroable)]
+pub struct GpuFeatureEdgeInput {
+    /// First endpoint vertex index.
+    pub v0: u32,
+    /// Second endpoint vertex index.
+    pub v1: u32,
+    /// First adjacent face index.
+    pub f0: i32,
+    /// Second adjacent face index (-1 if open boundary).
+    pub f1: i32,
+}
+
+/// 3D line segment output from GPU edge extraction.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Pod, Zeroable)]
+pub struct GpuEdgeSegment {
+    /// First segment endpoint `[x, y, z, 1.0]`.
+    pub p0: [f32; 4],
+    /// Second segment endpoint `[x, y, z, 1.0]`.
+    pub p1: [f32; 4],
+}
+
+/// Precomputed topology buffers for GPU smooth Loop subdivision.
+#[derive(Clone, Debug)]
+pub struct LoopSubdivisionTopology {
+    /// Original vertex topology and boundary information.
+    pub vertex_info: Vec<GpuLoopVertexInfo>,
+    /// Flattened adjacency list of neighbor vertex indices.
+    pub vertex_neighbors: Vec<u32>,
+    /// Edge definitions with f32 weights for Vulkan.
+    pub edges_f32: Vec<GpuLoopEdgeInfoF32>,
+    /// Edge definitions with f64 weights for CUDA.
+    pub edges_f64: Vec<GpuLoopEdgeInfoF64>,
+    /// Subdivided 4-to-1 triangle face indices.
+    pub new_tri_faces: Vec<[StandardVertex; 3]>,
+}
+
+/// Precomputed topology buffers for GPU feature and boundary edge extraction.
+#[derive(Clone, Debug)]
+pub struct FeatureEdgesTopology {
+    /// Unique edges with face adjacency.
+    pub edges: Vec<GpuFeatureEdgeInput>,
+    /// Face normal vectors in FP64 precision.
+    pub face_normals_f64: Vec<[f64; 3]>,
+    /// Face normal vectors in FP32 precision for Vulkan.
+    pub face_normals_f32: Vec<[f32; 4]>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct SubdivEdge(usize, usize);
+
+#[derive(Clone, Copy, Debug)]
+struct SubdivEdgeInfo {
+    idx: usize,
+    first_wing: usize,
+    second_wing: Option<usize>,
+}
+
+fn add_subdiv_edge(
+    edges: &mut rustc_hash::FxHashMap<SubdivEdge, SubdivEdgeInfo>,
+    vertex_adjacency: &mut [Vec<usize>],
+    v0: usize,
+    v1: usize,
+    v2: usize,
+) {
+    let idx = edges.len();
+    edges
+        .entry(SubdivEdge(usize::min(v0, v1), usize::max(v0, v1)))
+        .and_modify(|tuple| tuple.second_wing = Some(v2))
+        .or_insert_with(|| {
+            vertex_adjacency[v0].push(v1);
+            vertex_adjacency[v1].push(v0);
+            SubdivEdgeInfo {
+                idx,
+                first_wing: v2,
+                second_wing: None,
+            }
+        });
+}
+
+/// Prepares full topology buffers for smooth Loop subdivision surface refinement.
+pub fn prepare_loop_subdivision_topology(mesh: &PolygonMesh) -> LoopSubdivisionTopology {
+    let num_vertices = mesh.positions().len();
+    let mut edges = rustc_hash::FxHashMap::default();
+    let mut vertex_adjacency = vec![Vec::new(); num_vertices];
+
+    mesh.tri_faces().iter().for_each(|face| {
+        let f = [face[0].pos, face[1].pos, face[2].pos];
+        add_subdiv_edge(&mut edges, &mut vertex_adjacency, f[1], f[2], f[0]);
+        add_subdiv_edge(&mut edges, &mut vertex_adjacency, f[2], f[0], f[1]);
+        add_subdiv_edge(&mut edges, &mut vertex_adjacency, f[0], f[1], f[2]);
+    });
+
+    let mut vertex_boundary = Vec::with_capacity(num_vertices);
+    for (v, adj) in vertex_adjacency.iter().enumerate() {
+        let binfo = adj.iter().copied().fold((None, None), |binfo, w| {
+            let edge = edges.get(&SubdivEdge(usize::min(v, w), usize::max(v, w))).unwrap();
+            match (edge.second_wing, binfo) {
+                (None, (None, _)) => (Some(w), None),
+                (None, (Some(x), None)) => (Some(x), Some(w)),
+                _ => binfo,
+            }
+        });
+        let cond = if let (Some(x), Some(y)) = binfo {
+            if adj.len() == 2 {
+                (2u32, x as u32, y as u32) // Corner
+            } else {
+                (1u32, x as u32, y as u32) // Boundary
+            }
+        } else {
+            (0u32, 0u32, 0u32) // Inner
+        };
+        vertex_boundary.push(cond);
+    }
+
+    let mut vertex_info = Vec::with_capacity(num_vertices);
+    let mut vertex_neighbors = Vec::new();
+    for (adj, &(b_type, b0, b1)) in vertex_adjacency.iter().zip(&vertex_boundary) {
+        let offset = vertex_neighbors.len() as u32;
+        let valence = adj.len() as u32;
+        vertex_neighbors.extend(adj.iter().map(|&nb| nb as u32));
+        vertex_info.push(GpuLoopVertexInfo {
+            offset,
+            valence,
+            boundary_type: b_type,
+            b0,
+            b1,
+            _pad: 0,
+        });
+    }
+
+    let num_edges = edges.len();
+    let mut edges_f32 = vec![GpuLoopEdgeInfoF32::default(); num_edges];
+    let mut edges_f64 = vec![GpuLoopEdgeInfoF64::default(); num_edges];
+    for (&SubdivEdge(v0, v1), info) in edges.iter() {
+        let is_boundary = info.second_wing.is_none();
+        let (w0, w1) = match info.second_wing {
+            Some(w1) => (info.first_wing as u32, w1 as u32),
+            None => (info.first_wing as u32, 0xFFFFFFFFu32),
+        };
+        let gamma = if is_boundary {
+            0.5
+        } else {
+            let (cond0, _, _) = vertex_boundary[v0];
+            let (cond1, _, _) = vertex_boundary[v1];
+            if cond0 == 1 {
+                5.0 / 8.0 - f64::cos(std::f64::consts::PI / vertex_adjacency[v0].len() as f64) / 4.0
+            } else if cond1 == 1 {
+                3.0 / 8.0 + f64::cos(std::f64::consts::PI / vertex_adjacency[v1].len() as f64) / 4.0
+            } else {
+                0.5
+            }
+        };
+
+        edges_f32[info.idx] = GpuLoopEdgeInfoF32 {
+            v0: v0 as u32,
+            v1: v1 as u32,
+            w0,
+            w1,
+            gamma: gamma as f32,
+            is_boundary: if is_boundary { 1 } else { 0 },
+            _pad0: 0,
+            _pad1: 0,
+        };
+        edges_f64[info.idx] = GpuLoopEdgeInfoF64 {
+            v0: v0 as u32,
+            v1: v1 as u32,
+            w0,
+            w1,
+            gamma,
+            is_boundary: if is_boundary { 1 } else { 0 },
+            _pad: 0,
+        };
+    }
+
+    let new_tri_faces = mesh.tri_faces().iter().flat_map(|v| {
+        let len = num_vertices;
+        let e: [StandardVertex; 3] = [
+            (edges.get(&SubdivEdge(usize::min(v[1].pos, v[2].pos), usize::max(v[1].pos, v[2].pos))).unwrap().idx + len).into(),
+            (edges.get(&SubdivEdge(usize::min(v[2].pos, v[0].pos), usize::max(v[2].pos, v[0].pos))).unwrap().idx + len).into(),
+            (edges.get(&SubdivEdge(usize::min(v[0].pos, v[1].pos), usize::max(v[0].pos, v[1].pos))).unwrap().idx + len).into(),
+        ];
+        vec![
+            [v[0], e[2], e[1]],
+            [e[0], v[2], e[1]],
+            [e[0], e[2], v[1]],
+            [e[0], e[1], e[2]],
+        ]
+    }).collect();
+
+    LoopSubdivisionTopology {
+        vertex_info,
+        vertex_neighbors,
+        edges_f32,
+        edges_f64,
+        new_tri_faces,
+    }
+}
+
+/// Prepares topology buffers and face normals for feature/boundary edge extraction.
+pub fn prepare_feature_edges_topology(mesh: &PolygonMesh) -> FeatureEdgesTopology {
+    let positions = mesh.positions();
+    let tri_faces = mesh.tri_faces();
+    let num_faces = tri_faces.len();
+    let mut face_normals_f64 = Vec::with_capacity(num_faces);
+    let mut face_normals_f32 = Vec::with_capacity(num_faces);
+
+    for face in tri_faces.iter() {
+        let p0 = positions[face[0].pos];
+        let p1 = positions[face[1].pos];
+        let p2 = positions[face[2].pos];
+        let u = p1 - p0;
+        let v = p2 - p0;
+        let n = u.cross(v);
+        let len = n.magnitude();
+        if len > 1e-12 {
+            let inv = 1.0 / len;
+            let unit = [n.x * inv, n.y * inv, n.z * inv];
+            face_normals_f64.push(unit);
+            face_normals_f32.push([unit[0] as f32, unit[1] as f32, unit[2] as f32, 0.0]);
+        } else {
+            face_normals_f64.push([0.0, 0.0, 1.0]);
+            face_normals_f32.push([0.0, 0.0, 1.0, 0.0]);
+        }
+    }
+
+    let mut edge_map = rustc_hash::FxHashMap::default();
+    for (f_idx, face) in tri_faces.iter().enumerate() {
+        let v = [face[0].pos, face[1].pos, face[2].pos];
+        let f_edges = [
+            (usize::min(v[0], v[1]), usize::max(v[0], v[1])),
+            (usize::min(v[1], v[2]), usize::max(v[1], v[2])),
+            (usize::min(v[2], v[0]), usize::max(v[2], v[0])),
+        ];
+        for &e in &f_edges {
+            edge_map.entry(e)
+                .and_modify(|info: &mut (usize, Option<usize>)| {
+                    if info.1.is_none() {
+                        info.1 = Some(f_idx);
+                    }
+                })
+                .or_insert((f_idx, None));
+        }
+    }
+
+    let mut edges = Vec::with_capacity(edge_map.len());
+    for (&(v0, v1), &(f0, f1)) in edge_map.iter() {
+        edges.push(GpuFeatureEdgeInput {
+            v0: v0 as u32,
+            v1: v1 as u32,
+            f0: f0 as i32,
+            f1: f1.map(|idx| idx as i32).unwrap_or(-1),
+        });
+    }
+
+    FeatureEdgesTopology {
+        edges,
+        face_normals_f64,
+        face_normals_f32,
     }
 }
 

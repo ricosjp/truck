@@ -7,7 +7,7 @@ use super::metadata::SystemMetadata;
 use super::profile::DispatchProfile;
 
 /// Current schema version of the kernel calibration cache.
-pub const CURRENT_CACHE_VERSION: u32 = 4;
+pub const CURRENT_CACHE_VERSION: u32 = 5;
 
 /// Default filename for the persistent dot file cache.
 pub const DEFAULT_CACHE_FILENAME: &str = ".truck_kernel_cache.json";

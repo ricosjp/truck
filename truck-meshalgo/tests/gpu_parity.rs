@@ -1547,5 +1547,344 @@ fn test_cuda_and_vulkan_raycast_parity() {
     println!("Raycast parity verified across {} rays: {} hits, {} misses.", rays.len(), hit_count, miss_count);
 }
 
+#[cfg(feature = "cuda")]
+fn create_octahedron() -> PolygonMesh {
+    PolygonMesh::new(
+        StandardAttributes {
+            positions: vec![
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(-1.0, 0.0, 0.0),
+                Point3::new(0.0, 1.0, 0.0),
+                Point3::new(0.0, -1.0, 0.0),
+                Point3::new(0.0, 0.0, 1.0),
+                Point3::new(0.0, 0.0, -1.0),
+            ],
+            ..Default::default()
+        },
+        Faces::from_iter(vec![
+            [0, 2, 4],
+            [2, 1, 4],
+            [1, 3, 4],
+            [3, 0, 4],
+            [2, 0, 5],
+            [1, 2, 5],
+            [3, 1, 5],
+            [0, 3, 5],
+        ]),
+    )
+}
+
+#[cfg(feature = "cuda")]
+fn create_open_quad_mesh() -> PolygonMesh {
+    PolygonMesh::new(
+        StandardAttributes {
+            positions: vec![
+                Point3::new(-1.0, 0.0, 0.0),
+                Point3::new(0.0, 1.0, 1.0),
+                Point3::new(0.0, 1.0, -1.0),
+                Point3::new(1.0, 0.0, 0.0),
+            ],
+            ..Default::default()
+        },
+        Faces::from_iter(vec![
+            [0, 1, 2],
+            [3, 2, 1],
+        ]),
+    )
+}
+
+#[cfg(feature = "cuda")]
+fn canonicalize_segments(mut segs: Vec<(Point3, Point3)>) -> Vec<(Point3, Point3)> {
+    fn pt_key(p: Point3) -> (i64, i64, i64) {
+        (
+            (p.x * 1000.0).round() as i64,
+            (p.y * 1000.0).round() as i64,
+            (p.z * 1000.0).round() as i64,
+        )
+    }
+    for seg in &mut segs {
+        if pt_key(seg.0) > pt_key(seg.1) {
+            std::mem::swap(&mut seg.0, &mut seg.1);
+        }
+    }
+    segs.sort_by(|a, b| {
+        pt_key(a.0)
+            .cmp(&pt_key(b.0))
+            .then_with(|| pt_key(a.1).cmp(&pt_key(b.1)))
+    });
+    segs
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_loop_subdivision_parity() {
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+    let dispatcher = Dispatcher::global();
+
+    // 1. Closed Octahedron (6 vertices, 8 faces, 12 edges)
+    let octa = create_octahedron();
+    let cpu_octa = dispatcher.loop_subdivide(&octa);
+    let cuda_octa = cuda.loop_subdivide(&octa);
+    let vulk_octa = vulkan.loop_subdivide(&octa);
+    let disp_octa = octa.loop_subdivide();
+
+    assert_eq!(cpu_octa.positions().len(), 6 + 12);
+    assert_eq!(cpu_octa.tri_faces().len(), 8 * 4);
+    assert_eq!(cuda_octa.positions().len(), cpu_octa.positions().len());
+    assert_eq!(vulk_octa.positions().len(), cpu_octa.positions().len());
+    assert_eq!(disp_octa.positions().len(), cpu_octa.positions().len());
+    assert_eq!(cuda_octa.tri_faces().len(), cpu_octa.tri_faces().len());
+    assert_eq!(vulk_octa.tri_faces().len(), cpu_octa.tri_faces().len());
+    assert_eq!(disp_octa.tri_faces().len(), cpu_octa.tri_faces().len());
+
+    for i in 0..cpu_octa.positions().len() {
+        let p_cpu = cpu_octa.positions()[i];
+        let p_cuda = cuda_octa.positions()[i];
+        let p_vulk = vulk_octa.positions()[i];
+        let p_disp = disp_octa.positions()[i];
+
+        assert!(
+            p_cuda.distance(p_cpu) < 1e-10,
+            "CUDA vs CPU octahedron pos mismatch at {}: {:?} vs {:?}",
+            i, p_cuda, p_cpu
+        );
+        assert!(
+            p_vulk.distance(p_cpu) < 1e-4,
+            "Vulkan vs CPU octahedron pos mismatch at {}: {:?} vs {:?}",
+            i, p_vulk, p_cpu
+        );
+        assert!(
+            p_disp.distance(p_cpu) < 1e-4,
+            "Dispatcher vs CPU octahedron pos mismatch at {}: {:?} vs {:?}",
+            i, p_disp, p_cpu
+        );
+    }
+    assert_eq!(cuda_octa.tri_faces(), cpu_octa.tri_faces());
+    assert_eq!(vulk_octa.tri_faces(), cpu_octa.tri_faces());
+    assert_eq!(disp_octa.tri_faces(), cpu_octa.tri_faces());
+
+    // 2. Closed Triangulated Cube (8 vertices, 12 faces, 18 edges)
+    let mut cube = create_unit_cube();
+    cube.triangulate();
+    let cpu_cube = dispatcher.loop_subdivide(&cube);
+    let cuda_cube = cuda.loop_subdivide(&cube);
+    let vulk_cube = vulkan.loop_subdivide(&cube);
+    let disp_cube = cube.loop_subdivide();
+
+    assert_eq!(cpu_cube.positions().len(), 8 + 18);
+    assert_eq!(cpu_cube.tri_faces().len(), 12 * 4);
+    assert_eq!(cuda_cube.positions().len(), cpu_cube.positions().len());
+    assert_eq!(vulk_cube.positions().len(), cpu_cube.positions().len());
+    assert_eq!(disp_cube.positions().len(), cpu_cube.positions().len());
+
+    for i in 0..cpu_cube.positions().len() {
+        let p_cpu = cpu_cube.positions()[i];
+        let p_cuda = cuda_cube.positions()[i];
+        let p_vulk = vulk_cube.positions()[i];
+        let p_disp = disp_cube.positions()[i];
+
+        assert!(
+            p_cuda.distance(p_cpu) < 1e-10,
+            "CUDA vs CPU cube pos mismatch at {}: {:?} vs {:?}",
+            i, p_cuda, p_cpu
+        );
+        assert!(
+            p_vulk.distance(p_cpu) < 1e-4,
+            "Vulkan vs CPU cube pos mismatch at {}: {:?} vs {:?}",
+            i, p_vulk, p_cpu
+        );
+        assert!(
+            p_disp.distance(p_cpu) < 1e-4,
+            "Dispatcher vs CPU cube pos mismatch at {}: {:?} vs {:?}",
+            i, p_disp, p_cpu
+        );
+    }
+
+    // 3. Open Quad (4 vertices, 2 faces, 5 edges: 4 boundary, 1 interior)
+    let quad = create_open_quad_mesh();
+    let cpu_quad = dispatcher.loop_subdivide(&quad);
+    let cuda_quad = cuda.loop_subdivide(&quad);
+    let vulk_quad = vulkan.loop_subdivide(&quad);
+    let disp_quad = quad.loop_subdivide();
+
+    assert_eq!(cpu_quad.positions().len(), 4 + 5);
+    assert_eq!(cpu_quad.tri_faces().len(), 2 * 4);
+    assert_eq!(cuda_quad.positions().len(), 9);
+    assert_eq!(vulk_quad.positions().len(), 9);
+    assert_eq!(disp_quad.positions().len(), 9);
+
+    for i in 0..cpu_quad.positions().len() {
+        let p_cpu = cpu_quad.positions()[i];
+        let p_cuda = cuda_quad.positions()[i];
+        let p_vulk = vulk_quad.positions()[i];
+        let p_disp = disp_quad.positions()[i];
+
+        assert!(
+            p_cuda.distance(p_cpu) < 1e-10,
+            "CUDA vs CPU open quad pos mismatch at {}: {:?} vs {:?}",
+            i, p_cuda, p_cpu
+        );
+        assert!(
+            p_vulk.distance(p_cpu) < 1e-4,
+            "Vulkan vs CPU open quad pos mismatch at {}: {:?} vs {:?}",
+            i, p_vulk, p_cpu
+        );
+        assert!(
+            p_disp.distance(p_cpu) < 1e-4,
+            "Dispatcher vs CPU open quad pos mismatch at {}: {:?} vs {:?}",
+            i, p_disp, p_cpu
+        );
+    }
+
+    // In-place subdivision parity
+    let mut in_place_quad = quad.clone();
+    in_place_quad.loop_subdivision();
+    assert_eq!(in_place_quad.positions().len(), 9);
+    for i in 0..9 {
+        assert!(
+            in_place_quad.positions()[i].distance(cpu_quad.positions()[i]) < 1e-4,
+            "In-place loop_subdivision mismatch at {}: {:?} vs {:?}",
+            i, in_place_quad.positions()[i], cpu_quad.positions()[i]
+        );
+    }
+
+    println!("Loop subdivision parity verified across octahedron, cube, and open quad.");
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_feature_and_boundary_edges_parity() {
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+    let dispatcher = Dispatcher::global();
+
+    // 1. Closed Triangulated Cube
+    let mut cube = create_unit_cube();
+    cube.triangulate();
+    let crease_angle = std::f64::consts::FRAC_PI_4; // 45 degrees
+
+    // Boundary edges on closed cube: 0
+    let cpu_bounds = dispatcher.extract_boundary_edges(&cube);
+    let cuda_bounds = cuda.extract_boundary_edges(&cube);
+    let vulk_bounds = vulkan.extract_boundary_edges(&cube);
+    let disp_bounds = cube.extract_boundary_edges();
+
+    assert_eq!(cpu_bounds.len(), 0, "Cube is closed, 0 boundary edges expected");
+    assert_eq!(cuda_bounds.len(), 0, "CUDA should detect 0 boundary edges on cube");
+    assert_eq!(vulk_bounds.len(), 0, "Vulkan should detect 0 boundary edges on cube");
+    assert_eq!(disp_bounds.len(), 0, "Dispatcher should detect 0 boundary edges on cube");
+
+    // Crease feature edges on cube: exactly 12 cube edges (dihedral 90 deg > 45 deg)
+    let cpu_creases = canonicalize_segments(dispatcher.extract_feature_edges(&cube, crease_angle));
+    let cuda_creases = canonicalize_segments(cuda.extract_feature_edges(&cube, crease_angle));
+    let vulk_creases = canonicalize_segments(vulkan.extract_feature_edges(&cube, crease_angle));
+    let disp_creases = canonicalize_segments(cube.extract_feature_edges(crease_angle));
+
+    assert_eq!(cpu_creases.len(), 12, "Cube has exactly 12 crease edges");
+    assert_eq!(cuda_creases.len(), 12, "CUDA should find 12 crease edges on cube");
+    assert_eq!(vulk_creases.len(), 12, "Vulkan should find 12 crease edges on cube");
+    assert_eq!(disp_creases.len(), 12, "Dispatcher should find 12 crease edges on cube");
+
+    for i in 0..12 {
+        let (cpu_p0, cpu_p1) = cpu_creases[i];
+        let (cuda_p0, cuda_p1) = cuda_creases[i];
+        let (vulk_p0, vulk_p1) = vulk_creases[i];
+        let (disp_p0, disp_p1) = disp_creases[i];
+
+        assert!(
+            cuda_p0.distance(cpu_p0) < 1e-6 && cuda_p1.distance(cpu_p1) < 1e-6,
+            "CUDA vs CPU crease mismatch at segment {}: {:?} vs {:?}",
+            i, (cuda_p0, cuda_p1), (cpu_p0, cpu_p1)
+        );
+        assert!(
+            vulk_p0.distance(cpu_p0) < 1e-3 && vulk_p1.distance(cpu_p1) < 1e-3,
+            "Vulkan vs CPU crease mismatch at segment {}: {:?} vs {:?}",
+            i, (vulk_p0, vulk_p1), (cpu_p0, cpu_p1)
+        );
+        assert!(
+            disp_p0.distance(cpu_p0) < 1e-3 && disp_p1.distance(cpu_p1) < 1e-3,
+            "Dispatcher vs CPU crease mismatch at segment {}: {:?} vs {:?}",
+            i, (disp_p0, disp_p1), (cpu_p0, cpu_p1)
+        );
+    }
+
+    // 2. Open Quad Mesh (4 boundary edges, 1 interior crease edge with 90 deg dihedral)
+    let quad = create_open_quad_mesh();
+
+    // Boundary edges
+    let cpu_q_bounds = canonicalize_segments(dispatcher.extract_boundary_edges(&quad));
+    let cuda_q_bounds = canonicalize_segments(cuda.extract_boundary_edges(&quad));
+    let vulk_q_bounds = canonicalize_segments(vulkan.extract_boundary_edges(&quad));
+    let disp_q_bounds = canonicalize_segments(quad.extract_boundary_edges());
+
+    assert_eq!(cpu_q_bounds.len(), 4, "Open quad has 4 boundary edges");
+    assert_eq!(cuda_q_bounds.len(), 4, "CUDA open quad 4 boundary edges");
+    assert_eq!(vulk_q_bounds.len(), 4, "Vulkan open quad 4 boundary edges");
+    assert_eq!(disp_q_bounds.len(), 4, "Dispatcher open quad 4 boundary edges");
+
+    for i in 0..4 {
+        let (cpu_p0, cpu_p1) = cpu_q_bounds[i];
+        let (cuda_p0, cuda_p1) = cuda_q_bounds[i];
+        let (vulk_p0, vulk_p1) = vulk_q_bounds[i];
+        let (disp_p0, disp_p1) = disp_q_bounds[i];
+
+        assert!(
+            cuda_p0.distance(cpu_p0) < 1e-6 && cuda_p1.distance(cpu_p1) < 1e-6,
+            "CUDA boundary mismatch at segment {}: {:?} vs {:?}",
+            i, (cuda_p0, cuda_p1), (cpu_p0, cpu_p1)
+        );
+        assert!(
+            vulk_p0.distance(cpu_p0) < 1e-3 && vulk_p1.distance(cpu_p1) < 1e-3,
+            "Vulkan boundary mismatch at segment {}: {:?} vs {:?}",
+            i, (vulk_p0, vulk_p1), (cpu_p0, cpu_p1)
+        );
+        assert!(
+            disp_p0.distance(cpu_p0) < 1e-3 && disp_p1.distance(cpu_p1) < 1e-3,
+            "Dispatcher boundary mismatch at segment {}: {:?} vs {:?}",
+            i, (disp_p0, disp_p1), (cpu_p0, cpu_p1)
+        );
+    }
+
+    // Feature edges (4 boundary + 1 crease = 5 edges)
+    let cpu_q_features = canonicalize_segments(dispatcher.extract_feature_edges(&quad, crease_angle));
+    let cuda_q_features = canonicalize_segments(cuda.extract_feature_edges(&quad, crease_angle));
+    let vulk_q_features = canonicalize_segments(vulkan.extract_feature_edges(&quad, crease_angle));
+    let disp_q_features = canonicalize_segments(quad.extract_feature_edges(crease_angle));
+
+    assert_eq!(cpu_q_features.len(), 5, "Open quad has 5 feature edges (4 bounds + 1 crease)");
+    assert_eq!(cuda_q_features.len(), 5, "CUDA open quad 5 feature edges");
+    assert_eq!(vulk_q_features.len(), 5, "Vulkan open quad 5 feature edges");
+    assert_eq!(disp_q_features.len(), 5, "Dispatcher open quad 5 feature edges");
+
+    for i in 0..5 {
+        let (cpu_p0, cpu_p1) = cpu_q_features[i];
+        let (cuda_p0, cuda_p1) = cuda_q_features[i];
+        let (vulk_p0, vulk_p1) = vulk_q_features[i];
+        let (disp_p0, disp_p1) = disp_q_features[i];
+
+        assert!(
+            cuda_p0.distance(cpu_p0) < 1e-6 && cuda_p1.distance(cpu_p1) < 1e-6,
+            "CUDA feature mismatch at segment {}: {:?} vs {:?}",
+            i, (cuda_p0, cuda_p1), (cpu_p0, cpu_p1)
+        );
+        assert!(
+            vulk_p0.distance(cpu_p0) < 1e-3 && vulk_p1.distance(cpu_p1) < 1e-3,
+            "Vulkan feature mismatch at segment {}: {:?} vs {:?}",
+            i, (vulk_p0, vulk_p1), (cpu_p0, cpu_p1)
+        );
+        assert!(
+            disp_p0.distance(cpu_p0) < 1e-3 && disp_p1.distance(cpu_p1) < 1e-3,
+            "Dispatcher feature mismatch at segment {}: {:?} vs {:?}",
+            i, (disp_p0, disp_p1), (cpu_p0, cpu_p1)
+        );
+    }
+
+    println!("Feature edges and boundary parity verified across cube and open quad.");
+}
+
+
 
 

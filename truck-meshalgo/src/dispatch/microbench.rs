@@ -442,6 +442,8 @@ pub fn run_scaling_microbenchmark() -> DispatchProfile {
         linear_subdivision: ScalingThresholds::default_fallback(Operation::LinearSubdivision),
         nurbs_curve_evaluation: ScalingThresholds::default_fallback(Operation::NurbsCurveEvaluation),
         raycast_mesh: ScalingThresholds::default_fallback(Operation::RaycastMesh),
+        loop_subdivision: ScalingThresholds::default_fallback(Operation::LoopSubdivision),
+        feature_edges: ScalingThresholds::default_fallback(Operation::FeatureEdges),
     }
 }
 
