@@ -1,9 +1,10 @@
 //! CUDA-accelerated mesh algorithms targeting NVIDIA Ampere (SM 8.6, RTX 3080).
 #![allow(unsafe_code)]
 
-use super::GpuTriangle;
+use super::{filter_and_cluster_seeds, sample_surface_grid, GpuTriangle};
 use truck_base::cgmath64::*;
 use truck_base::hash::{self, HashGen};
+use truck_geometry::prelude::*;
 use truck_polymesh::PolygonMesh;
 
 extern "C" {
@@ -141,6 +142,53 @@ extern "C" {
         num_points: u32,
         h_out_points: *mut f64,
         h_out_normals: *mut f64,
+    ) -> i32;
+
+    fn truck_cuda_is_clung_to_by_f64(
+        h_points: *const f64,
+        num_points: u32,
+        h_triangles: *const f64,
+        num_triangles: u32,
+        tol: f64,
+        h_result: *mut i32,
+    ) -> i32;
+
+    fn truck_cuda_neighborhood_include_f64(
+        h_points: *const f64,
+        num_points: u32,
+        h_triangles: *const f64,
+        num_triangles: u32,
+        tol: f64,
+        h_result: *mut i32,
+    ) -> i32;
+
+    fn truck_cuda_find_surface_intersection_seeds(
+        h_s1_samples: *const std::ffi::c_void,
+        n_u1: u32,
+        n_v1: u32,
+        h_s2_samples: *const std::ffi::c_void,
+        n_u2: u32,
+        n_v2: u32,
+        tol: f32,
+        h_out_seeds: *mut f32,
+        max_seeds: u32,
+        h_seed_count: *mut u32,
+    ) -> i32;
+
+    fn truck_cuda_slice_mesh_planes(
+        h_triangles: *const f32,
+        num_triangles: u32,
+        h_planes: *const f32,
+        num_planes: u32,
+        max_segments_per_plane: u32,
+        h_out_counts: *mut u32,
+        h_out_segments: *mut f32,
+    ) -> i32;
+
+    fn truck_cuda_mesh_volume_cog(
+        h_triangles: *const f32,
+        num_triangles: u32,
+        h_out_accum: *mut f64,
     ) -> i32;
 
     fn truck_cuda_get_device_info(
@@ -783,5 +831,234 @@ impl CudaMeshAnalyzer {
             .collect();
 
         (pts, nors)
+    }
+
+    /// Extracts triangles from a polygon mesh as flat double-precision vertex coordinates `[f64; 4]`.
+    pub fn extract_triangles_f64(mesh: &PolygonMesh) -> Vec<[f64; 4]> {
+        let pos = mesh.positions();
+        mesh.face_iter()
+            .flat_map(|face| {
+                (2..face.len()).flat_map(move |i| {
+                    let p0 = pos[face[0].pos];
+                    let p1 = pos[face[i - 1].pos];
+                    let p2 = pos[face[i].pos];
+                    vec![
+                        [p0.x, p0.y, p0.z, 0.0],
+                        [p1.x, p1.y, p1.z, 0.0],
+                        [p2.x, p2.y, p2.z, 0.0],
+                    ]
+                })
+            })
+            .collect()
+    }
+
+    /// Checks whether all faces of the mesh intersect the neighborhood of `point_cloud` on the GPU.
+    pub fn is_clung_to_by(&self, mesh: &PolygonMesh, point_cloud: &[Point3], tol: f64) -> bool {
+        if point_cloud.is_empty() {
+            return false;
+        }
+        let tri_coords = Self::extract_triangles_f64(mesh);
+        if tri_coords.is_empty() {
+            return false;
+        }
+        let pt_coords: Vec<[f64; 4]> = point_cloud
+            .iter()
+            .map(|p| [p.x, p.y, p.z, 0.0])
+            .collect();
+
+        let mut result = 1i32;
+        let status = unsafe {
+            truck_cuda_is_clung_to_by_f64(
+                pt_coords.as_ptr() as *const f64,
+                point_cloud.len() as u32,
+                tri_coords.as_ptr() as *const f64,
+                (tri_coords.len() / 3) as u32,
+                tol,
+                &mut result,
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_is_clung_to_by_f64 failed with code: {}", status);
+        result != 0
+    }
+
+    /// Checks whether the neighborhood of the mesh includes all points in `point_cloud` on the GPU.
+    pub fn neighborhood_include(&self, mesh: &PolygonMesh, point_cloud: &[Point3], tol: f64) -> bool {
+        if point_cloud.is_empty() {
+            return true;
+        }
+        let tri_coords = Self::extract_triangles_f64(mesh);
+        if tri_coords.is_empty() {
+            return false;
+        }
+        let pt_coords: Vec<[f64; 4]> = point_cloud
+            .iter()
+            .map(|p| [p.x, p.y, p.z, 0.0])
+            .collect();
+
+        let mut result = 1i32;
+        let status = unsafe {
+            truck_cuda_neighborhood_include_f64(
+                pt_coords.as_ptr() as *const f64,
+                point_cloud.len() as u32,
+                tri_coords.as_ptr() as *const f64,
+                (tri_coords.len() / 3) as u32,
+                tol,
+                &mut result,
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_neighborhood_include_f64 failed with code: {}", status);
+        result != 0
+    }
+
+    /// Evaluates dense parameter grid separation on the GPU to locate candidate intersection seeds between two B-spline surfaces.
+    pub fn find_surface_intersection_seeds(
+        &self,
+        s1: &BSplineSurface<Point3>,
+        s2: &BSplineSurface<Point3>,
+        tol: f64,
+    ) -> Vec<(Point2, Point2)> {
+        self.find_surface_intersection_seeds_with_res(s1, s2, (32, 32), (32, 32), tol)
+    }
+
+    /// Evaluates dense parameter grid separation on the GPU with custom grid resolutions.
+    pub fn find_surface_intersection_seeds_with_res(
+        &self,
+        s1: &BSplineSurface<Point3>,
+        s2: &BSplineSurface<Point3>,
+        res1: (usize, usize),
+        res2: (usize, usize),
+        tol: f64,
+    ) -> Vec<(Point2, Point2)> {
+        let (samples1, n_u1, n_v1) = sample_surface_grid(s1, res1);
+        let (samples2, n_u2, n_v2) = sample_surface_grid(s2, res2);
+
+        const MAX_SEEDS: usize = 8192;
+        let mut out_seeds = vec![[0.0f32; 4]; MAX_SEEDS];
+        let mut seed_count = 0u32;
+
+        let status = unsafe {
+            truck_cuda_find_surface_intersection_seeds(
+                samples1.as_ptr() as *const std::ffi::c_void,
+                n_u1 as u32,
+                n_v1 as u32,
+                samples2.as_ptr() as *const std::ffi::c_void,
+                n_u2 as u32,
+                n_v2 as u32,
+                tol as f32,
+                out_seeds.as_mut_ptr() as *mut f32,
+                MAX_SEEDS as u32,
+                &mut seed_count,
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_find_surface_intersection_seeds failed with code: {}", status);
+
+        let valid_count = (seed_count as usize).min(MAX_SEEDS);
+        let raw_seeds: Vec<(Point2, Point2)> = out_seeds[..valid_count]
+            .iter()
+            .map(|s| (Point2::new(s[0] as f64, s[1] as f64), Point2::new(s[2] as f64, s[3] as f64)))
+            .collect();
+
+        filter_and_cluster_seeds(raw_seeds, s1, s2)
+    }
+
+    /// Slices a polygon mesh against multiple planes on the GPU using native CUDA with SM 8.6 warp-aggregated atomics.
+    pub fn slice_mesh_planes(&self, mesh: &PolygonMesh, planes: &[[f64; 4]]) -> Vec<Vec<(Point3, Point3)>> {
+        if planes.is_empty() {
+            return Vec::new();
+        }
+        let triangles = Self::extract_triangles(mesh);
+        if triangles.is_empty() {
+            return vec![Vec::new(); planes.len()];
+        }
+
+        let num_triangles = triangles.len() as u32;
+        let num_planes = planes.len() as u32;
+        let max_segments_per_plane = num_triangles.min(262_144);
+
+        let planes_f32: Vec<[f32; 4]> = planes
+            .iter()
+            .map(|p| [p[0] as f32, p[1] as f32, p[2] as f32, p[3] as f32])
+            .collect();
+
+        let mut out_counts = vec![0u32; planes.len()];
+        let total_segments = (num_planes as usize) * (max_segments_per_plane as usize);
+        let mut out_segments = vec![0.0f32; total_segments * 8];
+
+        let status = unsafe {
+            truck_cuda_slice_mesh_planes(
+                triangles.as_ptr() as *const f32,
+                num_triangles,
+                planes_f32.as_ptr() as *const f32,
+                num_planes,
+                max_segments_per_plane,
+                out_counts.as_mut_ptr(),
+                out_segments.as_mut_ptr(),
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_slice_mesh_planes failed with code: {}", status);
+
+        (0..planes.len())
+            .map(|k| {
+                let count = (out_counts[k] as usize).min(max_segments_per_plane as usize);
+                let base = k * (max_segments_per_plane as usize) * 8;
+                (0..count)
+                    .map(|i| {
+                        let seg_base = base + i * 8;
+                        let p1 = Point3::new(
+                            out_segments[seg_base] as f64,
+                            out_segments[seg_base + 1] as f64,
+                            out_segments[seg_base + 2] as f64,
+                        );
+                        let p2 = Point3::new(
+                            out_segments[seg_base + 4] as f64,
+                            out_segments[seg_base + 5] as f64,
+                            out_segments[seg_base + 6] as f64,
+                        );
+                        (p1, p2)
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    /// Evaluates divergence-theorem prism volume and center of gravity of a mesh on the GPU using parallel warp-shuffle and block reductions.
+    pub fn mass_properties(&self, mesh: &PolygonMesh) -> (f64, Point3) {
+        let triangles = Self::extract_triangles(mesh);
+        if triangles.is_empty() {
+            return (0.0, Point3::origin());
+        }
+
+        let num_triangles = triangles.len() as u32;
+        let mut accum = [0.0f64; 4];
+
+        let status = unsafe {
+            truck_cuda_mesh_volume_cog(
+                triangles.as_ptr() as *const f32,
+                num_triangles,
+                accum.as_mut_ptr(),
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_mesh_volume_cog failed with code: {}", status);
+
+        let vol = accum[3];
+        let cog = if vol.abs() > 1e-12 {
+            Point3::new(accum[0] / vol, accum[1] / vol, accum[2] / vol)
+        } else {
+            Point3::origin()
+        };
+
+        (vol, cog)
+    }
+
+    /// Evaluates the divergence-theorem prism volume of a mesh on the GPU via CUDA.
+    #[inline(always)]
+    pub fn volume(&self, mesh: &PolygonMesh) -> f64 {
+        self.mass_properties(mesh).0
+    }
+
+    /// Evaluates the center of gravity of a mesh on the GPU via CUDA.
+    #[inline(always)]
+    pub fn center_of_gravity(&self, mesh: &PolygonMesh) -> Point3 {
+        self.mass_properties(mesh).1
     }
 }

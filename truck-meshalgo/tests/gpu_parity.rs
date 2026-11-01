@@ -665,4 +665,264 @@ fn test_vulkan_vs_cuda_advanced_candidates_parity() {
     assert_eq!(vulkan_hit.is_some(), cuda_hit.is_some(), "Collision hit presence differs between Vulkan and CUDA!");
 }
 
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_mass_properties_parity() {
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+
+    // 1. Unit Cube Parity
+    let cube = create_unit_cube();
+    let cpu_cube_vol = cube.volume();
+    let cpu_cube_cog = cube.center_of_gravity().to_point();
+
+    let (cuda_cube_vol, cuda_cube_cog) = cuda.mass_properties(&cube);
+    let (vulkan_cube_vol, vulkan_cube_cog) = vulkan.mass_properties(&cube);
+
+    assert!((cpu_cube_vol - 1.0).abs() < 1e-6, "CPU cube volume should be 1.0");
+    assert!((cuda_cube_vol - cpu_cube_vol).abs() < 1e-6, "CUDA cube volume parity mismatch: CUDA={}, CPU={}", cuda_cube_vol, cpu_cube_vol);
+    assert!((vulkan_cube_vol - cpu_cube_vol).abs() < 1e-4, "Vulkan cube volume parity mismatch: Vulkan={}, CPU={}", vulkan_cube_vol, cpu_cube_vol);
+
+    let cuda_cog_diff = (cuda_cube_cog - cpu_cube_cog).magnitude();
+    let vulkan_cog_diff = (vulkan_cube_cog - cpu_cube_cog).magnitude();
+    assert!(cuda_cog_diff < 1e-6, "CUDA cube CoG mismatch: CUDA={:?}, CPU={:?}", cuda_cube_cog, cpu_cube_cog);
+    assert!(vulkan_cog_diff < 1e-4, "Vulkan cube CoG mismatch: Vulkan={:?}, CPU={:?}", vulkan_cube_cog, cpu_cube_cog);
+
+    // 2. Regular Trihedron in Unit Sphere
+    let a = 1.0 / f64::sqrt(3.0);
+    let trihedron = PolygonMesh::new(
+        StandardAttributes {
+            positions: vec![
+                Point3::new(-a, -a, -a),
+                Point3::new(a, a, -a),
+                Point3::new(a, -a, a),
+                Point3::new(-a, a, a),
+            ],
+            ..Default::default()
+        },
+        Faces::from_iter(&[
+            [0, 1, 2],
+            [1, 3, 2],
+            [1, 0, 3],
+            [0, 2, 3],
+        ]),
+    );
+
+    let cpu_tri_vol = trihedron.volume();
+    let cuda_tri_vol = cuda.volume(&trihedron);
+    let vulkan_tri_vol = vulkan.volume(&trihedron);
+
+    assert!((cuda_tri_vol - cpu_tri_vol).abs() < 1e-5, "CUDA trihedron volume mismatch: CUDA={}, CPU={}", cuda_tri_vol, cpu_tri_vol);
+    assert!((vulkan_tri_vol - cpu_tri_vol).abs() < 1e-4, "Vulkan trihedron volume mismatch: Vulkan={}, CPU={}", vulkan_tri_vol, cpu_tri_vol);
+
+    // 3. Tessellated Sphere
+    let sphere = common::shapes::sphere(Point3::origin(), 1.0, 32, 32);
+    let cpu_sphere_vol = sphere.volume();
+    let cpu_sphere_cog = sphere.center_of_gravity().to_point();
+
+    let cuda_sphere_vol = cuda.volume(&sphere);
+    let cuda_sphere_cog = cuda.center_of_gravity(&sphere);
+    let vulkan_sphere_vol = vulkan.volume(&sphere);
+    let vulkan_sphere_cog = vulkan.center_of_gravity(&sphere);
+
+    assert!((cuda_sphere_vol - cpu_sphere_vol).abs() < 1e-4, "CUDA sphere volume mismatch: CUDA={}, CPU={}", cuda_sphere_vol, cpu_sphere_vol);
+    assert!((vulkan_sphere_vol - cpu_sphere_vol).abs() < 1e-4, "Vulkan sphere volume mismatch: Vulkan={}, CPU={}", vulkan_sphere_vol, cpu_sphere_vol);
+    assert!((cuda_sphere_cog - cpu_sphere_cog).magnitude() < 1e-4, "CUDA sphere CoG mismatch: CUDA={:?}, CPU={:?}", cuda_sphere_cog, cpu_sphere_cog);
+    assert!((vulkan_sphere_cog - cpu_sphere_cog).magnitude() < 1e-4, "Vulkan sphere CoG mismatch: Vulkan={:?}, CPU={:?}", vulkan_sphere_cog, cpu_sphere_cog);
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_planar_slicing_parity() {
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+
+    let cube = create_unit_cube();
+    let planes = vec![
+        [0.0, 0.0, 1.0, -0.25], // horizontal Z = 0.25
+        [0.0, 0.0, 1.0, -0.50], // horizontal Z = 0.50
+        [0.0, 0.0, 1.0, -0.75], // horizontal Z = 0.75
+        [1.0, 1.0, 0.0, -1.0],  // diagonal X + Y = 1.0
+    ];
+
+    let cpu_slices = slice_mesh_planes_cpu(&cube, &planes);
+    let cuda_slices = cuda.slice_mesh_planes(&cube, &planes);
+    let vulkan_slices = vulkan.slice_mesh_planes(&cube, &planes);
+
+    assert_eq!(cuda_slices.len(), planes.len());
+    assert_eq!(vulkan_slices.len(), planes.len());
+
+    for k in 0..planes.len() {
+        assert_eq!(
+            cuda_slices[k].len(),
+            cpu_slices[k].len(),
+            "CUDA segment count mismatch on plane #{}: CUDA={}, CPU={}",
+            k,
+            cuda_slices[k].len(),
+            cpu_slices[k].len()
+        );
+        assert_eq!(
+            vulkan_slices[k].len(),
+            cpu_slices[k].len(),
+            "Vulkan segment count mismatch on plane #{}: Vulkan={}, CPU={}",
+            k,
+            vulkan_slices[k].len(),
+            cpu_slices[k].len()
+        );
+
+        let pl = planes[k];
+        for &(p1, p2) in &cuda_slices[k] {
+            let mid = Point3::new((p1.x + p2.x) * 0.5, (p1.y + p2.y) * 0.5, (p1.z + p2.z) * 0.5);
+            let dist = pl[0] * mid.x + pl[1] * mid.y + pl[2] * mid.z + pl[3];
+            assert!(dist.abs() < 1e-4, "CUDA segment midpoint should lie on plane #{}: dist={}", k, dist);
+        }
+    }
+
+    // Test loop chaining on Z = 0.5 slice
+    let z50_segments = &cuda_slices[1];
+    let loops = chain_segments_into_loops(z50_segments, 1e-4);
+    assert_eq!(loops.len(), 1, "Cube horizontal slice should yield exactly 1 closed polygon loop");
+    let loop0 = &loops[0];
+    assert!(loop0.len() >= 4, "Square loop should have at least 4 vertices, got {}", loop0.len());
+
+    // Verify all vertices lie at Z = 0.5
+    for pt in loop0 {
+        assert!((pt.z - 0.5).abs() < 1e-4, "Z-coordinate in loop should be 0.5, got {}", pt.z);
+    }
+
+    // Verify closed loop perimeter is ~4.0 for a 1x1 square
+    let mut perimeter = 0.0;
+    for i in 0..loop0.len() {
+        let p_curr = loop0[i];
+        let p_next = loop0[(i + 1) % loop0.len()];
+        perimeter += (p_next - p_curr).magnitude();
+    }
+    assert!((perimeter - 4.0).abs() < 1e-3, "Perimeter of square slice should be ~4.0, got {}", perimeter);
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_point_cloud_conformance_parity() {
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+
+    // 1. Concentric Spheres: R = 10.0 and R = 11.0
+    let sphere0 = common::shapes::sphere(Point3::origin(), 10.0, 30, 30);
+    let sphere1 = common::shapes::sphere(Point3::origin(), 11.0, 30, 30);
+
+    // With tol = 1.01 (> distance of 1.0): both should be true across CPU, CUDA, and Vulkan
+    let cpu_clung_101 = sphere0.is_clung_to_by(sphere1.positions(), 1.01);
+    let cuda_clung_101 = cuda.is_clung_to_by(&sphere0, sphere1.positions(), 1.01);
+    let vulkan_clung_101 = vulkan.is_clung_to_by(&sphere0, sphere1.positions(), 1.01);
+
+    assert!(cpu_clung_101, "CPU is_clung_to_by should be true for tol=1.01");
+    assert_eq!(cuda_clung_101, cpu_clung_101, "CUDA is_clung_to_by parity mismatch at tol=1.01");
+    assert_eq!(vulkan_clung_101, cpu_clung_101, "Vulkan is_clung_to_by parity mismatch at tol=1.01");
+
+    // With tol = 0.99 (< distance of 1.0): both should be false across CPU, CUDA, and Vulkan
+    let cpu_clung_099 = sphere0.is_clung_to_by(sphere1.positions(), 0.99);
+    let cuda_clung_099 = cuda.is_clung_to_by(&sphere0, sphere1.positions(), 0.99);
+    let vulkan_clung_099 = vulkan.is_clung_to_by(&sphere0, sphere1.positions(), 0.99);
+
+    assert!(!cpu_clung_099, "CPU is_clung_to_by should be false for tol=0.99");
+    assert_eq!(cuda_clung_099, cpu_clung_099, "CUDA is_clung_to_by parity mismatch at tol=0.99");
+    assert_eq!(vulkan_clung_099, cpu_clung_099, "Vulkan is_clung_to_by parity mismatch at tol=0.99");
+
+    // 2. Unit Cube Neighborhood Inclusion
+    let cube = create_unit_cube();
+    let inside_pts = vec![
+        Point3::new(0.5, 0.5, 0.5),
+        Point3::new(0.1, 0.1, 0.1),
+        Point3::new(0.9, 0.9, 0.9),
+    ];
+    let outside_pts = vec![
+        Point3::new(2.0, 2.0, 2.0),
+        Point3::new(-1.0, 0.5, 0.5),
+    ];
+
+    let cpu_inc_inside = cube.neighborhood_include(&inside_pts, 0.1);
+    let cuda_inc_inside = cuda.neighborhood_include(&cube, &inside_pts, 0.1);
+    let vulkan_inc_inside = vulkan.neighborhood_include(&cube, &inside_pts, 0.1);
+
+    assert_eq!(cuda_inc_inside, cpu_inc_inside, "CUDA neighborhood_include parity mismatch for inside points");
+    assert_eq!(vulkan_inc_inside, cpu_inc_inside, "Vulkan neighborhood_include parity mismatch for inside points");
+
+    let cpu_inc_outside = cube.neighborhood_include(&outside_pts, 0.1);
+    let cuda_inc_outside = cuda.neighborhood_include(&cube, &outside_pts, 0.1);
+    let vulkan_inc_outside = vulkan.neighborhood_include(&cube, &outside_pts, 0.1);
+
+    assert_eq!(cuda_inc_outside, cpu_inc_outside, "CUDA neighborhood_include parity mismatch for outside points");
+    assert_eq!(vulkan_inc_outside, cpu_inc_outside, "Vulkan neighborhood_include parity mismatch for outside points");
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_surface_intersection_seeds_parity() {
+    use truck_geometry::prelude::*;
+
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+
+    let u_knots = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    let v_knots = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+
+    // Surface 1: Paraboloid with depression intersecting z = 0
+    let ctrl_pts1 = vec![
+        vec![Point3::new(-1.0, -1.0, 1.0), Point3::new(0.0, -1.0, 0.0), Point3::new(1.0, -1.0, 1.0)],
+        vec![Point3::new(-1.0,  0.0, 0.0), Point3::new(0.0,  0.0, -1.0), Point3::new(1.0,  0.0, 0.0)],
+        vec![Point3::new(-1.0,  1.0, 1.0), Point3::new(0.0,  1.0, 0.0), Point3::new(1.0,  1.0, 1.0)],
+    ];
+    let s1 = BSplineSurface::new(
+        (KnotVec::from(u_knots.clone()), KnotVec::from(v_knots.clone())),
+        ctrl_pts1,
+    );
+
+    // Surface 2: Flat plane at z = 0
+    let ctrl_pts2 = vec![
+        vec![Point3::new(-1.0, -1.0, 0.0), Point3::new(0.0, -1.0, 0.0), Point3::new(1.0, -1.0, 0.0)],
+        vec![Point3::new(-1.0,  0.0, 0.0), Point3::new(0.0,  0.0, 0.0), Point3::new(1.0,  0.0, 0.0)],
+        vec![Point3::new(-1.0,  1.0, 0.0), Point3::new(0.0,  1.0, 0.0), Point3::new(1.0,  1.0, 0.0)],
+    ];
+    let s2 = BSplineSurface::new(
+        (KnotVec::from(u_knots.clone()), KnotVec::from(v_knots.clone())),
+        ctrl_pts2,
+    );
+
+    let tol = 0.05;
+    let cuda_seeds = cuda.find_surface_intersection_seeds(&s1, &s2, tol);
+    let vulkan_seeds = vulkan.find_surface_intersection_seeds(&s1, &s2, tol);
+    let dispatch_seeds = truck_meshalgo::dispatch::Dispatcher::global().find_surface_intersection_seeds(&s1, &s2, tol);
+
+    assert!(!cuda_seeds.is_empty(), "CUDA should detect candidate intersection seeds");
+    assert!(!vulkan_seeds.is_empty(), "Vulkan should detect candidate intersection seeds");
+    assert!(!dispatch_seeds.is_empty(), "Dispatcher should detect candidate intersection seeds");
+
+    // Verify geometric accuracy: distance between surfaces at each seed is small
+    for &(p1, p2) in &cuda_seeds {
+        let pt1 = s1.subs(p1.x, p1.y);
+        let pt2 = s2.subs(p2.x, p2.y);
+        let dist = pt1.distance(pt2);
+        assert!(
+            dist < 0.25,
+            "CUDA seed distance between surfaces should be within grid resolution bound, got {}",
+            dist
+        );
+    }
+
+    for &(p1, p2) in &vulkan_seeds {
+        let pt1 = s1.subs(p1.x, p1.y);
+        let pt2 = s2.subs(p2.x, p2.y);
+        let dist = pt1.distance(pt2);
+        assert!(
+            dist < 0.25,
+            "Vulkan seed distance between surfaces should be within grid resolution bound, got {}",
+            dist
+        );
+    }
+}
+
 

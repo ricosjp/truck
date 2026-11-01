@@ -435,6 +435,9 @@ pub fn run_scaling_microbenchmark() -> DispatchProfile {
         mesh_interference,
         trimming_loop_include,
         bspline_evaluation,
+        point_cloud_clung: ScalingThresholds::default_fallback(Operation::PointCloudClung),
+        point_cloud_include: ScalingThresholds::default_fallback(Operation::PointCloudInclude),
+        surface_intersection_seeds: ScalingThresholds::default_fallback(Operation::SurfaceIntersectionSeeds),
     }
 }
 

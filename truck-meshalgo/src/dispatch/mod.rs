@@ -417,6 +417,176 @@ impl Dispatcher {
             .map(|&p| (bsp_surface.subs(p.x, p.y), bsp_surface.normal(p.x, p.y)))
             .unzip()
     }
+
+    // ========================================================================
+    // Operation 7: Point Cloud Clung Test
+    // ========================================================================
+
+    /// Checks whether all faces of the polygon mesh intersect the neighborhood of `point_cloud`.
+    pub fn is_clung_to_by(&self, mesh: &PolygonMesh, point_cloud: &[Point3], tol: f64) -> bool {
+        if point_cloud.is_empty() {
+            return false;
+        }
+        let target = self.select_kernel(Operation::PointCloudClung, point_cloud.len().max(mesh.faces().len()));
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().is_clung_to_by(mesh, point_cloud, tol);
+                #[cfg(not(feature = "cuda"))]
+                self.is_clung_to_by_cpu(mesh, point_cloud, tol)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.is_clung_to_by(mesh, point_cloud, tol);
+                }
+                self.is_clung_to_by_cpu(mesh, point_cloud, tol)
+            }
+            _ => self.is_clung_to_by_cpu(mesh, point_cloud, tol),
+        }
+    }
+
+    fn is_clung_to_by_cpu(&self, mesh: &PolygonMesh, point_cloud: &[Point3], tol: f64) -> bool {
+        #[cfg(feature = "analyzers")]
+        {
+            crate::analyzers::point_cloud::cpu_is_clung_to_by(mesh, point_cloud, tol)
+        }
+        #[cfg(not(feature = "analyzers"))]
+        {
+            let _ = (mesh, point_cloud, tol);
+            unimplemented!("CPU point cloud analysis requires 'analyzers' feature")
+        }
+    }
+
+    // ========================================================================
+    // Operation 8: Point Cloud Neighborhood Inclusion
+    // ========================================================================
+
+    /// Checks whether the neighborhood of the polygon mesh includes all points in `point_cloud`.
+    pub fn neighborhood_include(&self, mesh: &PolygonMesh, point_cloud: &[Point3], tol: f64) -> bool {
+        if point_cloud.is_empty() {
+            return true;
+        }
+        let target = self.select_kernel(Operation::PointCloudInclude, point_cloud.len());
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().neighborhood_include(mesh, point_cloud, tol);
+                #[cfg(not(feature = "cuda"))]
+                self.neighborhood_include_cpu(mesh, point_cloud, tol)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.neighborhood_include(mesh, point_cloud, tol);
+                }
+                self.neighborhood_include_cpu(mesh, point_cloud, tol)
+            }
+            _ => self.neighborhood_include_cpu(mesh, point_cloud, tol),
+        }
+    }
+
+    fn neighborhood_include_cpu(&self, mesh: &PolygonMesh, point_cloud: &[Point3], tol: f64) -> bool {
+        #[cfg(feature = "analyzers")]
+        {
+            crate::analyzers::point_cloud::cpu_neighborhood_include(mesh, point_cloud, tol)
+        }
+        #[cfg(not(feature = "analyzers"))]
+        {
+            let _ = (mesh, point_cloud, tol);
+            unimplemented!("CPU point cloud analysis requires 'analyzers' feature")
+        }
+    }
+
+    // ========================================================================
+    // Operation 9: Surface-Surface Intersection Seeds Finder
+    // ========================================================================
+
+    /// Evaluates dense parameter grid separation on the GPU or CPU to locate candidate intersection seeds between two B-spline surfaces.
+    pub fn find_surface_intersection_seeds(
+        &self,
+        s1: &BSplineSurface<Point3>,
+        s2: &BSplineSurface<Point3>,
+        tol: f64,
+    ) -> Vec<(Point2, Point2)> {
+        let target = self.select_kernel(Operation::SurfaceIntersectionSeeds, 1024);
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().find_surface_intersection_seeds(s1, s2, tol);
+                #[cfg(not(feature = "cuda"))]
+                self.find_surface_intersection_seeds_cpu(s1, s2, tol)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.find_surface_intersection_seeds(s1, s2, tol);
+                }
+                self.find_surface_intersection_seeds_cpu(s1, s2, tol)
+            }
+            _ => self.find_surface_intersection_seeds_cpu(s1, s2, tol),
+        }
+    }
+
+    fn find_surface_intersection_seeds_cpu(
+        &self,
+        s1: &BSplineSurface<Point3>,
+        s2: &BSplineSurface<Point3>,
+        tol: f64,
+    ) -> Vec<(Point2, Point2)> {
+        #[cfg(feature = "gpu")]
+        {
+            let (samples1, n_u1, n_v1) = crate::gpu::sample_surface_grid(s1, (32, 32));
+            let (samples2, n_u2, n_v2) = crate::gpu::sample_surface_grid(s2, (32, 32));
+            let mut raw_seeds = Vec::new();
+            for i1 in 0..n_u1 {
+                for j1 in 0..n_v1 {
+                    let s1_idx = i1 * n_v1 + j1;
+                    let p1 = Vector3::new(samples1[s1_idx].pos[0] as f64, samples1[s1_idx].pos[1] as f64, samples1[s1_idx].pos[2] as f64);
+                    let uv1 = Point2::new(samples1[s1_idx].uv[0] as f64, samples1[s1_idx].uv[1] as f64);
+                    for i2 in 0..(n_u2 - 1) {
+                        for j2 in 0..(n_v2 - 1) {
+                            let s2_00 = &samples2[i2 * n_v2 + j2];
+                            let s2_10 = &samples2[(i2 + 1) * n_v2 + j2];
+                            let s2_01 = &samples2[i2 * n_v2 + (j2 + 1)];
+                            let s2_11 = &samples2[(i2 + 1) * n_v2 + (j2 + 1)];
+                            let center = Vector3::new(
+                                (s2_00.pos[0] + s2_10.pos[0] + s2_01.pos[0] + s2_11.pos[0]) as f64 * 0.25,
+                                (s2_00.pos[1] + s2_10.pos[1] + s2_01.pos[1] + s2_11.pos[1]) as f64 * 0.25,
+                                (s2_00.pos[2] + s2_10.pos[2] + s2_01.pos[2] + s2_11.pos[2]) as f64 * 0.25,
+                            );
+                            let d_sq = (p1 - center).magnitude2();
+                            let r_sq = (Vector3::new(s2_00.pos[0] as f64, s2_00.pos[1] as f64, s2_00.pos[2] as f64) - center).magnitude2().max(1e-6);
+                            let max_d = (r_sq.sqrt() + tol).powi(2);
+                            if d_sq > max_d {
+                                continue;
+                            }
+                            let nor2 = Vector3::new(s2_00.normal[0] as f64, s2_00.normal[1] as f64, s2_00.normal[2] as f64);
+                            let d00 = (Vector3::new(s2_00.pos[0] as f64, s2_00.pos[1] as f64, s2_00.pos[2] as f64) - p1).dot(nor2);
+                            let d10 = (Vector3::new(s2_10.pos[0] as f64, s2_10.pos[1] as f64, s2_10.pos[2] as f64) - p1).dot(nor2);
+                            let d01 = (Vector3::new(s2_01.pos[0] as f64, s2_01.pos[1] as f64, s2_01.pos[2] as f64) - p1).dot(nor2);
+                            let d11 = (Vector3::new(s2_11.pos[0] as f64, s2_11.pos[1] as f64, s2_11.pos[2] as f64) - p1).dot(nor2);
+                            let min_d = d00.min(d10).min(d01).min(d11);
+                            let max_d = d00.max(d10).max(d01).max(d11);
+                            if (min_d <= 0.0 && max_d >= 0.0) || (p1 - center).magnitude() < tol {
+                                let uv2 = Point2::new(
+                                    (s2_00.uv[0] + s2_10.uv[0] + s2_01.uv[0] + s2_11.uv[0]) as f64 * 0.25,
+                                    (s2_00.uv[1] + s2_10.uv[1] + s2_01.uv[1] + s2_11.uv[1]) as f64 * 0.25,
+                                );
+                                raw_seeds.push((uv1, uv2));
+                            }
+                        }
+                    }
+                }
+            }
+            crate::gpu::filter_and_cluster_seeds(raw_seeds, s1, s2)
+        }
+        #[cfg(not(feature = "gpu"))]
+        {
+            let _ = (s1, s2, tol);
+            Vec::new()
+        }
+    }
 }
 
 // Helpers

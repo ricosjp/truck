@@ -1,11 +1,8 @@
 #[cfg(feature = "cuda")]
 fn find_compatible_ccbin() -> Option<&'static str> {
-    for bin in &["g++-13", "g++-12", "clang++-18", "clang++-17"] {
-        if std::process::Command::new(bin).arg("--version").output().is_ok() {
-            return Some(bin);
-        }
-    }
-    None
+    ["g++-13", "g++-12", "clang++-18", "clang++-17"]
+        .into_iter()
+        .find(|&bin| std::process::Command::new(bin).arg("--version").output().is_ok())
 }
 
 fn main() {

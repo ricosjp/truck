@@ -44,6 +44,12 @@ pub enum Operation {
     TrimmingLoopInclude,
     /// Batch B-spline surface point and normal evaluation.
     BsplineEvaluation,
+    /// Point cloud clinging test: all faces intersect neighborhood of point cloud.
+    PointCloudClung,
+    /// Point cloud neighborhood inclusion test: neighborhood includes all points.
+    PointCloudInclude,
+    /// Surface-surface intersection candidate grid seed finder.
+    SurfaceIntersectionSeeds,
 }
 
 /// Recorded microbenchmark measurement sample.
@@ -110,6 +116,24 @@ impl ScalingThresholds {
                 preferred_gpu: KernelTarget::GpuCuda,
                 sample_timings: Vec::new(),
             },
+            Operation::PointCloudClung => Self {
+                cpu_single_max: 64,
+                cpu_rayon_max: 256,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
+            Operation::PointCloudInclude => Self {
+                cpu_single_max: 64,
+                cpu_rayon_max: 256,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
+            Operation::SurfaceIntersectionSeeds => Self {
+                cpu_single_max: 64,
+                cpu_rayon_max: 256,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
         }
     }
 
@@ -157,6 +181,12 @@ pub struct DispatchProfile {
     pub trimming_loop_include: ScalingThresholds,
     /// Thresholds for B-spline surface evaluation.
     pub bspline_evaluation: ScalingThresholds,
+    /// Thresholds for point cloud clung test.
+    pub point_cloud_clung: ScalingThresholds,
+    /// Thresholds for point cloud neighborhood inclusion test.
+    pub point_cloud_include: ScalingThresholds,
+    /// Thresholds for surface-surface intersection seed finder.
+    pub surface_intersection_seeds: ScalingThresholds,
 }
 
 impl Default for DispatchProfile {
@@ -168,6 +198,9 @@ impl Default for DispatchProfile {
             mesh_interference: ScalingThresholds::default_fallback(Operation::MeshInterference),
             trimming_loop_include: ScalingThresholds::default_fallback(Operation::TrimmingLoopInclude),
             bspline_evaluation: ScalingThresholds::default_fallback(Operation::BsplineEvaluation),
+            point_cloud_clung: ScalingThresholds::default_fallback(Operation::PointCloudClung),
+            point_cloud_include: ScalingThresholds::default_fallback(Operation::PointCloudInclude),
+            surface_intersection_seeds: ScalingThresholds::default_fallback(Operation::SurfaceIntersectionSeeds),
         }
     }
 }
@@ -182,6 +215,9 @@ impl DispatchProfile {
             mesh_interference: ScalingThresholds::cpu_only(128),
             trimming_loop_include: ScalingThresholds::cpu_only(256),
             bspline_evaluation: ScalingThresholds::cpu_only(128),
+            point_cloud_clung: ScalingThresholds::cpu_only(64),
+            point_cloud_include: ScalingThresholds::cpu_only(64),
+            surface_intersection_seeds: ScalingThresholds::cpu_only(64),
         }
     }
 
@@ -194,6 +230,9 @@ impl DispatchProfile {
             Operation::MeshInterference => self.mesh_interference.select_kernel(size),
             Operation::TrimmingLoopInclude => self.trimming_loop_include.select_kernel(size),
             Operation::BsplineEvaluation => self.bspline_evaluation.select_kernel(size),
+            Operation::PointCloudClung => self.point_cloud_clung.select_kernel(size),
+            Operation::PointCloudInclude => self.point_cloud_include.select_kernel(size),
+            Operation::SurfaceIntersectionSeeds => self.surface_intersection_seeds.select_kernel(size),
         }
     }
 }

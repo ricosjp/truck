@@ -1980,6 +1980,750 @@ int truck_cuda_evaluate_bspline_surface_f64(
     return 0;
 }
 
+// ============================================================================
+// Point Cloud Conformance (is_clung_to_by & neighborhood_include)
+// ============================================================================
+
+__device__ __forceinline__ double dot_product_f64(double3 a, double3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__device__ __forceinline__ double3 sub_f64(double3 a, double3 b) {
+    return make_double3(a.x - b.x, a.y - b.y, a.z - b.z);
+}
+
+__device__ __forceinline__ double3 add_f64(double3 a, double3 b) {
+    return make_double3(a.x + b.x, a.y + b.y, a.z + b.z);
+}
+
+__device__ __forceinline__ double3 mul_f64(double3 a, double s) {
+    return make_double3(a.x * s, a.y * s, a.z * s);
+}
+
+__device__ __forceinline__ double3 cross_product_f64(double3 a, double3 b) {
+    return make_double3(
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+    );
+}
+
+__device__ double distance2_point_triangle_f64(double3 point, double3 v0, double3 v1, double3 v2) {
+    double3 ab = sub_f64(v1, v0);
+    double3 ap = sub_f64(point, v0);
+    double3 bc = sub_f64(v2, v1);
+    double3 bp = sub_f64(point, v1);
+    double3 ca = sub_f64(v0, v2);
+    double3 cp = sub_f64(point, v2);
+    double3 nor = cross_product_f64(ab, ca);
+
+    double s0 = copysign(1.0, dot_product_f64(cross_product_f64(ab, nor), ap));
+    double s1 = copysign(1.0, dot_product_f64(cross_product_f64(bc, nor), bp));
+    double s2 = copysign(1.0, dot_product_f64(cross_product_f64(ca, nor), cp));
+    double coef = s0 + s1 + s2;
+    double nor_len2 = dot_product_f64(nor, nor);
+
+    if (coef < 2.0 || nor_len2 < 1.0e-20) {
+        double dot_ab = dot_product_f64(ab, ab);
+        double t_a = fmin(fmax(dot_product_f64(ap, ab) / fmax(dot_ab, 1.0e-20), 0.0), 1.0);
+        double3 da = sub_f64(ap, mul_f64(ab, t_a));
+        double d2_a = dot_product_f64(da, da);
+
+        double dot_bc = dot_product_f64(bc, bc);
+        double t_b = fmin(fmax(dot_product_f64(bp, bc) / fmax(dot_bc, 1.0e-20), 0.0), 1.0);
+        double3 db = sub_f64(bp, mul_f64(bc, t_b));
+        double d2_b = dot_product_f64(db, db);
+
+        double dot_ca = dot_product_f64(ca, ca);
+        double t_c = fmin(fmax(dot_product_f64(cp, ca) / fmax(dot_ca, 1.0e-20), 0.0), 1.0);
+        double3 dc = sub_f64(cp, mul_f64(ca, t_c));
+        double d2_c = dot_product_f64(dc, dc);
+
+        return fmin(fmin(d2_a, d2_b), d2_c);
+    } else {
+        double d = dot_product_f64(nor, ap);
+        return (d * d) / nor_len2;
+    }
+}
+
+__global__ void truck_cuda_is_clung_to_by_f64_kernel(
+    const double4* __restrict__ points,
+    uint32_t num_points,
+    const double4* __restrict__ triangles,
+    uint32_t num_triangles,
+    double tol2,
+    int* __restrict__ out_result
+) {
+    uint32_t tri_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tri_idx >= num_triangles) return;
+
+    double4 tv0 = triangles[tri_idx * 3 + 0];
+    double4 tv1 = triangles[tri_idx * 3 + 1];
+    double4 tv2 = triangles[tri_idx * 3 + 2];
+    double3 v0 = make_double3(tv0.x, tv0.y, tv0.z);
+    double3 v1 = make_double3(tv1.x, tv1.y, tv1.z);
+    double3 v2 = make_double3(tv2.x, tv2.y, tv2.z);
+
+    bool found = false;
+    for (uint32_t k = 0; k < num_points; ++k) {
+        if ((k & 63) == 0 && *out_result == 0) return;
+        double4 p = points[k];
+        double3 pt = make_double3(p.x, p.y, p.z);
+        double d2 = distance2_point_triangle_f64(pt, v0, v1, v2);
+        if (d2 < tol2) {
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        atomicMin(out_result, 0);
+    }
+}
+
+__global__ void truck_cuda_neighborhood_include_f64_kernel(
+    const double4* __restrict__ points,
+    uint32_t num_points,
+    const double4* __restrict__ triangles,
+    uint32_t num_triangles,
+    double tol2,
+    int* __restrict__ out_result
+) {
+    uint32_t pt_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (pt_idx >= num_points) return;
+
+    double4 pt4 = points[pt_idx];
+    double3 pt = make_double3(pt4.x, pt4.y, pt4.z);
+
+    bool found = false;
+    for (uint32_t k = 0; k < num_triangles; ++k) {
+        if ((k & 63) == 0 && *out_result == 0) return;
+        double4 tv0 = triangles[k * 3 + 0];
+        double4 tv1 = triangles[k * 3 + 1];
+        double4 tv2 = triangles[k * 3 + 2];
+        double3 v0 = make_double3(tv0.x, tv0.y, tv0.z);
+        double3 v1 = make_double3(tv1.x, tv1.y, tv1.z);
+        double3 v2 = make_double3(tv2.x, tv2.y, tv2.z);
+        double d2 = distance2_point_triangle_f64(pt, v0, v1, v2);
+        if (d2 < tol2) {
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        atomicMin(out_result, 0);
+    }
+}
+
+int truck_cuda_is_clung_to_by_f64(
+    const double* h_points,
+    unsigned int num_points,
+    const double* h_triangles,
+    unsigned int num_triangles,
+    double tol,
+    int* h_result
+) {
+    if (!h_result) return -1;
+    if (num_points == 0) {
+        *h_result = 0;
+        return 0;
+    }
+    if (num_triangles == 0) {
+        *h_result = 0;
+        return 0;
+    }
+
+    ensure_best_device();
+
+    double tol2 = tol * tol;
+    size_t pt_bytes = num_points * sizeof(double4);
+    size_t tri_bytes = num_triangles * 3 * sizeof(double4);
+
+    double4* d_points = NULL;
+    double4* d_triangles = NULL;
+    int* d_result = NULL;
+
+    if (cudaMalloc(&d_points, pt_bytes) != cudaSuccess) return -2;
+    if (cudaMalloc(&d_triangles, tri_bytes) != cudaSuccess) {
+        cudaFree(d_points);
+        return -3;
+    }
+    if (cudaMalloc(&d_result, sizeof(int)) != cudaSuccess) {
+        cudaFree(d_points);
+        cudaFree(d_triangles);
+        return -4;
+    }
+
+    int initial_result = 1;
+    cudaMemcpy(d_result, &initial_result, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_points, h_points, pt_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_triangles, h_triangles, tri_bytes, cudaMemcpyHostToDevice);
+
+    unsigned int block_size = 128;
+    unsigned int grid_size = (num_triangles + block_size - 1) / block_size;
+    truck_cuda_is_clung_to_by_f64_kernel<<<grid_size, block_size>>>(
+        d_points, num_points, d_triangles, num_triangles, tol2, d_result
+    );
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(h_result, d_result, sizeof(int), cudaMemcpyDeviceToHost);
+
+    cudaFree(d_points);
+    cudaFree(d_triangles);
+    cudaFree(d_result);
+    return 0;
+}
+
+int truck_cuda_neighborhood_include_f64(
+    const double* h_points,
+    unsigned int num_points,
+    const double* h_triangles,
+    unsigned int num_triangles,
+    double tol,
+    int* h_result
+) {
+    if (!h_result) return -1;
+    if (num_points == 0) {
+        *h_result = 1;
+        return 0;
+    }
+    if (num_triangles == 0) {
+        *h_result = 0;
+        return 0;
+    }
+
+    ensure_best_device();
+
+    double tol2 = tol * tol;
+    size_t pt_bytes = num_points * sizeof(double4);
+    size_t tri_bytes = num_triangles * 3 * sizeof(double4);
+
+    double4* d_points = NULL;
+    double4* d_triangles = NULL;
+    int* d_result = NULL;
+
+    if (cudaMalloc(&d_points, pt_bytes) != cudaSuccess) return -2;
+    if (cudaMalloc(&d_triangles, tri_bytes) != cudaSuccess) {
+        cudaFree(d_points);
+        return -3;
+    }
+    if (cudaMalloc(&d_result, sizeof(int)) != cudaSuccess) {
+        cudaFree(d_points);
+        cudaFree(d_triangles);
+        return -4;
+    }
+
+    int initial_result = 1;
+    cudaMemcpy(d_result, &initial_result, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_points, h_points, pt_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_triangles, h_triangles, tri_bytes, cudaMemcpyHostToDevice);
+
+    unsigned int block_size = 128;
+    unsigned int grid_size = (num_points + block_size - 1) / block_size;
+    truck_cuda_neighborhood_include_f64_kernel<<<grid_size, block_size>>>(
+        d_points, num_points, d_triangles, num_triangles, tol2, d_result
+    );
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(h_result, d_result, sizeof(int), cudaMemcpyDeviceToHost);
+
+    cudaFree(d_points);
+    cudaFree(d_triangles);
+    cudaFree(d_result);
+    return 0;
+}
+
+// ============================================================================
+// Surface-Surface Intersection (SSI) Grid Initializer / Seed Finder
+// ============================================================================
+
+struct GpuSurfaceSample {
+    float4 pos;     // x, y, z, 1.0f
+    float4 normal;  // nx, ny, nz, 0.0f
+    float4 uv;      // u, v, 0.0f, 0.0f
+};
+
+__global__ void truck_cuda_find_surface_intersection_seeds_kernel(
+    const GpuSurfaceSample* __restrict__ s1_samples,
+    uint32_t n_u1,
+    uint32_t n_v1,
+    const GpuSurfaceSample* __restrict__ s2_samples,
+    uint32_t n_u2,
+    uint32_t n_v2,
+    float tol,
+    float4* __restrict__ out_seeds,
+    uint32_t max_seeds,
+    unsigned int* __restrict__ out_seed_count
+) {
+    uint32_t n1 = n_u1 * n_v1;
+    uint32_t num_cells2 = (n_u2 - 1) * (n_v2 - 1);
+    uint32_t total_tasks = n1 * num_cells2;
+
+    uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= total_tasks) return;
+
+    uint32_t pt1_idx = idx / num_cells2;
+    uint32_t cell2_idx = idx % num_cells2;
+    uint32_t k = cell2_idx / (n_v2 - 1);
+    uint32_t l = cell2_idx % (n_v2 - 1);
+
+    GpuSurfaceSample p1 = s1_samples[pt1_idx];
+    float3 p1_pos = make_float3(p1.pos.x, p1.pos.y, p1.pos.z);
+    float3 p1_nor = make_float3(p1.normal.x, p1.normal.y, p1.normal.z);
+
+    GpuSurfaceSample p2_00 = s2_samples[k * n_v2 + l];
+    GpuSurfaceSample p2_10 = s2_samples[(k + 1) * n_v2 + l];
+    GpuSurfaceSample p2_01 = s2_samples[k * n_v2 + (l + 1)];
+    GpuSurfaceSample p2_11 = s2_samples[(k + 1) * n_v2 + (l + 1)];
+
+    float3 pos00 = make_float3(p2_00.pos.x, p2_00.pos.y, p2_00.pos.z);
+    float3 pos10 = make_float3(p2_10.pos.x, p2_10.pos.y, p2_10.pos.z);
+    float3 pos01 = make_float3(p2_01.pos.x, p2_01.pos.y, p2_01.pos.z);
+    float3 pos11 = make_float3(p2_11.pos.x, p2_11.pos.y, p2_11.pos.z);
+
+    float d2_00 = dot_product(sub(pos00, p1_pos), sub(pos00, p1_pos));
+    float d2_10 = dot_product(sub(pos10, p1_pos), sub(pos10, p1_pos));
+    float d2_01 = dot_product(sub(pos01, p1_pos), sub(pos01, p1_pos));
+    float d2_11 = dot_product(sub(pos11, p1_pos), sub(pos11, p1_pos));
+
+    float min_d2 = fminf(fminf(d2_00, d2_10), fminf(d2_01, d2_11));
+
+    float h00 = dot_product(sub(pos00, p1_pos), p1_nor);
+    float h10 = dot_product(sub(pos10, p1_pos), p1_nor);
+    float h01 = dot_product(sub(pos01, p1_pos), p1_nor);
+    float h11 = dot_product(sub(pos11, p1_pos), p1_nor);
+
+    float min_h = fminf(fminf(h00, h10), fminf(h01, h11));
+    float max_h = fmaxf(fmaxf(h00, h10), fmaxf(h01, h11));
+
+    float diag_d2 = dot_product(sub(pos11, pos00), sub(pos11, pos00));
+    float cell_reach2 = fmaxf(tol * tol, diag_d2 * 2.25f);
+
+    bool is_close = (min_d2 < tol * tol);
+    bool is_crossing = (min_h <= 0.0f && max_h >= 0.0f && min_d2 < cell_reach2);
+
+    if (is_close || is_crossing) {
+        float u2 = p2_00.uv.x;
+        float v2 = p2_00.uv.y;
+
+        if (is_crossing) {
+            if (h00 * h10 <= 0.0f) {
+                float t = fabsf(h00) / (fabsf(h00) + fabsf(h10) + 1.0e-12f);
+                u2 = p2_00.uv.x + t * (p2_10.uv.x - p2_00.uv.x);
+                v2 = p2_00.uv.y;
+            } else if (h01 * h11 <= 0.0f) {
+                float t = fabsf(h01) / (fabsf(h01) + fabsf(h11) + 1.0e-12f);
+                u2 = p2_01.uv.x + t * (p2_11.uv.x - p2_01.uv.x);
+                v2 = p2_01.uv.y;
+            } else if (h00 * h01 <= 0.0f) {
+                float t = fabsf(h00) / (fabsf(h00) + fabsf(h01) + 1.0e-12f);
+                u2 = p2_00.uv.x;
+                v2 = p2_00.uv.y + t * (p2_01.uv.y - p2_00.uv.y);
+            } else if (h10 * h11 <= 0.0f) {
+                float t = fabsf(h10) / (fabsf(h10) + fabsf(h11) + 1.0e-12f);
+                u2 = p2_10.uv.x;
+                v2 = p2_10.uv.y + t * (p2_11.uv.y - p2_10.uv.y);
+            }
+        } else {
+            if (min_d2 == d2_10) {
+                u2 = p2_10.uv.x; v2 = p2_10.uv.y;
+            } else if (min_d2 == d2_01) {
+                u2 = p2_01.uv.x; v2 = p2_01.uv.y;
+            } else if (min_d2 == d2_11) {
+                u2 = p2_11.uv.x; v2 = p2_11.uv.y;
+            }
+        }
+
+        unsigned int slot = atomicAdd(out_seed_count, 1);
+        if (slot < max_seeds) {
+            out_seeds[slot] = make_float4(p1.uv.x, p1.uv.y, u2, v2);
+        }
+    }
+}
+
+int truck_cuda_find_surface_intersection_seeds(
+    const void* h_s1_samples,
+    unsigned int n_u1,
+    unsigned int n_v1,
+    const void* h_s2_samples,
+    unsigned int n_u2,
+    unsigned int n_v2,
+    float tol,
+    float* h_out_seeds,
+    unsigned int max_seeds,
+    unsigned int* h_seed_count
+) {
+    if (!h_seed_count) return -1;
+    *h_seed_count = 0;
+    if (n_u1 < 2 || n_v1 < 2 || n_u2 < 2 || n_v2 < 2) return 0;
+    if (max_seeds == 0) return 0;
+
+    ensure_best_device();
+
+    uint32_t n1 = n_u1 * n_v1;
+    uint32_t n2 = n_u2 * n_v2;
+    uint32_t num_cells2 = (n_u2 - 1) * (n_v2 - 1);
+    uint32_t total_tasks = n1 * num_cells2;
+
+    size_t s1_bytes = n1 * sizeof(GpuSurfaceSample);
+    size_t s2_bytes = n2 * sizeof(GpuSurfaceSample);
+    size_t out_bytes = max_seeds * sizeof(float4);
+
+    GpuSurfaceSample* d_s1 = NULL;
+    GpuSurfaceSample* d_s2 = NULL;
+    float4* d_out_seeds = NULL;
+    unsigned int* d_seed_count = NULL;
+
+    if (cudaMalloc(&d_s1, s1_bytes) != cudaSuccess) return -2;
+    if (cudaMalloc(&d_s2, s2_bytes) != cudaSuccess) {
+        cudaFree(d_s1);
+        return -3;
+    }
+    if (cudaMalloc(&d_out_seeds, out_bytes) != cudaSuccess) {
+        cudaFree(d_s1);
+        cudaFree(d_s2);
+        return -4;
+    }
+    if (cudaMalloc(&d_seed_count, sizeof(unsigned int)) != cudaSuccess) {
+        cudaFree(d_s1);
+        cudaFree(d_s2);
+        cudaFree(d_out_seeds);
+        return -5;
+    }
+
+    cudaMemset(d_seed_count, 0, sizeof(unsigned int));
+    cudaMemcpy(d_s1, h_s1_samples, s1_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_s2, h_s2_samples, s2_bytes, cudaMemcpyHostToDevice);
+
+    unsigned int block_size = 256;
+    unsigned int grid_size = (total_tasks + block_size - 1) / block_size;
+    truck_cuda_find_surface_intersection_seeds_kernel<<<grid_size, block_size>>>(
+        d_s1, n_u1, n_v1, d_s2, n_u2, n_v2, tol, d_out_seeds, max_seeds, d_seed_count
+    );
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(h_seed_count, d_seed_count, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+    unsigned int copy_count = (*h_seed_count < max_seeds) ? *h_seed_count : max_seeds;
+    if (copy_count > 0 && h_out_seeds) {
+        cudaMemcpy(h_out_seeds, d_out_seeds, copy_count * sizeof(float4), cudaMemcpyDeviceToHost);
+    }
+
+    cudaFree(d_s1);
+    cudaFree(d_s2);
+    cudaFree(d_out_seeds);
+    cudaFree(d_seed_count);
+    return 0;
+}
+
+// ============================================================================
+// Planar Slicing for Additive Manufacturing (SM 8.6 Warp-Aggregated Atomics)
+// ============================================================================
+
+__device__ inline unsigned int warp_aggregated_atomic_add(
+    unsigned int* address,
+    unsigned int val,
+    unsigned int* lane_offset
+) {
+    unsigned int active = __ballot_sync(0xffffffff, val > 0);
+    if ((active & (1u << (threadIdx.x & 31))) == 0) {
+        *lane_offset = 0;
+        return 0;
+    }
+    unsigned int rank = __popc(active & ((1u << (threadIdx.x & 31)) - 1));
+    *lane_offset = rank;
+    unsigned int leader = __ffs(active) - 1;
+    unsigned int warp_base = 0;
+    if ((threadIdx.x & 31) == leader) {
+        warp_base = atomicAdd(address, __popc(active));
+    }
+    warp_base = __shfl_sync(active, warp_base, leader);
+    return warp_base;
+}
+
+__global__ void truck_cuda_slice_mesh_planes_kernel(
+    const GpuTriangle* __restrict__ triangles,
+    uint32_t num_triangles,
+    const float4* __restrict__ planes,
+    uint32_t num_planes,
+    uint32_t max_segments_per_plane,
+    unsigned int* __restrict__ counts,
+    float4* __restrict__ out_segments
+) {
+    uint32_t tri_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    uint32_t plane_idx = blockIdx.y;
+
+    if (plane_idx >= num_planes) return;
+
+    bool has_tri = (tri_idx < num_triangles);
+    bool has_intersection = false;
+    float3 p1 = make_float3(0.0f, 0.0f, 0.0f);
+    float3 p2 = make_float3(0.0f, 0.0f, 0.0f);
+
+    if (has_tri) {
+        GpuTriangle tri = triangles[tri_idx];
+        float4 plane = planes[plane_idx];
+
+        float d0 = tri.v0.x * plane.x + tri.v0.y * plane.y + tri.v0.z * plane.z + plane.w;
+        float d1 = tri.v1.x * plane.x + tri.v1.y * plane.y + tri.v1.z * plane.z + plane.w;
+        float d2 = tri.v2.x * plane.x + tri.v2.y * plane.y + tri.v2.z * plane.z + plane.w;
+
+        if (fabsf(d0) < 1.0e-7f) d0 = (d0 >= 0.0f) ? 1.0e-7f : -1.0e-7f;
+        if (fabsf(d1) < 1.0e-7f) d1 = (d1 >= 0.0f) ? 1.0e-7f : -1.0e-7f;
+        if (fabsf(d2) < 1.0e-7f) d2 = (d2 >= 0.0f) ? 1.0e-7f : -1.0e-7f;
+
+        bool s0 = d0 > 0.0f;
+        bool s1 = d1 > 0.0f;
+        bool s2 = d2 > 0.0f;
+
+        if ((s0 != s1) || (s1 != s2)) {
+            has_intersection = true;
+            if (s0 != s1 && s0 != s2) {
+                float t01 = d0 / (d0 - d1);
+                float t02 = d0 / (d0 - d2);
+                p1 = make_float3(tri.v0.x + t01 * (tri.v1.x - tri.v0.x),
+                                 tri.v0.y + t01 * (tri.v1.y - tri.v0.y),
+                                 tri.v0.z + t01 * (tri.v1.z - tri.v0.z));
+                p2 = make_float3(tri.v0.x + t02 * (tri.v2.x - tri.v0.x),
+                                 tri.v0.y + t02 * (tri.v2.y - tri.v0.y),
+                                 tri.v0.z + t02 * (tri.v2.z - tri.v0.z));
+            } else if (s1 != s0 && s1 != s2) {
+                float t10 = d1 / (d1 - d0);
+                float t12 = d1 / (d1 - d2);
+                p1 = make_float3(tri.v1.x + t10 * (tri.v0.x - tri.v1.x),
+                                 tri.v1.y + t10 * (tri.v0.y - tri.v1.y),
+                                 tri.v1.z + t10 * (tri.v0.z - tri.v1.z));
+                p2 = make_float3(tri.v1.x + t12 * (tri.v2.x - tri.v1.x),
+                                 tri.v1.y + t12 * (tri.v2.y - tri.v1.y),
+                                 tri.v1.z + t12 * (tri.v2.z - tri.v1.z));
+            } else {
+                float t20 = d2 / (d2 - d0);
+                float t21 = d2 / (d2 - d1);
+                p1 = make_float3(tri.v2.x + t20 * (tri.v0.x - tri.v2.x),
+                                 tri.v2.y + t20 * (tri.v0.y - tri.v2.y),
+                                 tri.v2.z + t20 * (tri.v0.z - tri.v2.z));
+                p2 = make_float3(tri.v2.x + t21 * (tri.v1.x - tri.v2.x),
+                                 tri.v2.y + t21 * (tri.v1.y - tri.v2.y),
+                                 tri.v2.z + t21 * (tri.v1.z - tri.v2.z));
+            }
+        }
+    }
+
+    unsigned int lane_offset = 0;
+    unsigned int warp_base = warp_aggregated_atomic_add(&counts[plane_idx], has_intersection ? 1 : 0, &lane_offset);
+    if (has_intersection) {
+        unsigned int slot = warp_base + lane_offset;
+        if (slot < max_segments_per_plane) {
+            size_t base = ((size_t)plane_idx * max_segments_per_plane + slot) * 2;
+            out_segments[base] = make_float4(p1.x, p1.y, p1.z, 0.0f);
+            out_segments[base + 1] = make_float4(p2.x, p2.y, p2.z, 0.0f);
+        }
+    }
+}
+
+int truck_cuda_slice_mesh_planes(
+    const float* h_triangles,
+    unsigned int num_triangles,
+    const float* h_planes,
+    unsigned int num_planes,
+    unsigned int max_segments_per_plane,
+    unsigned int* h_out_counts,
+    float* h_out_segments
+) {
+    if (num_triangles == 0 || num_planes == 0 || max_segments_per_plane == 0) {
+        return 0;
+    }
+    ensure_best_device();
+
+    size_t tri_bytes = (size_t)num_triangles * sizeof(GpuTriangle);
+    size_t planes_bytes = (size_t)num_planes * sizeof(float4);
+    size_t counts_bytes = (size_t)num_planes * sizeof(unsigned int);
+    size_t total_segs = (size_t)num_planes * (size_t)max_segments_per_plane;
+    size_t out_bytes = total_segs * 2 * sizeof(float4);
+
+    GpuTriangle* d_triangles = NULL;
+    float4* d_planes = NULL;
+    unsigned int* d_counts = NULL;
+    float4* d_out_segments = NULL;
+
+    if (cudaMalloc(&d_triangles, tri_bytes) != cudaSuccess) return -1;
+    if (cudaMalloc(&d_planes, planes_bytes) != cudaSuccess) {
+        cudaFree(d_triangles);
+        return -2;
+    }
+    if (cudaMalloc(&d_counts, counts_bytes) != cudaSuccess) {
+        cudaFree(d_triangles);
+        cudaFree(d_planes);
+        return -3;
+    }
+    if (cudaMalloc(&d_out_segments, out_bytes) != cudaSuccess) {
+        cudaFree(d_triangles);
+        cudaFree(d_planes);
+        cudaFree(d_counts);
+        return -4;
+    }
+
+    cudaMemset(d_counts, 0, counts_bytes);
+    cudaMemcpy(d_triangles, h_triangles, tri_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_planes, h_planes, planes_bytes, cudaMemcpyHostToDevice);
+
+    unsigned int block_size = 128;
+    dim3 grid((num_triangles + block_size - 1) / block_size, num_planes, 1);
+    truck_cuda_slice_mesh_planes_kernel<<<grid, block_size>>>(
+        d_triangles, num_triangles, d_planes, num_planes, max_segments_per_plane, d_counts, d_out_segments
+    );
+    cudaDeviceSynchronize();
+
+    if (h_out_counts) {
+        cudaMemcpy(h_out_counts, d_counts, counts_bytes, cudaMemcpyDeviceToHost);
+    }
+    if (h_out_segments) {
+        cudaMemcpy(h_out_segments, d_out_segments, out_bytes, cudaMemcpyDeviceToHost);
+    }
+
+    cudaFree(d_triangles);
+    cudaFree(d_planes);
+    cudaFree(d_counts);
+    cudaFree(d_out_segments);
+    return 0;
+}
+
+// ============================================================================
+// GPU Mass Properties & Volume Integration (Parallel Warp & Block FP64 Reductions)
+// ============================================================================
+
+__device__ inline double warp_reduce_sum_f64(double val) {
+    for (int offset = 16; offset > 0; offset /= 2) {
+        val += __shfl_down_sync(0xffffffff, val, offset);
+    }
+    return val;
+}
+
+__global__ void truck_cuda_mesh_volume_cog_kernel(
+    const GpuTriangle* __restrict__ triangles,
+    uint32_t num_triangles,
+    double* __restrict__ out_accum
+) {
+    __shared__ double s_cx[8];
+    __shared__ double s_cy[8];
+    __shared__ double s_cz[8];
+    __shared__ double s_vol[8];
+
+    double my_cx = 0.0;
+    double my_cy = 0.0;
+    double my_cz = 0.0;
+    double my_vol = 0.0;
+
+    uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    uint32_t stride = gridDim.x * blockDim.x;
+
+    for (uint32_t i = idx; i < num_triangles; i += stride) {
+        GpuTriangle tri = triangles[i];
+        double v0x = (double)tri.v0.x, v0y = (double)tri.v0.y, v0z = (double)tri.v0.z;
+        double v1x = (double)tri.v1.x, v1y = (double)tri.v1.y, v1z = (double)tri.v1.z;
+        double v2x = (double)tri.v2.x, v2y = (double)tri.v2.y, v2z = (double)tri.v2.z;
+
+        // det(v0, v1, v2) = (v0 x v1) . v2
+        double cross_x = v0y * v1z - v0z * v1y;
+        double cross_y = v0z * v1x - v0x * v1z;
+        double cross_z = v0x * v1y - v0y * v1x;
+        double det = cross_x * v2x + cross_y * v2y + cross_z * v2z;
+        double vol = det / 6.0;
+
+        double cx = 0.25 * (v0x + v1x + v2x);
+        double cy = 0.25 * (v0y + v1y + v2y);
+        double cz = 0.25 * (v0z + v1z + v2z);
+
+        my_cx += cx * vol;
+        my_cy += cy * vol;
+        my_cz += cz * vol;
+        my_vol += vol;
+    }
+
+    my_cx = warp_reduce_sum_f64(my_cx);
+    my_cy = warp_reduce_sum_f64(my_cy);
+    my_cz = warp_reduce_sum_f64(my_cz);
+    my_vol = warp_reduce_sum_f64(my_vol);
+
+    int lane = threadIdx.x & 31;
+    int warp_id = threadIdx.x >> 5;
+
+    if (lane == 0) {
+        s_cx[warp_id] = my_cx;
+        s_cy[warp_id] = my_cy;
+        s_cz[warp_id] = my_cz;
+        s_vol[warp_id] = my_vol;
+    }
+    __syncthreads();
+
+    if (warp_id == 0) {
+        int num_warps = blockDim.x >> 5;
+        double b_cx = (lane < num_warps) ? s_cx[lane] : 0.0;
+        double b_cy = (lane < num_warps) ? s_cy[lane] : 0.0;
+        double b_cz = (lane < num_warps) ? s_cz[lane] : 0.0;
+        double b_vol = (lane < num_warps) ? s_vol[lane] : 0.0;
+
+        b_cx = warp_reduce_sum_f64(b_cx);
+        b_cy = warp_reduce_sum_f64(b_cy);
+        b_cz = warp_reduce_sum_f64(b_cz);
+        b_vol = warp_reduce_sum_f64(b_vol);
+
+        if (lane == 0) {
+            atomicAdd(&out_accum[0], b_cx);
+            atomicAdd(&out_accum[1], b_cy);
+            atomicAdd(&out_accum[2], b_cz);
+            atomicAdd(&out_accum[3], b_vol);
+        }
+    }
+}
+
+int truck_cuda_mesh_volume_cog(
+    const float* h_triangles,
+    unsigned int num_triangles,
+    double* h_out_accum
+) {
+    if (num_triangles == 0) {
+        if (h_out_accum) {
+            h_out_accum[0] = 0.0;
+            h_out_accum[1] = 0.0;
+            h_out_accum[2] = 0.0;
+            h_out_accum[3] = 0.0;
+        }
+        return 0;
+    }
+    ensure_best_device();
+
+    size_t tri_bytes = (size_t)num_triangles * sizeof(GpuTriangle);
+    GpuTriangle* d_triangles = NULL;
+    double* d_accum = NULL;
+
+    if (cudaMalloc(&d_triangles, tri_bytes) != cudaSuccess) return -1;
+    if (cudaMalloc(&d_accum, 4 * sizeof(double)) != cudaSuccess) {
+        cudaFree(d_triangles);
+        return -2;
+    }
+
+    cudaMemset(d_accum, 0, 4 * sizeof(double));
+    cudaMemcpy(d_triangles, h_triangles, tri_bytes, cudaMemcpyHostToDevice);
+
+    unsigned int block_size = 256;
+    unsigned int grid_size = (num_triangles + block_size - 1) / block_size;
+    if (grid_size > 256) grid_size = 256;
+
+    truck_cuda_mesh_volume_cog_kernel<<<grid_size, block_size>>>(
+        d_triangles, num_triangles, d_accum
+    );
+    cudaDeviceSynchronize();
+
+    if (h_out_accum) {
+        cudaMemcpy(h_out_accum, d_accum, 4 * sizeof(double), cudaMemcpyDeviceToHost);
+    }
+
+    cudaFree(d_triangles);
+    cudaFree(d_accum);
+    return 0;
+}
+
 int truck_cuda_get_device_info(
     char* name_buf,
     int name_buf_len,

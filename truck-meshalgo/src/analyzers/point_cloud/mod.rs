@@ -48,7 +48,7 @@ impl WithPointCloud for PolygonMesh {
     #[inline(always)]
     fn is_clung_to_by(&self, point_cloud: &[Point3], tol: f64) -> bool {
         nonpositive_tolerance!(tol);
-        HashedPointCloud::from_points(point_cloud, tol * 2.0).distance2(self) < tol * tol
+        dispatch::Dispatcher::global().is_clung_to_by(self, point_cloud, tol)
     }
     #[inline(always)]
     fn collide_with_neighborhood_of(&self, point_cloud: &[Point3], tol: f64) -> bool {
@@ -56,8 +56,16 @@ impl WithPointCloud for PolygonMesh {
     }
     #[inline(always)]
     fn neighborhood_include(&self, point_cloud: &[Point3], tol: f64) -> bool {
-        sort_end_points::pointcloud_in_polygon_neighborhood(self, point_cloud, tol)
+        dispatch::Dispatcher::global().neighborhood_include(self, point_cloud, tol)
     }
+}
+
+pub(crate) fn cpu_is_clung_to_by(mesh: &PolygonMesh, point_cloud: &[Point3], tol: f64) -> bool {
+    HashedPointCloud::from_points(point_cloud, tol * 2.0).distance2(mesh) < tol * tol
+}
+
+pub(crate) fn cpu_neighborhood_include(mesh: &PolygonMesh, point_cloud: &[Point3], tol: f64) -> bool {
+    sort_end_points::pointcloud_in_polygon_neighborhood(mesh, point_cloud, tol)
 }
 
 // https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
