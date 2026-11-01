@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <mutex>
 #include "kernels_sm86_ptx.h"
 
 struct GpuTriangle {
@@ -505,6 +506,9 @@ static void* get_cross_scratch(size_t bytes) {
 
 extern "C" {
 
+static std::mutex g_dist_mutex;
+static std::mutex g_cross_mutex;
+
 // Optimized SM 8.6 kernel execution with buffer pooling (Default)
 int cuda_compute_distance2_point_cloud(
     const float* h_points,
@@ -520,6 +524,7 @@ int cuda_compute_distance2_point_cloud(
         }
         return 0;
     }
+    std::lock_guard<std::mutex> lock(g_dist_mutex);
     ensure_best_device();
 
     size_t points_size = num_points * sizeof(float4);
@@ -680,6 +685,7 @@ int cuda_compute_signed_crossing_rays(
         }
         return 0;
     }
+    std::lock_guard<std::mutex> lock(g_cross_mutex);
     ensure_best_device();
 
     size_t points_size = num_points * sizeof(float4);
@@ -1971,6 +1977,40 @@ int truck_cuda_evaluate_bspline_surface_f64(
     cudaFree(d_uv_points);
     cudaFree(d_out_points);
     cudaFree(d_out_normals);
+    return 0;
+}
+
+int truck_cuda_get_device_info(
+    char* name_buf,
+    int name_buf_len,
+    int* major,
+    int* minor,
+    int* multi_processor_count,
+    size_t* total_mem
+) {
+    ensure_best_device();
+    int current_dev = 0;
+    if (cudaGetDevice(&current_dev) != cudaSuccess) {
+        return -1;
+    }
+    CUdevice dev = (CUdevice)current_dev;
+    if (name_buf && name_buf_len > 0) {
+        if (cuDeviceGetName(name_buf, name_buf_len, dev) != CUDA_SUCCESS) {
+            name_buf[0] = '\0';
+        }
+    }
+    if (major) {
+        cuDeviceGetAttribute(major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, dev);
+    }
+    if (minor) {
+        cuDeviceGetAttribute(minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, dev);
+    }
+    if (multi_processor_count) {
+        cuDeviceGetAttribute(multi_processor_count, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, dev);
+    }
+    if (total_mem) {
+        cuDeviceTotalMem(total_mem, dev);
+    }
     return 0;
 }
 

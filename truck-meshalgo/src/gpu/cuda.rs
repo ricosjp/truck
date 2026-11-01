@@ -142,6 +142,28 @@ extern "C" {
         h_out_points: *mut f64,
         h_out_normals: *mut f64,
     ) -> i32;
+
+    fn truck_cuda_get_device_info(
+        name_buf: *mut std::os::raw::c_char,
+        name_buf_len: i32,
+        major: *mut i32,
+        minor: *mut i32,
+        multi_processor_count: *mut i32,
+        total_mem: *mut usize,
+    ) -> i32;
+}
+
+/// Metadata describing a CUDA device.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct CudaDeviceInfo {
+    /// Device model name (e.g. "NVIDIA GeForce RTX 3080").
+    pub name: String,
+    /// Compute capability string (e.g. "8.6").
+    pub compute_capability: String,
+    /// Number of Streaming Multiprocessors (SMs).
+    pub multi_processor_count: i32,
+    /// Total global device memory in bytes.
+    pub total_memory_bytes: usize,
 }
 
 /// CUDA-accelerated mesh analyzer for point-cloud distance queries and in-out containment.
@@ -153,6 +175,37 @@ impl CudaMeshAnalyzer {
     #[inline(always)]
     pub fn new() -> Self {
         Self
+    }
+
+    /// Queries the primary CUDA device information.
+    pub fn get_device_info() -> Option<CudaDeviceInfo> {
+        let mut name_buf = [0u8; 256];
+        let mut major = 0i32;
+        let mut minor = 0i32;
+        let mut sms = 0i32;
+        let mut total_mem = 0usize;
+        let status = unsafe {
+            truck_cuda_get_device_info(
+                name_buf.as_mut_ptr() as *mut std::os::raw::c_char,
+                name_buf.len() as i32,
+                &mut major,
+                &mut minor,
+                &mut sms,
+                &mut total_mem,
+            )
+        };
+        if status == 0 {
+            let nul_pos = name_buf.iter().position(|&b| b == 0).unwrap_or(name_buf.len());
+            let name = String::from_utf8_lossy(&name_buf[..nul_pos]).trim().to_string();
+            Some(CudaDeviceInfo {
+                name,
+                compute_capability: format!("{}.{}", major, minor),
+                multi_processor_count: sms,
+                total_memory_bytes: total_mem,
+            })
+        } else {
+            None
+        }
     }
 
     /// Extracts triangles from a polygon mesh into GPU triangle format.

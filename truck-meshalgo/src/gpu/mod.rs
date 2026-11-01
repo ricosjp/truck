@@ -663,6 +663,49 @@ fn collision_layout_entries() -> [BindGroupLayoutEntry; 5] {
     ]
 }
 
+/// Metadata describing a Vulkan GPU device.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct VulkanDeviceInfo {
+    /// Device adapter name (e.g. "NVIDIA GeForce RTX 3080").
+    pub name: String,
+    /// Backend API name (e.g. "Vulkan").
+    pub backend: String,
+    /// Driver name.
+    pub driver: String,
+    /// Driver information string.
+    pub driver_info: String,
+}
+
+/// Initializes a Vulkan device handler if a suitable Vulkan GPU is found.
+pub fn try_init_vulkan_device() -> Option<DeviceHandler> {
+    pollster::block_on(async {
+        let instance = Instance::new(InstanceDescriptor {
+            backends: Backends::VULKAN,
+            flags: InstanceFlags::from_build_config(),
+            memory_budget_thresholds: Default::default(),
+            backend_options: Default::default(),
+            display: None,
+        });
+        let adapter = instance
+            .request_adapter(&RequestAdapterOptions {
+                power_preference: PowerPreference::HighPerformance,
+                compatible_surface: None,
+                force_fallback_adapter: false,
+                apply_limit_buckets: false,
+            })
+            .await
+            .ok()?;
+        let (device, queue) = adapter
+            .request_device(&DeviceDescriptor {
+                label: Some("truck_meshalgo_vulkan_device"),
+                ..Default::default()
+            })
+            .await
+            .ok()?;
+        Some(DeviceHandler::new(adapter, device, queue))
+    })
+}
+
 /// GPU-accelerated mesh analyzer for distance queries, in-out containment, normals, trimming, and collisions.
 #[derive(Debug)]
 pub struct GpuMeshAnalyzer {
@@ -675,6 +718,23 @@ pub struct GpuMeshAnalyzer {
 }
 
 impl GpuMeshAnalyzer {
+    /// Attempts to create a new GPU mesh analyzer using the default Vulkan device.
+    pub fn try_create_default() -> Option<Self> {
+        let handler = try_init_vulkan_device()?;
+        Some(Self::new(&handler))
+    }
+
+    /// Queries the Vulkan device information for this analyzer.
+    pub fn device_info(&self) -> VulkanDeviceInfo {
+        let info = self.handler.adapter().get_info();
+        VulkanDeviceInfo {
+            name: info.name,
+            backend: format!("{:?}", info.backend),
+            driver: info.driver,
+            driver_info: info.driver_info,
+        }
+    }
+
     /// Creates a new GPU mesh analyzer.
     pub fn new(handler: &DeviceHandler) -> Self {
         let dist_entries = distance_layout_entries();

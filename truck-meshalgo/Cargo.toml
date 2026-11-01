@@ -35,6 +35,8 @@ truck-geometry = { version = "0.5.0", path = "../truck-geometry" }
 truck-platform = { version = "0.6.0", path = "../truck-platform", optional = true }
 truck-polymesh = { version = "0.6.0", path = "../truck-polymesh" }
 truck-topology = { version = "0.6.0", path = "../truck-topology" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rayon = "1.12.0"

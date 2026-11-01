@@ -45,10 +45,14 @@ pub mod vtk;
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
+/// Intelligent kernel dispatcher and dynamic calibration engine
+pub mod dispatch;
+
 /// This module contains all traits and re-exports `truck_polymesh`.
 pub mod prelude {
     #[cfg(feature = "analyzers")]
     pub use crate::analyzers::*;
+    pub use crate::dispatch::*;
     #[cfg(feature = "filters")]
     pub use crate::filters::*;
     #[cfg(feature = "gpu")]
