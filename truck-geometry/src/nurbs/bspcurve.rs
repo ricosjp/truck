@@ -56,6 +56,7 @@ impl<P> BSplineCurve<P> {
         Self {
             knot_vec,
             control_points,
+            nurbs_weights: std::sync::OnceLock::new(),
         }
     }
 
@@ -92,10 +93,14 @@ impl<P> BSplineCurve<P> {
 
     /// Returns the mutable reference of the control point corresponding to index `idx`.
     #[inline(always)]
-    pub fn control_point_mut(&mut self, idx: usize) -> &mut P { &mut self.control_points[idx] }
+    pub fn control_point_mut(&mut self, idx: usize) -> &mut P {
+        self.nurbs_weights.take();
+        &mut self.control_points[idx]
+    }
     /// Returns the iterator on all control points
     #[inline(always)]
     pub fn control_points_mut(&mut self) -> impl Iterator<Item = &mut P> {
+        self.nurbs_weights.take();
         self.control_points.iter_mut()
     }
 
@@ -106,6 +111,7 @@ impl<P> BSplineCurve<P> {
     /// Apply the given transformation to all control points.
     #[inline(always)]
     pub fn transform_control_points<F: FnMut(&mut P)>(&mut self, f: F) {
+        self.nurbs_weights.take();
         self.control_points.iter_mut().for_each(f)
     }
 
@@ -448,6 +454,28 @@ impl<P: ControlPoint<f64>> ParametricCurve for BSplineCurve<P> {
             Bound::Included(self.knot_vec[0]),
             Bound::Included(self.knot_vec[self.knot_vec.len() - 1]),
         )
+    }
+}
+
+impl BSplineCurve<Vector3> {
+    /// Returns NURBS representation (knots, degree, control_points with weights=1.0)
+    #[inline(always)]
+    pub fn as_nurbs_curve(&self) -> Option<(&[f64], usize, &[Vector4])> {
+        let weights = self.nurbs_weights.get_or_init(|| {
+            self.control_points.iter().map(|p| Vector4::new(p.x, p.y, p.z, 1.0)).collect()
+        });
+        Some((self.knot_vec.as_slice(), self.degree(), weights.as_slice()))
+    }
+}
+
+impl BSplineCurve<Point3> {
+    /// Returns NURBS representation (knots, degree, control_points with weights=1.0)
+    #[inline(always)]
+    pub fn as_nurbs_curve(&self) -> Option<(&[f64], usize, &[Vector4])> {
+        let weights = self.nurbs_weights.get_or_init(|| {
+            self.control_points.iter().map(|p| Vector4::new(p.x, p.y, p.z, 1.0)).collect()
+        });
+        Some((self.knot_vec.as_slice(), self.degree(), weights.as_slice()))
     }
 }
 

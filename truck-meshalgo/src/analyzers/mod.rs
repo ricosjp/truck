@@ -7,10 +7,12 @@ mod slicing;
 mod splitting;
 mod topology;
 mod volume;
+pub(crate) mod raycast;
 
 pub use collision::Collision;
 pub use in_out_judge::IncludingPointInDomain;
 pub use point_cloud::WithPointCloud;
+pub use raycast::{intersect_ray_triangle, raycast_mesh_cpu, raycast_mesh_rayon, RaycastMesh};
 pub use slicing::{
     chain_segments, chain_segments_into_loops, intersect_triangle_plane, slice_mesh_planes_cpu,
     slice_mesh_planes_rayon, PlanarSlicing,

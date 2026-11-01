@@ -479,6 +479,62 @@ impl Dispatcher {
     }
 
     // ========================================================================
+    // Operation 6c: Batch Rational NURBS & B-Spline Curve Evaluation
+    // ========================================================================
+
+    /// Evaluates 3D points and derivatives on a rational NURBS curve using the optimal kernel.
+    pub fn evaluate_nurbs_curve(
+        &self,
+        knots: &[f64],
+        degree: usize,
+        control_points: &[Vector4],
+        t_points: &[f64],
+    ) -> (Vec<Point3>, Vec<Vector3>) {
+        if t_points.is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+
+        let target = self.select_kernel(Operation::NurbsCurveEvaluation, t_points.len());
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().evaluate_nurbs_curve(
+                    knots, degree, control_points, t_points,
+                );
+                #[cfg(not(feature = "cuda"))]
+                self.evaluate_nurbs_curve_cpu(knots, control_points, t_points)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.evaluate_nurbs_curve(
+                        knots, degree, control_points, t_points,
+                    );
+                }
+                self.evaluate_nurbs_curve_cpu(knots, control_points, t_points)
+            }
+            _ => self.evaluate_nurbs_curve_cpu(knots, control_points, t_points),
+        }
+    }
+
+    fn evaluate_nurbs_curve_cpu(
+        &self,
+        knots: &[f64],
+        control_points: &[Vector4],
+        t_points: &[f64],
+    ) -> (Vec<Point3>, Vec<Vector3>) {
+        let nurbs_curve = NurbsCurve::new(BSplineCurve::new(
+            KnotVec::from(knots.to_vec()),
+            control_points.to_vec(),
+        ));
+
+        t_points
+            .par_iter()
+            .map(|&t| (nurbs_curve.subs(t), nurbs_curve.der(t)))
+            .unzip()
+    }
+
+    // ========================================================================
     // Operation 7: Point Cloud Clung Test
     // ========================================================================
 
@@ -799,6 +855,53 @@ impl Dispatcher {
         let triangles = crate::gpu::GpuMeshAnalyzer::extract_triangles(mesh);
         let sub_tris = self.subdivide_triangles_rayon(&triangles);
         crate::gpu::create_mesh_from_triangles(&sub_tris)
+    }
+
+    // ========================================================================
+    // Operation 13: Batch Ray-to-Mesh Raycasting
+    // ========================================================================
+
+    /// Raycasts an array of rays against a polygon mesh using the optimal kernel.
+    ///
+    /// For each ray, returns `Some((distance, hit_point, outward_normal))` if an intersection
+    /// exists, or `None` if the ray misses the mesh.
+    pub fn raycast_mesh(
+        &self,
+        mesh: &PolygonMesh,
+        rays: &[(Point3, Vector3)],
+    ) -> Vec<Option<(f64, Point3, Vector3)>> {
+        if rays.is_empty() {
+            return Vec::new();
+        }
+
+        let target = self.select_kernel(Operation::RaycastMesh, rays.len());
+        match target {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+                #[cfg(feature = "cuda")]
+                return crate::gpu::cuda::CudaMeshAnalyzer::new().raycast_mesh(mesh, rays);
+                #[cfg(not(feature = "cuda"))]
+                crate::analyzers::raycast_mesh_rayon(mesh, rays)
+            }
+            KernelTarget::GpuVulkan => {
+                #[cfg(feature = "gpu")]
+                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
+                    return analyzer.raycast_mesh(mesh, rays);
+                }
+                crate::analyzers::raycast_mesh_rayon(mesh, rays)
+            }
+            KernelTarget::CpuRayon => crate::analyzers::raycast_mesh_rayon(mesh, rays),
+            KernelTarget::CpuSingle => crate::analyzers::raycast_mesh_cpu(mesh, rays),
+        }
+    }
+
+    /// Alias for [`Self::raycast_mesh`].
+    #[inline(always)]
+    pub fn raycast(
+        &self,
+        mesh: &PolygonMesh,
+        rays: &[(Point3, Vector3)],
+    ) -> Vec<Option<(f64, Point3, Vector3)>> {
+        self.raycast_mesh(mesh, rays)
     }
 }
 

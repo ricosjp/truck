@@ -94,6 +94,23 @@ struct NurbsUniforms {
     _pad: [u32; 2],
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+struct NurbsCurveUniforms {
+    num_knots: u32,
+    degree: u32,
+    num_control_points: u32,
+    num_points: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+struct RaycastUniforms {
+    num_rays: u32,
+    num_triangles: u32,
+    _pad: [u32; 2],
+}
+
 /// GPU-compatible sample point representation for B-spline surfaces.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
@@ -1331,6 +1348,397 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 "#;
 
+const NURBS_CURVE_SHADER: &str = r#"
+struct NurbsCurveUniforms {
+    num_knots: u32,
+    degree: u32,
+    num_control_points: u32,
+    num_points: u32,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: NurbsCurveUniforms;
+@group(0) @binding(1) var<storage, read> knots: array<f32>;
+@group(0) @binding(2) var<storage, read> control_points: array<vec4<f32>>;
+@group(0) @binding(3) var<storage, read> t_points: array<f32>;
+@group(0) @binding(4) var<storage, read_write> out_points: array<vec4<f32>>;
+@group(0) @binding(5) var<storage, read_write> out_derivatives: array<vec4<f32>>;
+
+fn inv_or_zero(delta: f32) -> f32 {
+    if (abs(delta) > 1.0e-7) {
+        return 1.0 / delta;
+    }
+    return 0.0;
+}
+
+struct BasisResult {
+    base: u32,
+    len: u32,
+    vals: array<f32, 16>,
+};
+
+fn bspline_basis(t: f32, degree: u32, der_rank: u32) -> BasisResult {
+    var res: BasisResult;
+    let n = uniforms.num_knots - 1u;
+
+    var idx = 0u;
+    while (idx < n && knots[idx + 1u] <= t) {
+        idx = idx + 1u;
+    }
+    if (idx == n) {
+        var mult = 0u;
+        var k = n;
+        loop {
+            if (abs(knots[k] - knots[n]) < 1.0e-7) {
+                mult = mult + 1u;
+            } else {
+                break;
+            }
+            if (k == 0u) { break; }
+            k = k - 1u;
+        }
+        idx = n - mult;
+    }
+
+    var global_base = 0u;
+    if (idx >= degree) {
+        global_base = idx - degree;
+    }
+    res.base = global_base;
+
+    var eval: array<f32, 16>;
+    for (var i = 0u; i < 16u; i = i + 1u) {
+        eval[i] = 0.0;
+    }
+    eval[idx - global_base] = 1.0;
+
+    if (degree >= der_rank) {
+        let k_limit_1 = degree - der_rank;
+        for (var k = 1u; k <= k_limit_1; k = k + 1u) {
+            var base = 0u;
+            if (idx >= k) {
+                base = idx - k;
+            }
+            let delta = knots[base + k] - knots[base];
+            var a = inv_or_zero(delta) * (t - knots[base]);
+            var max_i = idx;
+            if ((n - k - 1u) < max_i) {
+                max_i = n - k - 1u;
+            }
+            for (var i = base; i <= max_i; i = i + 1u) {
+                let delta2 = knots[i + k + 1u] - knots[i + 1u];
+                let b = inv_or_zero(delta2) * (knots[i + k + 1u] - t);
+                let j = i - global_base;
+                eval[j] = a * eval[j] + b * eval[j + 1u];
+                a = 1.0 - b;
+            }
+        }
+    }
+
+    let k_start_2 = degree - der_rank + 1u;
+    if (k_start_2 <= degree) {
+        for (var k = k_start_2; k <= degree; k = k + 1u) {
+            var base = 0u;
+            if (idx >= k) {
+                base = idx - k;
+            }
+            let delta = knots[base + k] - knots[base];
+            var a = inv_or_zero(delta);
+            var max_i = idx;
+            if ((n - k - 1u) < max_i) {
+                max_i = n - k - 1u;
+            }
+            for (var i = base; i <= max_i; i = i + 1u) {
+                let delta2 = knots[i + k + 1u] - knots[i + 1u];
+                let b = inv_or_zero(delta2);
+                let j = i - global_base;
+                eval[j] = (a * eval[j] - b * eval[j + 1u]) * f32(k);
+                a = b;
+            }
+        }
+    }
+
+    var len = degree + 1u;
+    if ((n - degree - global_base) < len) {
+        len = n - degree - global_base;
+    }
+    res.len = len;
+    for (var i = 0u; i < len; i = i + 1u) {
+        res.vals[i] = eval[i];
+    }
+    return res;
+}
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    if (idx >= uniforms.num_points) { return; }
+
+    let t = t_points[idx];
+
+    let b = bspline_basis(t, uniforms.degree, 0u);
+    let db = bspline_basis(t, uniforms.degree, 1u);
+
+    var pt = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    var dpt = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+
+    for (var i = 0u; i < b.len; i = i + 1u) {
+        let n = b.vals[i];
+        let dn = db.vals[i];
+        let ci = b.base + i;
+        if (ci < uniforms.num_control_points) {
+            let cp = control_points[ci];
+            pt = pt + cp * n;
+            dpt = dpt + cp * dn;
+        }
+    }
+
+    var inv_w = 1.0;
+    if (abs(pt.w) > 1.0e-7) {
+        inv_w = 1.0 / pt.w;
+    }
+    let C = pt.xyz * inv_w;
+    let dC = (dpt.xyz - dpt.w * C) * inv_w;
+
+    out_points[idx] = vec4<f32>(C, 1.0);
+    out_derivatives[idx] = vec4<f32>(dC, 0.0);
+}
+"#;
+
+const RAYCAST_MESH_SHADER: &str = r#"
+struct RaycastUniforms {
+    num_rays: u32,
+    num_triangles: u32,
+    _pad0: u32,
+    _pad1: u32,
+};
+
+struct GpuTriangle {
+    v0: vec4<f32>,
+    v1: vec4<f32>,
+    v2: vec4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: RaycastUniforms;
+@group(0) @binding(1) var<storage, read> ray_origins: array<vec4<f32>>;
+@group(0) @binding(2) var<storage, read> ray_dirs: array<vec4<f32>>;
+@group(0) @binding(3) var<storage, read> triangles: array<GpuTriangle>;
+@group(0) @binding(4) var<storage, read_write> out_distances: array<f32>;
+@group(0) @binding(5) var<storage, read_write> out_tri_indices: array<i32>;
+@group(0) @binding(6) var<storage, read_write> out_hit_points: array<vec4<f32>>;
+@group(0) @binding(7) var<storage, read_write> out_normals: array<vec4<f32>>;
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    if (idx >= uniforms.num_rays) { return; }
+
+    let origin = ray_origins[idx].xyz;
+    let dir = ray_dirs[idx].xyz;
+
+    var min_t: f32 = 3.402823e+38;
+    var hit_tri: i32 = -1;
+    var hit_norm = vec3<f32>(0.0, 0.0, 0.0);
+
+    for (var i = 0u; i < uniforms.num_triangles; i = i + 1u) {
+        let tri = triangles[i];
+        let v0 = tri.v0.xyz;
+        let v1 = tri.v1.xyz;
+        let v2 = tri.v2.xyz;
+
+        let e1 = v1 - v0;
+        let e2 = v2 - v0;
+        let pvec = cross(dir, e2);
+        let det = dot(e1, pvec);
+
+        if (abs(det) > 1.0e-7) {
+            let inv_det = 1.0 / det;
+            let tvec = origin - v0;
+            let u = dot(tvec, pvec) * inv_det;
+            if (u >= 0.0 && u <= 1.0) {
+                let qvec = cross(tvec, e1);
+                let v = dot(dir, qvec) * inv_det;
+                if (v >= 0.0 && (u + v) <= 1.0) {
+                    let hit_dist = dot(e2, qvec) * inv_det;
+                    if (hit_dist >= 0.0 && hit_dist < min_t) {
+                        min_t = hit_dist;
+                        hit_tri = i32(i);
+                        let geo_norm = cross(e1, e2);
+                        let norm_len = length(geo_norm);
+                        if (norm_len > 1.0e-7) {
+                            hit_norm = geo_norm / norm_len;
+                        } else {
+                            hit_norm = vec3<f32>(0.0, 0.0, 1.0);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (hit_tri >= 0) {
+        out_distances[idx] = min_t;
+        out_tri_indices[idx] = hit_tri;
+        out_hit_points[idx] = vec4<f32>(origin + min_t * dir, 1.0);
+        out_normals[idx] = vec4<f32>(hit_norm, 0.0);
+    } else {
+        out_distances[idx] = -1.0;
+        out_tri_indices[idx] = -1;
+        out_hit_points[idx] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+        out_normals[idx] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    }
+}
+"#;
+
+fn nurbs_curve_layout_entries() -> [BindGroupLayoutEntry; 6] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 4,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 5,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
+fn raycast_mesh_layout_entries() -> [BindGroupLayoutEntry; 8] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 4,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 5,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 6,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 7,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
 fn nurbs_layout_entries() -> [BindGroupLayoutEntry; 7] {
     [
         BindGroupLayoutEntry {
@@ -1730,6 +2138,8 @@ pub struct GpuMeshAnalyzer {
     extract_planes_engine: ComputeEngine,
     subdivide_engine: ComputeEngine,
     nurbs_surface_engine: ComputeEngine,
+    nurbs_curve_engine: ComputeEngine,
+    raycast_mesh_engine: ComputeEngine,
 }
 
 impl GpuMeshAnalyzer {
@@ -1788,6 +2198,12 @@ impl GpuMeshAnalyzer {
         let nurbs_entries = nurbs_layout_entries();
         let nurbs_surface_engine = ComputeEngine::new(handler, NURBS_SURFACE_SHADER, "main", &nurbs_entries);
 
+        let nurbs_curve_entries = nurbs_curve_layout_entries();
+        let nurbs_curve_engine = ComputeEngine::new(handler, NURBS_CURVE_SHADER, "main", &nurbs_curve_entries);
+
+        let raycast_entries = raycast_mesh_layout_entries();
+        let raycast_mesh_engine = ComputeEngine::new(handler, RAYCAST_MESH_SHADER, "main", &raycast_entries);
+
         Self {
             handler: handler.clone(),
             dist_engine,
@@ -1802,6 +2218,8 @@ impl GpuMeshAnalyzer {
             extract_planes_engine,
             subdivide_engine,
             nurbs_surface_engine,
+            nurbs_curve_engine,
+            raycast_mesh_engine,
         }
     }
 
@@ -2597,6 +3015,199 @@ impl GpuMeshAnalyzer {
             .collect();
 
         (pts, nors)
+    }
+
+    /// Evaluates a rational NURBS curve on a batch of parameters on the GPU via Vulkan compute.
+    ///
+    /// Returns a tuple of `(evaluated_3d_points, evaluated_derivatives)`.
+    pub fn evaluate_nurbs_curve(
+        &self,
+        knots: &[f64],
+        degree: usize,
+        control_points: &[Vector4],
+        t_points: &[f64],
+    ) -> (Vec<Point3>, Vec<Vector3>) {
+        if t_points.is_empty() || control_points.is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+
+        let num_knots = knots.len() as u32;
+        let num_control_points = control_points.len() as u32;
+        let num_points = t_points.len() as u32;
+
+        let uniforms = NurbsCurveUniforms {
+            num_knots,
+            degree: degree as u32,
+            num_control_points,
+            num_points,
+        };
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+
+        let knots_f32: Vec<f32> = knots.iter().map(|&x| x as f32).collect();
+        let cps_f32: Vec<[f32; 4]> = control_points
+            .iter()
+            .map(|pt| [pt.x as f32, pt.y as f32, pt.z as f32, pt.w as f32])
+            .collect();
+        let t_f32: Vec<f32> = t_points.iter().map(|&x| x as f32).collect();
+
+        let knots_buf = BufferHandler::storage_from_slice(&knots_f32, self.handler.device());
+        let cps_buf = BufferHandler::storage_from_slice(&cps_f32, self.handler.device());
+        let t_buf = BufferHandler::storage_from_slice(&t_f32, self.handler.device());
+
+        let out_pts_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_points as usize * size_of::<[f32; 4]>()) as u64,
+        );
+        let out_ders_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_points as usize * size_of::<[f32; 4]>()) as u64,
+        );
+
+        let bind_group = self.nurbs_curve_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            knots_buf.binding_resource(),
+            cps_buf.binding_resource(),
+            t_buf.binding_resource(),
+            out_pts_buf.binding_resource(),
+            out_ders_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_points + 63) / 64, 1, 1);
+        self.nurbs_curve_engine.dispatch(&bind_group, workgroups);
+
+        let pts_f32: Vec<[f32; 4]> = out_pts_buf.read_to_vec_block(&self.handler);
+        let ders_f32: Vec<[f32; 4]> = out_ders_buf.read_to_vec_block(&self.handler);
+
+        let pts = pts_f32
+            .into_iter()
+            .map(|p| Point3::new(p[0] as f64, p[1] as f64, p[2] as f64))
+            .collect();
+        let ders = ders_f32
+            .into_iter()
+            .map(|d| Vector3::new(d[0] as f64, d[1] as f64, d[2] as f64))
+            .collect();
+
+        (pts, ders)
+    }
+
+    /// Raycasts an array of rays against a polygon mesh on the GPU via Vulkan compute.
+    pub fn raycast_mesh(
+        &self,
+        mesh: &PolygonMesh,
+        rays: &[(Point3, Vector3)],
+    ) -> Vec<Option<(f64, Point3, Vector3)>> {
+        if rays.is_empty() {
+            return Vec::new();
+        }
+        let triangles = Self::extract_triangles(mesh);
+        self.raycast_triangles(&triangles, rays)
+    }
+
+    /// Alias for [`Self::raycast_mesh`].
+    #[inline(always)]
+    pub fn raycast(
+        &self,
+        mesh: &PolygonMesh,
+        rays: &[(Point3, Vector3)],
+    ) -> Vec<Option<(f64, Point3, Vector3)>> {
+        self.raycast_mesh(mesh, rays)
+    }
+
+    /// Raycasts an array of rays against a slice of GPU triangles on the GPU via Vulkan compute.
+    pub fn raycast_triangles(
+        &self,
+        triangles: &[GpuTriangle],
+        rays: &[(Point3, Vector3)],
+    ) -> Vec<Option<(f64, Point3, Vector3)>> {
+        if rays.is_empty() {
+            return Vec::new();
+        }
+
+        let num_rays = rays.len() as u32;
+        let num_triangles = triangles.len() as u32;
+
+        let uniforms = RaycastUniforms {
+            num_rays,
+            num_triangles,
+            _pad: [0, 0],
+        };
+        let uniform_buf = BufferHandler::from_slice(
+            &[uniforms],
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+
+        let ray_origins: Vec<[f32; 4]> = rays
+            .iter()
+            .map(|(o, _)| [o.x as f32, o.y as f32, o.z as f32, 1.0f32])
+            .collect();
+        let ray_dirs: Vec<[f32; 4]> = rays
+            .iter()
+            .map(|(_, d)| {
+                let norm = d.normalize();
+                [norm.x as f32, norm.y as f32, norm.z as f32, 0.0f32]
+            })
+            .collect();
+
+        let origins_buf = BufferHandler::storage_from_slice(&ray_origins, self.handler.device());
+        let dirs_buf = BufferHandler::storage_from_slice(&ray_dirs, self.handler.device());
+        let tri_buf = BufferHandler::storage_from_slice(&triangles.to_vec(), self.handler.device());
+
+        let out_dists_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_rays as usize * size_of::<f32>()) as u64,
+        );
+        let out_tris_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_rays as usize * size_of::<i32>()) as u64,
+        );
+        let out_hits_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_rays as usize * size_of::<[f32; 4]>()) as u64,
+        );
+        let out_nors_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_rays as usize * size_of::<[f32; 4]>()) as u64,
+        );
+
+        let bind_group = self.raycast_mesh_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            origins_buf.binding_resource(),
+            dirs_buf.binding_resource(),
+            tri_buf.binding_resource(),
+            out_dists_buf.binding_resource(),
+            out_tris_buf.binding_resource(),
+            out_hits_buf.binding_resource(),
+            out_nors_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_rays + 63) / 64, 1, 1);
+        self.raycast_mesh_engine.dispatch(&bind_group, workgroups);
+
+        let dists_f32: Vec<f32> = out_dists_buf.read_to_vec_block(&self.handler);
+        let hits_f32: Vec<[f32; 4]> = out_hits_buf.read_to_vec_block(&self.handler);
+        let nors_f32: Vec<[f32; 4]> = out_nors_buf.read_to_vec_block(&self.handler);
+
+        dists_f32
+            .into_iter()
+            .zip(hits_f32)
+            .zip(nors_f32)
+            .map(|((dist, hit_pt), norm)| {
+                if dist >= 0.0 {
+                    Some((
+                        dist as f64,
+                        Point3::new(hit_pt[0] as f64, hit_pt[1] as f64, hit_pt[2] as f64),
+                        Vector3::new(norm[0] as f64, norm[1] as f64, norm[2] as f64),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 }
 

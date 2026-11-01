@@ -7,40 +7,46 @@ use truck_platform::*;
 
 mod common;
 
+static SHARED_DEVICE: std::sync::OnceLock<DeviceHandler> = std::sync::OnceLock::new();
+
 fn init_vulkan_device() -> DeviceHandler {
-    pollster::block_on(async {
-        let instance = Instance::new(InstanceDescriptor {
-            backends: Backends::VULKAN,
-            flags: InstanceFlags::from_build_config(),
-            memory_budget_thresholds: Default::default(),
-            backend_options: Default::default(),
-            display: None,
-        });
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::HighPerformance,
-                compatible_surface: None,
-                force_fallback_adapter: false,
-                apply_limit_buckets: false,
+    SHARED_DEVICE
+        .get_or_init(|| {
+            pollster::block_on(async {
+                let instance = Instance::new(InstanceDescriptor {
+                    backends: Backends::VULKAN,
+                    flags: InstanceFlags::from_build_config(),
+                    memory_budget_thresholds: Default::default(),
+                    backend_options: Default::default(),
+                    display: None,
+                });
+                let adapter = instance
+                    .request_adapter(&RequestAdapterOptions {
+                        power_preference: PowerPreference::HighPerformance,
+                        compatible_surface: None,
+                        force_fallback_adapter: false,
+                        apply_limit_buckets: false,
+                    })
+                    .await
+                    .expect("Failed to get Vulkan adapter");
+                eprintln!(
+                    "Running GPU Parity Test on: {:?} ({:?})",
+                    adapter.get_info().name,
+                    adapter.get_info().backend
+                );
+                let (device, queue) = adapter
+                    .request_device(
+                        &DeviceDescriptor {
+                            label: Some("gpu_parity_device"),
+                            ..Default::default()
+                        },
+                    )
+                    .await
+                    .expect("Failed to create device");
+                DeviceHandler::new(adapter, device, queue)
             })
-            .await
-            .expect("Failed to get Vulkan adapter");
-        eprintln!(
-            "Running GPU Parity Test on: {:?} ({:?})",
-            adapter.get_info().name,
-            adapter.get_info().backend
-        );
-        let (device, queue) = adapter
-            .request_device(
-                &DeviceDescriptor {
-                    label: Some("gpu_parity_device"),
-                    ..Default::default()
-                },
-            )
-            .await
-            .expect("Failed to create device");
-        DeviceHandler::new(adapter, device, queue)
-    })
+        })
+        .clone()
 }
 
 // Ground-truth CPU distance function from truck-meshalgo
@@ -1268,5 +1274,278 @@ fn test_cuda_and_vulkan_linear_subdivision_parity() {
         }
     }
 }
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_nurbs_curve_parity() {
+    use std::f64::consts::FRAC_1_SQRT_2;
+    use truck_geometry::prelude::*;
+
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+
+    // Construct circular arc (unit 90-degree quadrant in XY plane)
+    // Degree 2 NURBS curve with knot vector [0, 0, 0, 1, 1, 1]
+    let knot_vec = KnotVec::bezier_knot(2);
+    let w = FRAC_1_SQRT_2;
+    let control_points = vec![
+        Vector4::new(1.0, 0.0, 0.0, 1.0),
+        Vector4::new(w, w, 0.0, w),
+        Vector4::new(0.0, 1.0, 0.0, 1.0),
+    ];
+
+    let bsp = BSplineCurve::new(knot_vec, control_points);
+    let nurbs_curve = NurbsCurve::new(bsp);
+
+    // Test as_nurbs_curve extraction via ParametricCurve trait
+    let (knots, degree, cps) = nurbs_curve.as_nurbs_curve().expect("as_nurbs_curve should succeed");
+    assert_eq!(degree, 2);
+    assert_eq!(knots.len(), 6);
+    assert_eq!(cps.len(), 3);
+
+    // Generate batch evaluation points t in [0.0, 1.0]
+    let n_eval = 200;
+    let t_points: Vec<f64> = (0..=n_eval)
+        .map(|i| i as f64 / n_eval as f64)
+        .collect();
+
+    // CPU ground truth
+    let mut cpu_pts = Vec::with_capacity(t_points.len());
+    let mut cpu_ders = Vec::with_capacity(t_points.len());
+    for &t in &t_points {
+        cpu_pts.push(nurbs_curve.subs(t));
+        cpu_ders.push(nurbs_curve.der(t));
+    }
+
+    // CUDA evaluation (FP64 bare-metal kernel)
+    let start_cuda = std::time::Instant::now();
+    let (cuda_pts, cuda_ders) = cuda.evaluate_nurbs_curve(knots, degree, cps, &t_points);
+    let dur_cuda = start_cuda.elapsed();
+
+    // Vulkan evaluation (FP32 wgpu compute shader)
+    let start_vulkan = std::time::Instant::now();
+    let (vulkan_pts, vulkan_ders) = vulkan.evaluate_nurbs_curve(knots, degree, cps, &t_points);
+    let dur_vulkan = start_vulkan.elapsed();
+
+    // Dispatcher evaluation
+    let start_dispatch = std::time::Instant::now();
+    let (dispatch_pts, dispatch_ders) =
+        truck_meshalgo::dispatch::Dispatcher::global().evaluate_nurbs_curve(knots, degree, cps, &t_points);
+    let dur_dispatch = start_dispatch.elapsed();
+
+    println!(
+        "evaluate_nurbs_curve {} samples: CUDA={:?}, Vulkan={:?}, Dispatcher={:?}",
+        t_points.len(),
+        dur_cuda,
+        dur_vulkan,
+        dur_dispatch
+    );
+
+    assert_eq!(cuda_pts.len(), t_points.len());
+    assert_eq!(vulkan_pts.len(), t_points.len());
+    assert_eq!(dispatch_pts.len(), t_points.len());
+
+    for i in 0..t_points.len() {
+        let p_cpu = cpu_pts[i];
+        let d_cpu = cpu_ders[i];
+
+        let p_cuda = cuda_pts[i];
+        let d_cuda = cuda_ders[i];
+
+        let p_vulk = vulkan_pts[i];
+        let d_vulk = vulkan_ders[i];
+
+        let p_disp = dispatch_pts[i];
+        let d_disp = dispatch_ders[i];
+
+        // CUDA FP64 parity against CPU ground truth: <= 1e-10
+        assert!(
+            p_cuda.distance(p_cpu) < 1e-10,
+            "CUDA vs CPU point mismatch at sample {}: {:?} vs {:?}",
+            i, p_cuda, p_cpu
+        );
+        assert!(
+            (d_cuda - d_cpu).magnitude() < 1e-9,
+            "CUDA vs CPU derivative mismatch at sample {}: {:?} vs {:?}",
+            i, d_cuda, d_cpu
+        );
+
+        // Vulkan FP32 parity against CPU ground truth: <= 1e-4
+        assert!(
+            p_vulk.distance(p_cpu) < 1e-4,
+            "Vulkan vs CPU point mismatch at sample {}: {:?} vs {:?}",
+            i, p_vulk, p_cpu
+        );
+        assert!(
+            (d_vulk - d_cpu).magnitude() < 1e-3,
+            "Vulkan vs CPU derivative mismatch at sample {}: {:?} vs {:?}",
+            i, d_vulk, d_cpu
+        );
+
+        // Dispatcher match
+        assert!(
+            p_disp.distance(p_cpu) < 1e-4,
+            "Dispatcher vs CPU point mismatch at sample {}: {:?} vs {:?}",
+            i, p_disp, p_cpu
+        );
+        assert!(
+            (d_disp - d_cpu).magnitude() < 1e-3,
+            "Dispatcher vs CPU derivative mismatch at sample {}: {:?} vs {:?}",
+            i, d_disp, d_cpu
+        );
+
+        // Analytical geometric correctness: every point must lie on the unit circle x^2 + y^2 = 1.0, z = 0.0
+        let radius = (p_cuda.x * p_cuda.x + p_cuda.y * p_cuda.y).sqrt();
+        assert!((radius - 1.0).abs() < 1e-10, "Point must lie on unit circle, got radius {}", radius);
+        assert!(p_cuda.z.abs() < 1e-10, "Z coordinate must be 0, got {}", p_cuda.z);
+
+        // Tangent vector must be perpendicular to radius vector (dot product = 0)
+        let dot_prod = (p_cuda - Point3::origin()).dot(d_cuda);
+        assert!(dot_prod.abs() < 1e-9, "Circle tangent must be perpendicular to position, dot={}", dot_prod);
+    }
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_and_vulkan_raycast_parity() {
+    use truck_meshalgo::analyzers::{raycast_mesh_cpu, raycast_mesh_rayon, RaycastMesh};
+
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+
+    let cube = create_unit_cube();
+
+    // Construct deterministic rays targeting various faces and misses
+    let mut rays = vec![
+        // Front face: through z=0 towards +z
+        (Point3::new(0.5, 0.5, -2.0), Vector3::new(0.0, 0.0, 1.0)),
+        // Back face: through z=1 towards -z
+        (Point3::new(0.5, 0.5, 3.0), Vector3::new(0.0, 0.0, -1.0)),
+        // Left face: through x=0 towards +x
+        (Point3::new(-2.0, 0.5, 0.5), Vector3::new(1.0, 0.0, 0.0)),
+        // Right face: through x=1 towards -x
+        (Point3::new(3.0, 0.5, 0.5), Vector3::new(-1.0, 0.0, 0.0)),
+        // Bottom face: through y=0 towards +y
+        (Point3::new(0.5, -2.0, 0.5), Vector3::new(0.0, 1.0, 0.0)),
+        // Top face: through y=1 towards -y
+        (Point3::new(0.5, 3.0, 0.5), Vector3::new(0.0, -1.0, 0.0)),
+        // Definite miss (aimed away)
+        (Point3::new(5.0, 5.0, 5.0), Vector3::new(1.0, 2.0, 3.0)),
+        // Definite miss (parallel to cube face outside bounds)
+        (Point3::new(2.0, 2.0, -1.0), Vector3::new(0.0, 0.0, 1.0)),
+    ];
+
+    // Add extra rays around the unit sphere aimed at origin
+    for i in 0..100 {
+        let theta = (i as f64) * 0.314;
+        let phi = (i as f64) * 0.173;
+        let origin = Point3::new(3.0 * theta.cos() * phi.sin(), 3.0 * theta.sin() * phi.sin(), 3.0 * phi.cos());
+        let dir = Point3::new(0.5, 0.5, 0.5) - origin;
+        rays.push((origin, dir));
+    }
+
+    // CPU single-thread ground truth
+    let cpu_results = raycast_mesh_cpu(&cube, &rays);
+    // Rayon CPU ground truth
+    let rayon_results = raycast_mesh_rayon(&cube, &rays);
+
+    // CUDA
+    let start_cuda = std::time::Instant::now();
+    let cuda_results = cuda.raycast_mesh(&cube, &rays);
+    let dur_cuda = start_cuda.elapsed();
+
+    // Vulkan
+    let start_vulkan = std::time::Instant::now();
+    let vulkan_results = vulkan.raycast_mesh(&cube, &rays);
+    let dur_vulkan = start_vulkan.elapsed();
+
+    // Dispatcher / Trait method
+    let start_dispatch = std::time::Instant::now();
+    let dispatch_results = cube.raycast(&rays);
+    let dur_dispatch = start_dispatch.elapsed();
+
+    println!(
+        "raycast_mesh {} rays: CUDA={:?}, Vulkan={:?}, Dispatcher={:?}",
+        rays.len(),
+        dur_cuda,
+        dur_vulkan,
+        dur_dispatch
+    );
+
+    assert_eq!(cpu_results.len(), rays.len());
+    assert_eq!(rayon_results.len(), rays.len());
+    assert_eq!(cuda_results.len(), rays.len());
+    assert_eq!(vulkan_results.len(), rays.len());
+    assert_eq!(dispatch_results.len(), rays.len());
+
+    let mut hit_count = 0;
+    let mut miss_count = 0;
+
+    for i in 0..rays.len() {
+        let cpu_hit = &cpu_results[i];
+        let rayon_hit = &rayon_results[i];
+        let cuda_hit = &cuda_results[i];
+        let vulkan_hit = &vulkan_results[i];
+        let dispatch_hit = &dispatch_results[i];
+
+        // Rayon parity with single-threaded CPU
+        assert_eq!(cpu_hit.is_some(), rayon_hit.is_some(), "Rayon hit/miss mismatch at ray {}", i);
+
+        // CUDA parity with CPU
+        assert_eq!(
+            cpu_hit.is_some(),
+            cuda_hit.is_some(),
+            "CUDA hit/miss mismatch at ray {}: CPU={:?}, CUDA={:?}",
+            i, cpu_hit.is_some(), cuda_hit.is_some()
+        );
+
+        // Vulkan parity with CPU
+        assert_eq!(
+            cpu_hit.is_some(),
+            vulkan_hit.is_some(),
+            "Vulkan hit/miss mismatch at ray {}: CPU={:?}, Vulkan={:?}",
+            i, cpu_hit.is_some(), vulkan_hit.is_some()
+        );
+
+        // Dispatch parity with CPU
+        assert_eq!(
+            cpu_hit.is_some(),
+            dispatch_hit.is_some(),
+            "Dispatcher hit/miss mismatch at ray {}: CPU={:?}, Dispatcher={:?}",
+            i, cpu_hit.is_some(), dispatch_hit.is_some()
+        );
+
+        if let Some((cpu_t, cpu_p, cpu_n)) = cpu_hit {
+            hit_count += 1;
+            let (cuda_t, cuda_p, cuda_n) = cuda_hit.as_ref().unwrap();
+            let (vulkan_t, vulkan_p, vulkan_n) = vulkan_hit.as_ref().unwrap();
+            let (disp_t, disp_p, disp_n) = dispatch_hit.as_ref().unwrap();
+
+            // Distance match
+            assert!((cuda_t - cpu_t).abs() < 1e-4, "CUDA vs CPU t mismatch at ray {}: {} vs {}", i, cuda_t, cpu_t);
+            assert!((vulkan_t - cpu_t).abs() < 1e-3, "Vulkan vs CPU t mismatch at ray {}: {} vs {}", i, vulkan_t, cpu_t);
+            assert!((disp_t - cpu_t).abs() < 1e-3, "Dispatcher vs CPU t mismatch at ray {}: {} vs {}", i, disp_t, cpu_t);
+
+            // Hit point match
+            assert!(cuda_p.distance(*cpu_p) < 1e-4, "CUDA vs CPU hit point mismatch at ray {}", i);
+            assert!(vulkan_p.distance(*cpu_p) < 1e-3, "Vulkan vs CPU hit point mismatch at ray {}", i);
+            assert!(disp_p.distance(*cpu_p) < 1e-3, "Dispatcher vs CPU hit point mismatch at ray {}", i);
+
+            // Normal match (should point outwards and dot product with ray direction should be <= 0)
+            assert!((cuda_n - cpu_n).magnitude() < 1e-3, "CUDA vs CPU normal mismatch at ray {}: {:?} vs {:?}", i, cuda_n, cpu_n);
+            assert!((vulkan_n - cpu_n).magnitude() < 1e-2, "Vulkan vs CPU normal mismatch at ray {}: {:?} vs {:?}", i, vulkan_n, cpu_n);
+            assert!((disp_n - cpu_n).magnitude() < 1e-2, "Dispatcher vs CPU normal mismatch at ray {}: {:?} vs {:?}", i, disp_n, cpu_n);
+        } else {
+            miss_count += 1;
+        }
+    }
+
+    assert!(hit_count > 0, "Should have hits");
+    assert!(miss_count > 0, "Should have misses");
+    println!("Raycast parity verified across {} rays: {} hits, {} misses.", rays.len(), hit_count, miss_count);
+}
+
 
 

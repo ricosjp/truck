@@ -225,6 +225,30 @@ extern "C" {
         h_out_triangles: *mut f32,
     ) -> i32;
 
+    fn truck_cuda_evaluate_nurbs_curve_f64(
+        h_knots: *const f64,
+        num_knots: u32,
+        degree: u32,
+        h_control_points: *const f64,
+        num_control_points: u32,
+        h_t_points: *const f64,
+        num_points: u32,
+        h_out_points: *mut f64,
+        h_out_derivatives: *mut f64,
+    ) -> i32;
+
+    fn truck_cuda_raycast_mesh(
+        h_ray_origins: *const f32,
+        h_ray_dirs: *const f32,
+        num_rays: u32,
+        h_triangles: *const f32,
+        num_triangles: u32,
+        h_out_distances: *mut f32,
+        h_out_tri_indices: *mut i32,
+        h_out_hit_points: *mut f32,
+        h_out_normals: *mut f32,
+    ) -> i32;
+
     fn truck_cuda_get_device_info(
         name_buf: *mut std::os::raw::c_char,
         name_buf_len: i32,
@@ -1239,5 +1263,148 @@ impl CudaMeshAnalyzer {
         }
         let sub_tris = self.subdivide_triangles(&triangles);
         super::create_mesh_from_triangles(&sub_tris)
+    }
+
+    /// Evaluates a rational NURBS curve on a batch of parameters on the GPU via CUDA.
+    ///
+    /// Returns a tuple of `(evaluated_3d_points, evaluated_derivatives)`.
+    pub fn evaluate_nurbs_curve(
+        &self,
+        knots: &[f64],
+        degree: usize,
+        control_points: &[Vector4],
+        t_points: &[f64],
+    ) -> (Vec<Point3>, Vec<Vector3>) {
+        if t_points.is_empty() || control_points.is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+
+        let num_knots = knots.len() as u32;
+        let num_control_points = control_points.len() as u32;
+        let num_points = t_points.len() as u32;
+
+        let flat_cps: Vec<[f64; 4]> = control_points
+            .iter()
+            .map(|p| [p.x, p.y, p.z, p.w])
+            .collect();
+
+        let mut out_points = vec![[0.0f64; 4]; t_points.len()];
+        let mut out_derivatives = vec![[0.0f64; 4]; t_points.len()];
+
+        let status = unsafe {
+            truck_cuda_evaluate_nurbs_curve_f64(
+                knots.as_ptr(),
+                num_knots,
+                degree as u32,
+                flat_cps.as_ptr() as *const f64,
+                num_control_points,
+                t_points.as_ptr(),
+                num_points,
+                out_points.as_mut_ptr() as *mut f64,
+                out_derivatives.as_mut_ptr() as *mut f64,
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_evaluate_nurbs_curve_f64 failed with code: {}", status);
+
+        let pts = out_points
+            .into_iter()
+            .map(|p| Point3::new(p[0], p[1], p[2]))
+            .collect();
+        let ders = out_derivatives
+            .into_iter()
+            .map(|n| Vector3::new(n[0], n[1], n[2]))
+            .collect();
+
+        (pts, ders)
+    }
+
+    /// Raycasts an array of rays against a polygon mesh on the GPU via CUDA.
+    ///
+    /// For each ray, returns `Some((distance, hit_point, outward_normal))` if an intersection
+    /// exists, or `None` if the ray misses the mesh.
+    pub fn raycast_mesh(
+        &self,
+        mesh: &PolygonMesh,
+        rays: &[(Point3, Vector3)],
+    ) -> Vec<Option<(f64, Point3, Vector3)>> {
+        if rays.is_empty() {
+            return Vec::new();
+        }
+
+        let triangles = super::GpuMeshAnalyzer::extract_triangles(mesh);
+        self.raycast_triangles(&triangles, rays)
+    }
+
+    /// Alias for [`Self::raycast_mesh`].
+    #[inline(always)]
+    pub fn raycast(
+        &self,
+        mesh: &PolygonMesh,
+        rays: &[(Point3, Vector3)],
+    ) -> Vec<Option<(f64, Point3, Vector3)>> {
+        self.raycast_mesh(mesh, rays)
+    }
+
+    /// Raycasts an array of rays against a pre-extracted slice of GPU triangles.
+    pub fn raycast_triangles(
+        &self,
+        triangles: &[GpuTriangle],
+        rays: &[(Point3, Vector3)],
+    ) -> Vec<Option<(f64, Point3, Vector3)>> {
+        if rays.is_empty() {
+            return Vec::new();
+        }
+
+        let num_rays = rays.len() as u32;
+        let num_triangles = triangles.len() as u32;
+
+        let ray_origins: Vec<[f32; 4]> = rays
+            .iter()
+            .map(|(o, _)| [o.x as f32, o.y as f32, o.z as f32, 1.0f32])
+            .collect();
+        let ray_dirs: Vec<[f32; 4]> = rays
+            .iter()
+            .map(|(_, d)| {
+                let norm = d.normalize();
+                [norm.x as f32, norm.y as f32, norm.z as f32, 0.0f32]
+            })
+            .collect();
+
+        let mut out_distances = vec![0.0f32; rays.len()];
+        let mut out_tri_indices = vec![-1i32; rays.len()];
+        let mut out_hit_points = vec![[0.0f32; 4]; rays.len()];
+        let mut out_normals = vec![[0.0f32; 4]; rays.len()];
+
+        let status = unsafe {
+            truck_cuda_raycast_mesh(
+                ray_origins.as_ptr() as *const f32,
+                ray_dirs.as_ptr() as *const f32,
+                num_rays,
+                triangles.as_ptr() as *const f32,
+                num_triangles,
+                out_distances.as_mut_ptr(),
+                out_tri_indices.as_mut_ptr(),
+                out_hit_points.as_mut_ptr() as *mut f32,
+                out_normals.as_mut_ptr() as *mut f32,
+            )
+        };
+        assert_eq!(status, 0, "truck_cuda_raycast_mesh failed with code: {}", status);
+
+        out_distances
+            .into_iter()
+            .zip(out_hit_points)
+            .zip(out_normals)
+            .map(|((dist, hit_pt), norm)| {
+                if dist >= 0.0 {
+                    Some((
+                        dist as f64,
+                        Point3::new(hit_pt[0] as f64, hit_pt[1] as f64, hit_pt[2] as f64),
+                        Vector3::new(norm[0] as f64, norm[1] as f64, norm[2] as f64),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 }

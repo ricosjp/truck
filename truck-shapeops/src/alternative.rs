@@ -59,6 +59,13 @@ where
         parameter_range,
         (std::ops::Bound<f64>, std::ops::Bound<f64>),
     );
+    #[inline(always)]
+    fn as_nurbs_curve(&self) -> Option<(&[f64], usize, &[Vector4])> {
+        match self {
+            Alternative::FirstType(got) => got.as_nurbs_curve(),
+            Alternative::SecondType(got) => got.as_nurbs_curve(),
+        }
+    }
 }
 
 impl<C0, C1> BoundedCurve for Alternative<C0, C1>

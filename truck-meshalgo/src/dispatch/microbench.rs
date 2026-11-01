@@ -440,6 +440,8 @@ pub fn run_scaling_microbenchmark() -> DispatchProfile {
         surface_intersection_seeds: ScalingThresholds::default_fallback(Operation::SurfaceIntersectionSeeds),
         planar_face_segmentation: ScalingThresholds::default_fallback(Operation::PlanarFaceSegmentation),
         linear_subdivision: ScalingThresholds::default_fallback(Operation::LinearSubdivision),
+        nurbs_curve_evaluation: ScalingThresholds::default_fallback(Operation::NurbsCurveEvaluation),
+        raycast_mesh: ScalingThresholds::default_fallback(Operation::RaycastMesh),
     }
 }
 

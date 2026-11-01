@@ -54,6 +54,10 @@ pub enum Operation {
     PlanarFaceSegmentation,
     /// Triangle linear subdivision / midpoint refinement.
     LinearSubdivision,
+    /// Batch rational NURBS and B-spline curve evaluation.
+    NurbsCurveEvaluation,
+    /// Batch ray-to-mesh intersection and normal queries.
+    RaycastMesh,
 }
 
 /// Recorded microbenchmark measurement sample.
@@ -150,6 +154,18 @@ impl ScalingThresholds {
                 preferred_gpu: KernelTarget::GpuCuda,
                 sample_timings: Vec::new(),
             },
+            Operation::NurbsCurveEvaluation => Self {
+                cpu_single_max: 128,
+                cpu_rayon_max: 512,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
+            Operation::RaycastMesh => Self {
+                cpu_single_max: 64,
+                cpu_rayon_max: 256,
+                preferred_gpu: KernelTarget::GpuCuda,
+                sample_timings: Vec::new(),
+            },
         }
     }
 
@@ -207,6 +223,10 @@ pub struct DispatchProfile {
     pub planar_face_segmentation: ScalingThresholds,
     /// Thresholds for triangle linear subdivision.
     pub linear_subdivision: ScalingThresholds,
+    /// Thresholds for batch rational NURBS curve evaluation.
+    pub nurbs_curve_evaluation: ScalingThresholds,
+    /// Thresholds for batch raycast queries.
+    pub raycast_mesh: ScalingThresholds,
 }
 
 impl Default for DispatchProfile {
@@ -223,6 +243,8 @@ impl Default for DispatchProfile {
             surface_intersection_seeds: ScalingThresholds::default_fallback(Operation::SurfaceIntersectionSeeds),
             planar_face_segmentation: ScalingThresholds::default_fallback(Operation::PlanarFaceSegmentation),
             linear_subdivision: ScalingThresholds::default_fallback(Operation::LinearSubdivision),
+            nurbs_curve_evaluation: ScalingThresholds::default_fallback(Operation::NurbsCurveEvaluation),
+            raycast_mesh: ScalingThresholds::default_fallback(Operation::RaycastMesh),
         }
     }
 }
@@ -242,6 +264,8 @@ impl DispatchProfile {
             surface_intersection_seeds: ScalingThresholds::cpu_only(64),
             planar_face_segmentation: ScalingThresholds::cpu_only(32),
             linear_subdivision: ScalingThresholds::cpu_only(64),
+            nurbs_curve_evaluation: ScalingThresholds::cpu_only(128),
+            raycast_mesh: ScalingThresholds::cpu_only(64),
         }
     }
 
@@ -259,6 +283,8 @@ impl DispatchProfile {
             Operation::SurfaceIntersectionSeeds => self.surface_intersection_seeds.select_kernel(size),
             Operation::PlanarFaceSegmentation => self.planar_face_segmentation.select_kernel(size),
             Operation::LinearSubdivision => self.linear_subdivision.select_kernel(size),
+            Operation::NurbsCurveEvaluation => self.nurbs_curve_evaluation.select_kernel(size),
+            Operation::RaycastMesh => self.raycast_mesh.select_kernel(size),
         }
     }
 }

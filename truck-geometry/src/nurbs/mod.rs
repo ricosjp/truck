@@ -98,6 +98,8 @@ pub struct BasisWindow {
 pub struct BSplineCurve<P> {
     knot_vec: KnotVec,      // the knot vector
     control_points: Vec<P>, // the indices of control points
+    #[serde(skip)]
+    nurbs_weights: std::sync::OnceLock<Vec<Vector4>>,
 }
 
 /// B-spline surface
