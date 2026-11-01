@@ -567,6 +567,20 @@ where S: PreMeshableSurface {
 }
 
 /// Inserts parameter divisions into triangulation.
+#[cfg(feature = "cuda")]
+fn extract_polyline_segments(polyline: &PolyBoundary) -> Vec<[Point2; 2]> {
+    polyline
+        .0
+        .iter()
+        .flat_map(|vec| {
+            vec.iter()
+                .circular_tuple_windows()
+                .map(|(p0, p1)| [Point2::new(p0.x, p0.y), Point2::new(p1.x, p1.y)])
+        })
+        .collect()
+}
+
+/// Inserts parameter divisions into triangulation.
 fn insert_surface(
     triangulation: &mut Cdt,
     surface: impl PreMeshableSurface,
@@ -581,11 +595,29 @@ fn insert_surface(
         .collect();
     let range = ((bdb.min()[0], bdb.max()[0]), (bdb.min()[1], bdb.max()[1]));
     let (udiv, vdiv) = surface.parameter_division(range, tol);
+
+    #[cfg(feature = "cuda")]
+    let include_flags: Vec<bool> = {
+        let segments = extract_polyline_segments(polyline);
+        let pts: Vec<Point2> = udiv
+            .iter()
+            .flat_map(|&u| vdiv.iter().map(move |&v| Point2::new(u, v)))
+            .collect();
+        let cuda = gpu::cuda::CudaMeshAnalyzer::new();
+        cuda.trimming_loop_include(&segments, &pts)
+    };
+    #[cfg(not(feature = "cuda"))]
+    let include_flags: Vec<bool> = udiv
+        .iter()
+        .flat_map(|&u| vdiv.iter().map(move |&v| polyline.include(Point2::new(u, v))))
+        .collect();
+
+    let mut flag_iter = include_flags.into_iter();
     let insert_res: Vec<Vec<Option<_>>> = udiv
         .into_iter()
         .map(|u| {
             vdiv.iter()
-                .map(|v| match polyline.include(Point2::new(u, *v)) {
+                .map(|v| match flag_iter.next().unwrap() {
                     true => triangulation.insert(SPoint2::new(u, *v)).ok(),
                     false => None,
                 })
@@ -624,24 +656,67 @@ fn triangulation_into_polymesh<'a>(
     polyline: &PolyBoundary,
     boundary_map: &HashMap<FixedVertexHandle, Point3>,
 ) -> PolygonMesh {
-    let mut positions = Vec::<Point3>::new();
-    let mut uv_coords = Vec::<Vector2>::new();
-    let mut normals = Vec::<Vector3>::new();
-    let vmap: HashMap<_, _> = vertices
-        .enumerate()
-        .map(|(i, v)| {
+    let vert_vec: Vec<_> = vertices.collect();
+    let num_verts = vert_vec.len();
+
+    let mut positions = vec![Point3::origin(); num_verts];
+    let mut uv_coords = Vec::with_capacity(num_verts);
+    let mut normals = vec![Vector3::zero(); num_verts];
+    let mut vmap = HashMap::default();
+
+    #[cfg(feature = "cuda")]
+    let gpu_evaluated = if let Some((u_knots, v_knots, u_deg, v_deg, ctrl_pts)) = surface.as_bspline() {
+        let uvs: Vec<Point2> = vert_vec
+            .iter()
+            .map(|v| {
+                let p = *v.as_ref();
+                Point2::new(p.x, p.y)
+            })
+            .collect();
+        let cuda = gpu::cuda::CudaMeshAnalyzer::new();
+        let (gpu_pts, gpu_nors) = cuda.evaluate_bspline_surface(
+            u_knots,
+            v_knots,
+            u_deg,
+            v_deg,
+            ctrl_pts,
+            &uvs,
+        );
+        Some((gpu_pts, gpu_nors))
+    } else {
+        None
+    };
+    #[cfg(not(feature = "cuda"))]
+    let gpu_evaluated: Option<(Vec<Point3>, Vec<Vector3>)> = None;
+
+    if let Some((gpu_pts, gpu_nors)) = gpu_evaluated {
+        for (i, v) in vert_vec.into_iter().enumerate() {
+            let p = *v.as_ref();
+            let idx = v.fix();
+            let point = match boundary_map.get(&idx) {
+                Some(point) => *point,
+                None => gpu_pts[i],
+            };
+            positions[i] = point;
+            uv_coords.push(Vector2::new(p.x, p.y));
+            normals[i] = gpu_nors[i];
+            vmap.insert(idx, i);
+        }
+    } else {
+        for (i, v) in vert_vec.into_iter().enumerate() {
             let p = *v.as_ref();
             let idx = v.fix();
             let point = match boundary_map.get(&idx) {
                 Some(point) => *point,
                 None => surface.subs(p.x, p.y),
             };
-            positions.push(point);
+            positions[i] = point;
             uv_coords.push(Vector2::new(p.x, p.y));
-            normals.push(surface.normal(p.x, p.y));
-            (idx, i)
-        })
-        .collect();
+            normals[i] = surface.normal(p.x, p.y);
+            vmap.insert(idx, i);
+        }
+    }
+
     let tri_faces: Vec<[StandardVertex; 3]> = triangles
         .map(|tri| tri.vertices())
         .filter(|tri| {

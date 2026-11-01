@@ -118,6 +118,10 @@ impl<S: ParametricSurface> ParametricSurface for Box<S> {
 pub trait ParametricSurface2D: ParametricSurface<Point = Point2, Vector = Vector2> {}
 impl<S: ParametricSurface<Point = Point2, Vector = Vector2>> ParametricSurface2D for S {}
 
+/// Data tuple representing the components of a B-spline surface:
+/// `(u_knots, v_knots, u_degree, v_degree, control_points)`.
+pub type BSplineSurfaceData<'a, P> = (&'a [f64], &'a [f64], usize, usize, &'a [Vec<P>]);
+
 /// 3D parametric surface
 pub trait ParametricSurface3D: ParametricSurface<Point = Point3, Vector = Vector3> {
     /// Returns the normal vector at `(u, v)`.
@@ -143,16 +147,31 @@ pub trait ParametricSurface3D: ParametricSurface<Point = Point3, Vector = Vector
         let abs_vder = cross.dot(cross_vder) / abs;
         (cross_vder * abs - cross * abs_vder) / (abs * abs)
     }
+
+    /// Returns the components of the B-spline surface if `self` is a B-spline surface:
+    /// `(u_knots, v_knots, u_degree, v_degree, control_points)`
+    #[inline(always)]
+    fn as_bspline(&self) -> Option<BSplineSurfaceData<'_, Point3>> {
+        None
+    }
 }
 
 impl<S: ParametricSurface3D> ParametricSurface3D for &S {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 { (*self).normal(u, v) }
+    #[inline(always)]
+    fn as_bspline(&self) -> Option<BSplineSurfaceData<'_, Point3>> {
+        (*self).as_bspline()
+    }
 }
 
 impl<S: ParametricSurface3D> ParametricSurface3D for Box<S> {
     #[inline(always)]
     fn normal(&self, u: f64, v: f64) -> Vector3 { (**self).normal(u, v) }
+    #[inline(always)]
+    fn as_bspline(&self) -> Option<BSplineSurfaceData<'_, Point3>> {
+        (**self).as_bspline()
+    }
 }
 
 /// Bounded surface with parametric range i.e. it is guaranteed that the return value of `parameter_range` is not `Bound::Unbounded`.

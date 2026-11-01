@@ -94,6 +94,27 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     let mut cls1 = divide_face::divide_faces(&altshell1, &loops_store1, tol)?;
     cls1.integrate_by_component();
     let [mut and0, mut or0, unknown0] = cls0.and_or_unknown();
+    #[cfg(feature = "cuda")]
+    {
+        if !unknown0.is_empty() {
+            let poly_mesh1 = poly_shell1.to_polygon();
+            let cuda = CudaMeshAnalyzer::new();
+            let pts: Vec<Point3> = unknown0
+                .iter()
+                .map(|face| face.boundaries()[0].vertex_iter().next().unwrap().point())
+                .collect();
+            let dirs: Vec<Vector3> = pts.iter().map(|&pt| hash::take_one_unit(pt)).collect();
+            let counts = cuda.signed_crossing_rays(&poly_mesh1, &pts, &dirs);
+            for (face, count) in unknown0.into_iter().zip(counts) {
+                if count >= 1 {
+                    and0.push(face);
+                } else {
+                    or0.push(face);
+                }
+            }
+        }
+    }
+    #[cfg(not(feature = "cuda"))]
     unknown0.into_iter().try_for_each(|face| {
         let pt = face.boundaries()[0].vertex_iter().next().unwrap().point();
         let dir = hash::take_one_unit(pt);
@@ -108,7 +129,29 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
         }
         Some(())
     })?;
+
     let [mut and1, mut or1, unknown1] = cls1.and_or_unknown();
+    #[cfg(feature = "cuda")]
+    {
+        if !unknown1.is_empty() {
+            let poly_mesh0 = poly_shell0.to_polygon();
+            let cuda = CudaMeshAnalyzer::new();
+            let pts: Vec<Point3> = unknown1
+                .iter()
+                .map(|face| face.boundaries()[0].vertex_iter().next().unwrap().point())
+                .collect();
+            let dirs: Vec<Vector3> = pts.iter().map(|&pt| hash::take_one_unit(pt)).collect();
+            let counts = cuda.signed_crossing_rays(&poly_mesh0, &pts, &dirs);
+            for (face, count) in unknown1.into_iter().zip(counts) {
+                if count >= 1 {
+                    and1.push(face);
+                } else {
+                    or1.push(face);
+                }
+            }
+        }
+    }
+    #[cfg(not(feature = "cuda"))]
     unknown1.into_iter().try_for_each(|face| {
         let pt = face.boundaries()[0].vertex_iter().next().unwrap().point();
         let dir = hash::take_one_unit(pt);

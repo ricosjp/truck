@@ -80,6 +80,7 @@ extern "C" {
     ) -> i32;
 
     // Candidate 2: 2D Trimming Loop Inclusion Testing
+    #[allow(dead_code)]
     fn truck_cuda_trimming_loop_include(
         h_segments: *const f32,
         num_segments: u32,
@@ -102,6 +103,7 @@ extern "C" {
     ) -> i32;
 
     // Candidate 4: Batch B-Spline Surface Evaluation
+    #[allow(dead_code)]
     fn truck_cuda_evaluate_bspline_surface(
         h_u_knots: *const f32,
         num_u_knots: u32,
@@ -115,6 +117,30 @@ extern "C" {
         num_points: u32,
         h_out_points: *mut f32,
         h_out_normals: *mut f32,
+    ) -> i32;
+
+    fn truck_cuda_trimming_loop_include_f64(
+        h_segments: *const f64,
+        num_segments: u32,
+        h_points: *const f64,
+        h_ray_dirs: *const f64,
+        num_points: u32,
+        h_inside_flags: *mut i32,
+    ) -> i32;
+
+    fn truck_cuda_evaluate_bspline_surface_f64(
+        h_u_knots: *const f64,
+        num_u_knots: u32,
+        h_v_knots: *const f64,
+        num_v_knots: u32,
+        u_degree: u32,
+        v_degree: u32,
+        h_control_points: *const f64,
+        cp_stride_v: u32,
+        h_uv_points: *const f64,
+        num_points: u32,
+        h_out_points: *mut f64,
+        h_out_normals: *mut f64,
     ) -> i32;
 }
 
@@ -503,37 +529,37 @@ impl CudaMeshAnalyzer {
             return vec![false; points.len()];
         }
 
-        let seg_vec: Vec<[f32; 4]> = segments
+        let seg_vec: Vec<[f64; 4]> = segments
             .iter()
-            .map(|seg| [seg[0].x as f32, seg[0].y as f32, seg[1].x as f32, seg[1].y as f32])
+            .map(|seg| [seg[0].x, seg[0].y, seg[1].x, seg[1].y])
             .collect();
 
-        let pt_vec: Vec<[f32; 2]> = points
+        let pt_vec: Vec<[f64; 2]> = points
             .iter()
-            .map(|p| [p.x as f32, p.y as f32])
+            .map(|p| [p.x, p.y])
             .collect();
 
-        let ray_vec: Vec<[f32; 2]> = points
+        let ray_vec: Vec<[f64; 2]> = points
             .iter()
             .map(|&c| {
                 let t = 2.0 * std::f64::consts::PI * HashGen::hash1(c);
-                [t.cos() as f32, t.sin() as f32]
+                [t.cos(), t.sin()]
             })
             .collect();
 
         let mut out_flags = vec![0i32; points.len()];
 
         let status = unsafe {
-            truck_cuda_trimming_loop_include(
-                seg_vec.as_ptr() as *const f32,
+            truck_cuda_trimming_loop_include_f64(
+                seg_vec.as_ptr() as *const f64,
                 seg_vec.len() as u32,
-                pt_vec.as_ptr() as *const f32,
-                ray_vec.as_ptr() as *const f32,
+                pt_vec.as_ptr() as *const f64,
+                ray_vec.as_ptr() as *const f64,
                 points.len() as u32,
                 out_flags.as_mut_ptr(),
             )
         };
-        assert_eq!(status, 0, "truck_cuda_trimming_loop_include failed with code: {}", status);
+        assert_eq!(status, 0, "truck_cuda_trimming_loop_include_f64 failed with code: {}", status);
 
         out_flags.into_iter().map(|f| f > 0).collect()
     }
@@ -660,50 +686,47 @@ impl CudaMeshAnalyzer {
         let num_v_knots = v_knots.len() as u32;
         let num_points = uv_points.len() as u32;
 
-        let u_knots_f32: Vec<f32> = u_knots.iter().map(|&x| x as f32).collect();
-        let v_knots_f32: Vec<f32> = v_knots.iter().map(|&y| y as f32).collect();
-
         let cp_stride_v = control_points[0].len() as u32;
-        let mut flat_cps: Vec<[f32; 4]> = Vec::with_capacity(control_points.len() * control_points[0].len());
+        let mut flat_cps: Vec<[f64; 4]> = Vec::with_capacity(control_points.len() * control_points[0].len());
         for row in control_points {
             for pt in row {
-                flat_cps.push([pt.x as f32, pt.y as f32, pt.z as f32, 1.0]);
+                flat_cps.push([pt.x, pt.y, pt.z, 1.0]);
             }
         }
 
-        let uv_f32: Vec<[f32; 2]> = uv_points
+        let uv_f64: Vec<[f64; 2]> = uv_points
             .iter()
-            .map(|p| [p.x as f32, p.y as f32])
+            .map(|p| [p.x, p.y])
             .collect();
 
-        let mut out_points = vec![[0.0f32; 4]; uv_points.len()];
-        let mut out_normals = vec![[0.0f32; 4]; uv_points.len()];
+        let mut out_points = vec![[0.0f64; 4]; uv_points.len()];
+        let mut out_normals = vec![[0.0f64; 4]; uv_points.len()];
 
         let status = unsafe {
-            truck_cuda_evaluate_bspline_surface(
-                u_knots_f32.as_ptr(),
+            truck_cuda_evaluate_bspline_surface_f64(
+                u_knots.as_ptr(),
                 num_u_knots,
-                v_knots_f32.as_ptr(),
+                v_knots.as_ptr(),
                 num_v_knots,
                 u_degree as u32,
                 v_degree as u32,
-                flat_cps.as_ptr() as *const f32,
+                flat_cps.as_ptr() as *const f64,
                 cp_stride_v,
-                uv_f32.as_ptr() as *const f32,
+                uv_f64.as_ptr() as *const f64,
                 num_points,
-                out_points.as_mut_ptr() as *mut f32,
-                out_normals.as_mut_ptr() as *mut f32,
+                out_points.as_mut_ptr() as *mut f64,
+                out_normals.as_mut_ptr() as *mut f64,
             )
         };
-        assert_eq!(status, 0, "truck_cuda_evaluate_bspline_surface failed with code: {}", status);
+        assert_eq!(status, 0, "truck_cuda_evaluate_bspline_surface_f64 failed with code: {}", status);
 
         let pts = out_points
             .into_iter()
-            .map(|p| Point3::new(p[0] as f64, p[1] as f64, p[2] as f64))
+            .map(|p| Point3::new(p[0], p[1], p[2]))
             .collect();
         let nors = out_normals
             .into_iter()
-            .map(|n| Vector3::new(n[0] as f64, n[1] as f64, n[2] as f64))
+            .map(|n| Vector3::new(n[0], n[1], n[2]))
             .collect();
 
         (pts, nors)
