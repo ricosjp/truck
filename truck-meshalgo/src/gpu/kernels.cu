@@ -403,101 +403,122 @@ extern "C" __global__ void signed_crossing_rays_sm86(
 // ============================================================================
 // Driver API Dynamic PTX Module Loading
 // ============================================================================
+// Driver API Dynamic PTX Module Loading (Per-Device)
+// ============================================================================
 
-static CUmodule g_driver_ptx_module = nullptr;
-static CUfunction g_driver_ptx_dist_fn = nullptr;
-static CUfunction g_driver_ptx_cross_fn = nullptr;
-static bool g_driver_initialized = false;
+#define TRUCK_MAX_CUDA_DEVICES 16
+
+static CUmodule g_driver_ptx_module[TRUCK_MAX_CUDA_DEVICES] = {nullptr};
+static CUfunction g_driver_ptx_dist_fn[TRUCK_MAX_CUDA_DEVICES] = {nullptr};
+static CUfunction g_driver_ptx_cross_fn[TRUCK_MAX_CUDA_DEVICES] = {nullptr};
+static bool g_driver_initialized[TRUCK_MAX_CUDA_DEVICES] = {false};
 
 static void ensure_driver_ptx_loaded() {
     cuInit(0);
-    // Retain primary context for current CUDA device on the calling thread
     int current_dev = 0;
-    cudaGetDevice(&current_dev);
+    if (cudaGetDevice(&current_dev) != cudaSuccess || current_dev < 0 || current_dev >= TRUCK_MAX_CUDA_DEVICES) {
+        current_dev = 0;
+    }
     CUcontext ctx;
     cuDevicePrimaryCtxRetain(&ctx, current_dev);
     cuCtxSetCurrent(ctx);
 
-    if (g_driver_initialized) return;
+    if (g_driver_initialized[current_dev]) return;
 
     char* ptx_null_term = (char*)malloc(truck_meshalgo_src_gpu_kernels_sm86_ptx_len + 1);
     if (!ptx_null_term) return;
     memcpy(ptx_null_term, truck_meshalgo_src_gpu_kernels_sm86_ptx, truck_meshalgo_src_gpu_kernels_sm86_ptx_len);
     ptx_null_term[truck_meshalgo_src_gpu_kernels_sm86_ptx_len] = '\0';
 
-    CUresult res = cuModuleLoadData(&g_driver_ptx_module, ptx_null_term);
+    CUresult res = cuModuleLoadData(&g_driver_ptx_module[current_dev], ptx_null_term);
     free(ptx_null_term);
     if (res == CUDA_SUCCESS) {
-        cuModuleGetFunction(&g_driver_ptx_dist_fn, g_driver_ptx_module, "distance2_point_cloud_sm86");
-        cuModuleGetFunction(&g_driver_ptx_cross_fn, g_driver_ptx_module, "signed_crossing_rays_sm86");
-        g_driver_initialized = true;
+        cuModuleGetFunction(&g_driver_ptx_dist_fn[current_dev], g_driver_ptx_module[current_dev], "distance2_point_cloud_sm86");
+        cuModuleGetFunction(&g_driver_ptx_cross_fn[current_dev], g_driver_ptx_module[current_dev], "signed_crossing_rays_sm86");
+        g_driver_initialized[current_dev] = true;
     } else {
-        fprintf(stderr, "[truck_cuda] Warning: cuModuleLoadData failed with error %d\n", res);
+        fprintf(stderr, "[truck_cuda] Warning: cuModuleLoadData failed on device %d with error %d\n", current_dev, res);
     }
 }
 
 // ============================================================================
-// Device Initialization & Reusable Device Scratchpads
+// Multi-Device Management & Per-Device Reusable Scratchpads
 // ============================================================================
 
-static bool g_device_configured = false;
+static int g_primary_device = -1;
+static thread_local bool t_device_explicitly_set = false;
 
-static void ensure_best_device() {
-    if (g_device_configured) return;
-
-    int current_dev = 0;
-    if (cudaGetDevice(&current_dev) != cudaSuccess) {
-        int device_count = 0;
-        if (cudaGetDeviceCount(&device_count) == cudaSuccess && device_count > 0) {
-            int best_dev = 0;
-            int max_sms = 0;
-            for (int i = 0; i < device_count; ++i) {
-                int sms = 0;
-                if (cudaDeviceGetAttribute(&sms, cudaDevAttrMultiProcessorCount, i) == cudaSuccess) {
-                    if (sms > max_sms) {
-                        max_sms = sms;
-                        best_dev = i;
-                    }
+static int get_primary_device() {
+    if (g_primary_device >= 0) return g_primary_device;
+    int count = 0;
+    if (cudaGetDeviceCount(&count) == cudaSuccess && count > 0) {
+        int best_dev = 0;
+        int max_sms = -1;
+        for (int i = 0; i < count; ++i) {
+            int sms = 0;
+            if (cudaDeviceGetAttribute(&sms, cudaDevAttrMultiProcessorCount, i) == cudaSuccess) {
+                if (sms > max_sms) {
+                    max_sms = sms;
+                    best_dev = i;
                 }
             }
+        }
+        g_primary_device = best_dev;
+        return best_dev;
+    }
+    g_primary_device = 0;
+    return 0;
+}
+
+static void ensure_best_device() {
+    if (t_device_explicitly_set) return;
+    int current_dev = 0;
+    if (cudaGetDevice(&current_dev) == cudaSuccess) {
+        int best_dev = get_primary_device();
+        if (current_dev != best_dev) {
             cudaSetDevice(best_dev);
         }
     }
-    g_device_configured = true;
 }
 
-// Reusable scratchpad for point-mesh distance queries
-static void* g_dist_scratch = nullptr;
-static size_t g_dist_scratch_cap = 0;
+// Reusable scratchpad for point-mesh distance queries per device
+static void* g_dist_scratch[TRUCK_MAX_CUDA_DEVICES] = {nullptr};
+static size_t g_dist_scratch_cap[TRUCK_MAX_CUDA_DEVICES] = {0};
+static std::mutex g_dist_mutex[TRUCK_MAX_CUDA_DEVICES];
 
 static void* get_dist_scratch(size_t bytes) {
-    if (bytes > g_dist_scratch_cap) {
-        if (g_dist_scratch) cudaFree(g_dist_scratch);
-        if (cudaMalloc(&g_dist_scratch, bytes) != cudaSuccess) {
-            g_dist_scratch = nullptr;
-            g_dist_scratch_cap = 0;
+    int dev = 0;
+    if (cudaGetDevice(&dev) != cudaSuccess || dev < 0 || dev >= TRUCK_MAX_CUDA_DEVICES) dev = 0;
+    if (bytes > g_dist_scratch_cap[dev]) {
+        if (g_dist_scratch[dev]) cudaFree(g_dist_scratch[dev]);
+        if (cudaMalloc(&g_dist_scratch[dev], bytes) != cudaSuccess) {
+            g_dist_scratch[dev] = nullptr;
+            g_dist_scratch_cap[dev] = 0;
             return nullptr;
         }
-        g_dist_scratch_cap = bytes;
+        g_dist_scratch_cap[dev] = bytes;
     }
-    return g_dist_scratch;
+    return g_dist_scratch[dev];
 }
 
-// Reusable scratchpad for ray crossing queries
-static void* g_cross_scratch = nullptr;
-static size_t g_cross_scratch_cap = 0;
+// Reusable scratchpad for ray crossing queries per device
+static void* g_cross_scratch[TRUCK_MAX_CUDA_DEVICES] = {nullptr};
+static size_t g_cross_scratch_cap[TRUCK_MAX_CUDA_DEVICES] = {0};
+static std::mutex g_cross_mutex[TRUCK_MAX_CUDA_DEVICES];
 
 static void* get_cross_scratch(size_t bytes) {
-    if (bytes > g_cross_scratch_cap) {
-        if (g_cross_scratch) cudaFree(g_cross_scratch);
-        if (cudaMalloc(&g_cross_scratch, bytes) != cudaSuccess) {
-            g_cross_scratch = nullptr;
-            g_cross_scratch_cap = 0;
+    int dev = 0;
+    if (cudaGetDevice(&dev) != cudaSuccess || dev < 0 || dev >= TRUCK_MAX_CUDA_DEVICES) dev = 0;
+    if (bytes > g_cross_scratch_cap[dev]) {
+        if (g_cross_scratch[dev]) cudaFree(g_cross_scratch[dev]);
+        if (cudaMalloc(&g_cross_scratch[dev], bytes) != cudaSuccess) {
+            g_cross_scratch[dev] = nullptr;
+            g_cross_scratch_cap[dev] = 0;
             return nullptr;
         }
-        g_cross_scratch_cap = bytes;
+        g_cross_scratch_cap[dev] = bytes;
     }
-    return g_cross_scratch;
+    return g_cross_scratch[dev];
 }
 
 // ============================================================================
@@ -505,9 +526,6 @@ static void* get_cross_scratch(size_t bytes) {
 // ============================================================================
 
 extern "C" {
-
-static std::mutex g_dist_mutex;
-static std::mutex g_cross_mutex;
 
 // Optimized SM 8.6 kernel execution with buffer pooling (Default)
 int cuda_compute_distance2_point_cloud(
@@ -524,8 +542,10 @@ int cuda_compute_distance2_point_cloud(
         }
         return 0;
     }
-    std::lock_guard<std::mutex> lock(g_dist_mutex);
     ensure_best_device();
+    int current_dev = 0;
+    if (cudaGetDevice(&current_dev) != cudaSuccess || current_dev < 0 || current_dev >= TRUCK_MAX_CUDA_DEVICES) current_dev = 0;
+    std::lock_guard<std::mutex> lock(g_dist_mutex[current_dev]);
 
     size_t points_size = num_points * sizeof(float4);
     size_t triangles_size = num_triangles * sizeof(GpuTriangle);
@@ -624,10 +644,12 @@ int cuda_compute_distance2_point_cloud_ptx(
         }
         return 0;
     }
-    std::lock_guard<std::mutex> lock(g_dist_mutex);
     ensure_best_device();
+    int current_dev = 0;
+    if (cudaGetDevice(&current_dev) != cudaSuccess || current_dev < 0 || current_dev >= TRUCK_MAX_CUDA_DEVICES) current_dev = 0;
+    std::lock_guard<std::mutex> lock(g_dist_mutex[current_dev]);
     ensure_driver_ptx_loaded();
-    if (!g_driver_ptx_dist_fn) return -10;
+    if (!g_driver_ptx_dist_fn[current_dev]) return -10;
 
     size_t points_size = num_points * sizeof(float4);
     size_t triangles_size = num_triangles * sizeof(GpuTriangle);
@@ -656,7 +678,7 @@ int cuda_compute_distance2_point_cloud_ptx(
     };
 
     CUresult res = cuLaunchKernel(
-        g_driver_ptx_dist_fn,
+        g_driver_ptx_dist_fn[current_dev],
         grid_size, 1, 1,
         block_size, 1, 1,
         0, 0,
@@ -686,8 +708,10 @@ int cuda_compute_signed_crossing_rays(
         }
         return 0;
     }
-    std::lock_guard<std::mutex> lock(g_cross_mutex);
     ensure_best_device();
+    int current_dev = 0;
+    if (cudaGetDevice(&current_dev) != cudaSuccess || current_dev < 0 || current_dev >= TRUCK_MAX_CUDA_DEVICES) current_dev = 0;
+    std::lock_guard<std::mutex> lock(g_cross_mutex[current_dev]);
 
     size_t points_size = num_points * sizeof(float4);
     size_t dirs_size = num_points * sizeof(float4);
@@ -801,10 +825,12 @@ int cuda_compute_signed_crossing_rays_ptx(
         }
         return 0;
     }
-    std::lock_guard<std::mutex> lock(g_cross_mutex);
     ensure_best_device();
+    int current_dev = 0;
+    if (cudaGetDevice(&current_dev) != cudaSuccess || current_dev < 0 || current_dev >= TRUCK_MAX_CUDA_DEVICES) current_dev = 0;
+    std::lock_guard<std::mutex> lock(g_cross_mutex[current_dev]);
     ensure_driver_ptx_loaded();
-    if (!g_driver_ptx_cross_fn) return -10;
+    if (!g_driver_ptx_cross_fn[current_dev]) return -10;
 
     size_t points_size = num_points * sizeof(float4);
     size_t dirs_size = num_points * sizeof(float4);
@@ -837,7 +863,7 @@ int cuda_compute_signed_crossing_rays_ptx(
     };
 
     CUresult res = cuLaunchKernel(
-        g_driver_ptx_cross_fn,
+        g_driver_ptx_cross_fn[current_dev],
         grid_size, 1, 1,
         block_size, 1, 1,
         0, 0,
@@ -4580,7 +4606,33 @@ int truck_cuda_weld_attributes_f64(
     return 0;
 }
 
-int truck_cuda_get_device_info(
+int truck_cuda_get_device_count(int* count) {
+    if (!count) return -1;
+    if (cudaGetDeviceCount(count) != cudaSuccess) {
+        *count = 0;
+        return -1;
+    }
+    return 0;
+}
+
+int truck_cuda_set_device(int device_id) {
+    if (cudaSetDevice(device_id) != cudaSuccess) {
+        return -1;
+    }
+    t_device_explicitly_set = true;
+    return 0;
+}
+
+int truck_cuda_get_current_device(int* device_id) {
+    if (!device_id) return -1;
+    if (cudaGetDevice(device_id) != cudaSuccess) {
+        return -1;
+    }
+    return 0;
+}
+
+int truck_cuda_get_device_info_at(
+    int device_id,
     char* name_buf,
     int name_buf_len,
     int* major,
@@ -4588,12 +4640,11 @@ int truck_cuda_get_device_info(
     int* multi_processor_count,
     size_t* total_mem
 ) {
-    ensure_best_device();
-    int current_dev = 0;
-    if (cudaGetDevice(&current_dev) != cudaSuccess) {
+    int count = 0;
+    if (cudaGetDeviceCount(&count) != cudaSuccess || device_id < 0 || device_id >= count) {
         return -1;
     }
-    CUdevice dev = (CUdevice)current_dev;
+    CUdevice dev = (CUdevice)device_id;
     if (name_buf && name_buf_len > 0) {
         if (cuDeviceGetName(name_buf, name_buf_len, dev) != CUDA_SUCCESS) {
             name_buf[0] = '\0';
@@ -4612,6 +4663,26 @@ int truck_cuda_get_device_info(
         cuDeviceTotalMem(total_mem, dev);
     }
     return 0;
+}
+
+int truck_cuda_get_device_info(
+    char* name_buf,
+    int name_buf_len,
+    int* major,
+    int* minor,
+    int* multi_processor_count,
+    size_t* total_mem
+) {
+    int best_dev = get_primary_device();
+    return truck_cuda_get_device_info_at(
+        best_dev,
+        name_buf,
+        name_buf_len,
+        major,
+        minor,
+        multi_processor_count,
+        total_mem
+    );
 }
 
 } // extern "C"

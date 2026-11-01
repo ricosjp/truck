@@ -310,7 +310,22 @@ extern "C" {
         h_out_map: *mut u32,
     ) -> i32;
 
+    #[allow(dead_code)]
     fn truck_cuda_get_device_info(
+        name_buf: *mut std::os::raw::c_char,
+        name_buf_len: i32,
+        major: *mut i32,
+        minor: *mut i32,
+        multi_processor_count: *mut i32,
+        total_mem: *mut usize,
+    ) -> i32;
+
+    fn truck_cuda_get_device_count(count: *mut i32) -> i32;
+    fn truck_cuda_set_device(device_id: i32) -> i32;
+    #[allow(dead_code)]
+    fn truck_cuda_get_current_device(device_id: *mut i32) -> i32;
+    fn truck_cuda_get_device_info_at(
+        device_id: i32,
         name_buf: *mut std::os::raw::c_char,
         name_buf_len: i32,
         major: *mut i32,
@@ -323,6 +338,8 @@ extern "C" {
 /// Metadata describing a CUDA device.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct CudaDeviceInfo {
+    /// Zero-based device index.
+    pub device_id: i32,
     /// Device model name (e.g. "NVIDIA GeForce RTX 3080").
     pub name: String,
     /// Compute capability string (e.g. "8.6").
@@ -334,25 +351,54 @@ pub struct CudaDeviceInfo {
 }
 
 /// CUDA-accelerated mesh analyzer for point-cloud distance queries and in-out containment.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct CudaMeshAnalyzer;
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CudaMeshAnalyzer {
+    /// Specific device index targeted by this analyzer instance, or None for automatic primary device.
+    pub device_id: Option<i32>,
+}
 
 impl CudaMeshAnalyzer {
-    /// Creates a new CUDA mesh analyzer.
+    /// Creates a new CUDA mesh analyzer targeting the default/primary GPU.
     #[inline(always)]
     pub fn new() -> Self {
-        Self
+        Self { device_id: None }
     }
 
-    /// Queries the primary CUDA device information.
-    pub fn get_device_info() -> Option<CudaDeviceInfo> {
+    /// Creates a CUDA mesh analyzer targeting a specific GPU by device ID.
+    #[inline(always)]
+    pub fn with_device(device_id: i32) -> Self {
+        Self { device_id: Some(device_id) }
+    }
+
+    /// Sets the active CUDA device on the calling host thread if an explicit device is targeted.
+    #[inline(always)]
+    pub fn bind_device(&self) {
+        if let Some(dev) = self.device_id {
+            unsafe { truck_cuda_set_device(dev) };
+        }
+    }
+
+    /// Queries the number of available CUDA devices.
+    pub fn get_device_count() -> usize {
+        let mut count = 0i32;
+        let status = unsafe { truck_cuda_get_device_count(&mut count) };
+        if status == 0 && count > 0 {
+            count as usize
+        } else {
+            0
+        }
+    }
+
+    /// Queries details for a specific device by index.
+    pub fn get_device_info_at(device_id: i32) -> Option<CudaDeviceInfo> {
         let mut name_buf = [0u8; 256];
         let mut major = 0i32;
         let mut minor = 0i32;
         let mut sms = 0i32;
         let mut total_mem = 0usize;
         let status = unsafe {
-            truck_cuda_get_device_info(
+            truck_cuda_get_device_info_at(
+                device_id,
                 name_buf.as_mut_ptr() as *mut std::os::raw::c_char,
                 name_buf.len() as i32,
                 &mut major,
@@ -365,6 +411,7 @@ impl CudaMeshAnalyzer {
             let nul_pos = name_buf.iter().position(|&b| b == 0).unwrap_or(name_buf.len());
             let name = String::from_utf8_lossy(&name_buf[..nul_pos]).trim().to_string();
             Some(CudaDeviceInfo {
+                device_id,
                 name,
                 compute_capability: format!("{}.{}", major, minor),
                 multi_processor_count: sms,
@@ -373,6 +420,18 @@ impl CudaMeshAnalyzer {
         } else {
             None
         }
+    }
+
+    /// Returns a list of all detected CUDA devices on the system.
+    pub fn get_all_devices() -> Vec<CudaDeviceInfo> {
+        let count = Self::get_device_count();
+        (0..count as i32).filter_map(Self::get_device_info_at).collect()
+    }
+
+    /// Queries the primary/best CUDA device information.
+    pub fn get_device_info() -> Option<CudaDeviceInfo> {
+        let devices = Self::get_all_devices();
+        devices.into_iter().max_by_key(|d| d.multi_processor_count)
     }
 
     /// Extracts triangles from a polygon mesh into GPU triangle format.
@@ -392,6 +451,7 @@ impl CudaMeshAnalyzer {
 
     /// Computes the minimum squared distance from each query point to the polygon mesh via optimized SM 8.6 PTX.
     pub fn distance2_point_cloud(&self, mesh: &PolygonMesh, points: &[Point3]) -> Vec<f32> {
+        self.bind_device();
         if points.is_empty() {
             return Vec::new();
         }
@@ -426,6 +486,7 @@ impl CudaMeshAnalyzer {
 
     /// Computes the minimum squared distance using the baseline unoptimized CUDA kernel.
     pub fn distance2_point_cloud_baseline(&self, mesh: &PolygonMesh, points: &[Point3]) -> Vec<f32> {
+        self.bind_device();
         if points.is_empty() {
             return Vec::new();
         }
@@ -460,6 +521,7 @@ impl CudaMeshAnalyzer {
 
     /// Computes the minimum squared distance using the standalone SM 8.6 PTX module via CUDA Driver API.
     pub fn distance2_point_cloud_ptx(&self, mesh: &PolygonMesh, points: &[Point3]) -> Vec<f32> {
+        self.bind_device();
         if points.is_empty() {
             return Vec::new();
         }
@@ -499,6 +561,7 @@ impl CudaMeshAnalyzer {
         points: &[Point3],
         ray_directions: &[Vector3],
     ) -> Vec<i32> {
+        self.bind_device();
         assert_eq!(points.len(), ray_directions.len());
         if points.is_empty() {
             return Vec::new();
@@ -544,6 +607,7 @@ impl CudaMeshAnalyzer {
         points: &[Point3],
         ray_directions: &[Vector3],
     ) -> Vec<i32> {
+        self.bind_device();
         assert_eq!(points.len(), ray_directions.len());
         if points.is_empty() {
             return Vec::new();
@@ -589,6 +653,7 @@ impl CudaMeshAnalyzer {
         points: &[Point3],
         ray_directions: &[Vector3],
     ) -> Vec<i32> {
+        self.bind_device();
         assert_eq!(points.len(), ray_directions.len());
         if points.is_empty() {
             return Vec::new();
@@ -665,6 +730,7 @@ impl CudaMeshAnalyzer {
 
     /// Computes normalized face normals for all triangular faces in the mesh via CUDA.
     pub fn compute_face_normals(&self, mesh: &PolygonMesh) -> Vec<Vector3> {
+        self.bind_device();
         let triangles = Self::extract_triangles(mesh);
         if triangles.is_empty() {
             return Vec::new();
@@ -690,6 +756,7 @@ impl CudaMeshAnalyzer {
 
     /// Computes smooth area-weighted and normalized per-vertex normals via CUDA.
     pub fn compute_smooth_normals(&self, mesh: &PolygonMesh) -> Vec<Vector3> {
+        self.bind_device();
         let positions = mesh.positions();
         if positions.is_empty() {
             return Vec::new();
@@ -742,6 +809,7 @@ impl CudaMeshAnalyzer {
         segments: &[[Point2; 2]],
         points: &[Point2],
     ) -> Vec<bool> {
+        self.bind_device();
         if points.is_empty() {
             return Vec::new();
         }
@@ -794,6 +862,7 @@ impl CudaMeshAnalyzer {
         mesh0: &PolygonMesh,
         mesh1: &PolygonMesh,
     ) -> Vec<(Point3, Point3)> {
+        self.bind_device();
         let tri0 = Self::extract_triangles(mesh0);
         let tri1 = Self::extract_triangles(mesh1);
         if tri0.is_empty() || tri1.is_empty() {
@@ -898,6 +967,7 @@ impl CudaMeshAnalyzer {
         control_points: &[Vec<Point3>],
         uv_points: &[Point2],
     ) -> (Vec<Point3>, Vec<Vector3>) {
+        self.bind_device();
         if uv_points.is_empty() || control_points.is_empty() || control_points[0].is_empty() {
             return (Vec::new(), Vec::new());
         }
@@ -964,6 +1034,7 @@ impl CudaMeshAnalyzer {
         control_points: &[Vec<Vector4>],
         uv_points: &[Point2],
     ) -> (Vec<Point3>, Vec<Vector3>) {
+        self.bind_device();
         if uv_points.is_empty() || control_points.is_empty() || control_points[0].is_empty() {
             return (Vec::new(), Vec::new());
         }
@@ -1039,6 +1110,7 @@ impl CudaMeshAnalyzer {
 
     /// Checks whether all faces of the mesh intersect the neighborhood of `point_cloud` on the GPU.
     pub fn is_clung_to_by(&self, mesh: &PolygonMesh, point_cloud: &[Point3], tol: f64) -> bool {
+        self.bind_device();
         if point_cloud.is_empty() {
             return false;
         }
@@ -1068,6 +1140,7 @@ impl CudaMeshAnalyzer {
 
     /// Checks whether the neighborhood of the mesh includes all points in `point_cloud` on the GPU.
     pub fn neighborhood_include(&self, mesh: &PolygonMesh, point_cloud: &[Point3], tol: f64) -> bool {
+        self.bind_device();
         if point_cloud.is_empty() {
             return true;
         }
@@ -1114,6 +1187,7 @@ impl CudaMeshAnalyzer {
         res2: (usize, usize),
         tol: f64,
     ) -> Vec<(Point2, Point2)> {
+        self.bind_device();
         let (samples1, n_u1, n_v1) = sample_surface_grid(s1, res1);
         let (samples2, n_u2, n_v2) = sample_surface_grid(s2, res2);
 
@@ -1148,6 +1222,7 @@ impl CudaMeshAnalyzer {
 
     /// Slices a polygon mesh against multiple planes on the GPU using native CUDA with SM 8.6 warp-aggregated atomics.
     pub fn slice_mesh_planes(&self, mesh: &PolygonMesh, planes: &[[f64; 4]]) -> Vec<Vec<(Point3, Point3)>> {
+        self.bind_device();
         if planes.is_empty() {
             return Vec::new();
         }
@@ -1208,6 +1283,7 @@ impl CudaMeshAnalyzer {
 
     /// Evaluates divergence-theorem prism volume and center of gravity of a mesh on the GPU using parallel warp-shuffle and block reductions.
     pub fn mass_properties(&self, mesh: &PolygonMesh) -> (f64, Point3) {
+        self.bind_device();
         let triangles = Self::extract_triangles(mesh);
         if triangles.is_empty() {
             return (0.0, Point3::origin());
@@ -1249,6 +1325,7 @@ impl CudaMeshAnalyzer {
 
     /// Extracts planar faces such that their face normal matches their vertex normal within `tol` via CUDA.
     pub fn extract_planes(&self, mesh: &PolygonMesh, tol: f64) -> (Vec<usize>, Vec<usize>) {
+        self.bind_device();
         if mesh.faces().is_empty() {
             return (Vec::new(), Vec::new());
         }
@@ -1291,6 +1368,7 @@ impl CudaMeshAnalyzer {
 
     /// Subdivides triangles into 4-to-1 midpoint-refined triangles on the GPU via CUDA.
     pub fn subdivide_triangles(&self, triangles: &[GpuTriangle]) -> Vec<GpuTriangle> {
+        self.bind_device();
         if triangles.is_empty() {
             return Vec::new();
         }
@@ -1336,6 +1414,7 @@ impl CudaMeshAnalyzer {
         control_points: &[Vector4],
         t_points: &[f64],
     ) -> (Vec<Point3>, Vec<Vector3>) {
+        self.bind_device();
         if t_points.is_empty() || control_points.is_empty() {
             return (Vec::new(), Vec::new());
         }
@@ -1388,6 +1467,7 @@ impl CudaMeshAnalyzer {
         mesh: &PolygonMesh,
         rays: &[(Point3, Vector3)],
     ) -> Vec<Option<(f64, Point3, Vector3)>> {
+        self.bind_device();
         if rays.is_empty() {
             return Vec::new();
         }
@@ -1412,6 +1492,7 @@ impl CudaMeshAnalyzer {
         triangles: &[GpuTriangle],
         rays: &[(Point3, Vector3)],
     ) -> Vec<Option<(f64, Point3, Vector3)>> {
+        self.bind_device();
         if rays.is_empty() {
             return Vec::new();
         }
@@ -1472,6 +1553,7 @@ impl CudaMeshAnalyzer {
     /// Smooth Loop subdivision surface refinement on the GPU via CUDA (FP64 precision).
     #[allow(clippy::chunks_exact_to_as_chunks)]
     pub fn loop_subdivide(&self, mesh: &PolygonMesh) -> PolygonMesh {
+        self.bind_device();
         let tri_faces = mesh.tri_faces();
         if tri_faces.is_empty() {
             return mesh.clone();
@@ -1526,6 +1608,7 @@ impl CudaMeshAnalyzer {
     /// Extracts crease edges and open boundary feature edges as 3D line segments via CUDA.
     #[allow(clippy::chunks_exact_to_as_chunks)]
     pub fn extract_feature_edges(&self, mesh: &PolygonMesh, crease_angle_rad: f64) -> Vec<(Point3, Point3)> {
+        self.bind_device();
         let tri_faces = mesh.tri_faces();
         if tri_faces.is_empty() {
             return Vec::new();
@@ -1581,6 +1664,7 @@ impl CudaMeshAnalyzer {
     /// Extracts open boundary edges as 3D line segments via CUDA.
     #[allow(clippy::chunks_exact_to_as_chunks)]
     pub fn extract_boundary_edges(&self, mesh: &PolygonMesh) -> Vec<(Point3, Point3)> {
+        self.bind_device();
         let tri_faces = mesh.tri_faces();
         if tri_faces.is_empty() {
             return Vec::new();
@@ -1635,6 +1719,7 @@ impl CudaMeshAnalyzer {
     /// Evaluates Quadric Error Metric (Garland & Heckbert) edge collapse costs and optimal targets via CUDA.
     #[allow(clippy::chunks_exact_to_as_chunks)]
     pub fn compute_edge_collapse_costs(&self, mesh: &PolygonMesh) -> Vec<([usize; 2], f64, Point3)> {
+        self.bind_device();
         let triangulated;
         let mesh = if mesh.tri_faces().is_empty() && !mesh.faces().is_empty() {
             let mut m = mesh.clone();
@@ -1707,6 +1792,7 @@ impl CudaMeshAnalyzer {
 
     /// Evaluates 2D point-in-polygon containment across nested loops (outer boundary + holes) via CUDA.
     pub fn point_in_2d_loops(&self, points: &[Point2], loops: &[Vec<Point2>]) -> Vec<bool> {
+        self.bind_device();
         if points.is_empty() {
             return Vec::new();
         }
@@ -1749,6 +1835,7 @@ impl CudaMeshAnalyzer {
 
     /// Evaluates minimum clearance distance from 3D line segments to a workpiece mesh via CUDA.
     pub fn segment_mesh_distances(&self, mesh: &PolygonMesh, segments: &[(Point3, Point3)]) -> Vec<f64> {
+        self.bind_device();
         if segments.is_empty() {
             return Vec::new();
         }
@@ -1800,6 +1887,7 @@ impl CudaMeshAnalyzer {
 
     /// Welds and deduplicates 3D attributes within tolerance `tol` using Ampere SM 8.6 CUDA.
     pub fn weld_attributes_3d(&self, attrs: &[Point3], tol: f64) -> Vec<usize> {
+        self.bind_device();
         if attrs.is_empty() {
             return Vec::new();
         }
@@ -1821,6 +1909,7 @@ impl CudaMeshAnalyzer {
 
     /// Welds and deduplicates 2D attributes within tolerance `tol` using Ampere SM 8.6 CUDA.
     pub fn weld_attributes_2d(&self, attrs: &[Point2], tol: f64) -> Vec<usize> {
+        self.bind_device();
         if attrs.is_empty() {
             return Vec::new();
         }

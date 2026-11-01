@@ -39,14 +39,39 @@ fn test_metadata_detection_and_serialization() {
 
     #[cfg(feature = "cuda")]
     if let Some(ref cuda) = metadata.gpu.cuda {
-        println!("Detected CUDA GPU: {} (SM {}, {} SMs, {} MB)", cuda.name, cuda.compute_capability, cuda.multi_processor_count, cuda.total_memory_bytes / 1024 / 1024);
+        println!("Primary CUDA GPU: {} (SM {}, {} SMs, {} MB)", cuda.name, cuda.compute_capability, cuda.multi_processor_count, cuda.total_memory_bytes / 1024 / 1024);
         assert!(!cuda.name.is_empty());
+    }
+
+    #[cfg(feature = "cuda")]
+    {
+        let all_cuda = truck_meshalgo::gpu::cuda::CudaMeshAnalyzer::get_all_devices();
+        println!("All detected CUDA devices ({}):", all_cuda.len());
+        for dev in &all_cuda {
+            println!("  CUDA #{}: {} (SM {}, {} SMs, {} MB)", dev.device_id, dev.name, dev.compute_capability, dev.multi_processor_count, dev.total_memory_bytes / 1024 / 1024);
+        }
     }
 
     #[cfg(feature = "gpu")]
     if let Some(ref vulkan) = metadata.gpu.vulkan {
         println!("Detected Vulkan GPU: {} ({})", vulkan.name, vulkan.backend);
         assert!(!vulkan.name.is_empty());
+    }
+
+    {
+        use truck_platform::wgpu::*;
+        let instance = Instance::new(InstanceDescriptor {
+            backends: Backends::VULKAN,
+            flags: InstanceFlags::from_build_config(),
+            memory_budget_thresholds: Default::default(),
+            backend_options: Default::default(),
+            display: None,
+        });
+        let adapters = pollster::block_on(instance.enumerate_adapters(Backends::VULKAN));
+        for (i, adapter) in adapters.into_iter().enumerate() {
+            let info = adapter.get_info();
+            println!("  Found wgpu adapter #{}: {} ({:?}, driver: {}, info: {})", i, info.name, info.backend, info.driver, info.driver_info);
+        }
     }
 
     // Verify serialization roundtrip
@@ -101,6 +126,7 @@ fn test_cache_invalidation_lifecycle() {
             cuda.name = "NVIDIA GeForce RTX 9090 Super".to_string();
         } else {
             cache.hardware.gpu.cuda = Some(CudaDeviceInfo {
+                device_id: 0,
                 name: "Fake GPU".to_string(),
                 compute_capability: "9.9".to_string(),
                 multi_processor_count: 128,
@@ -274,5 +300,92 @@ fn test_dispatcher_nurbs_surface_evaluation() {
     for i in 0..9 {
         assert!((pts[i] - cpu_pts[i]).magnitude2() < 1e-10);
         assert!((normals[i] - cpu_normals[i]).magnitude2() < 1e-10);
+    }
+}
+
+#[test]
+fn test_multi_gpu_concurrent_execution() {
+    let metadata = SystemMetadata::current();
+    println!("System GPU device count: {}", metadata.gpu.device_count());
+
+    #[cfg(feature = "cuda")]
+    {
+        let count = truck_meshalgo::gpu::cuda::CudaMeshAnalyzer::get_device_count();
+        println!("Detected {} CUDA device(s):", count);
+        for i in 0..count {
+            if let Some(info) = truck_meshalgo::gpu::cuda::CudaMeshAnalyzer::get_device_info_at(i as i32) {
+                println!("  Device {}: {} (SM {}, {} SMs, {} MB)", i, info.name, info.compute_capability, info.multi_processor_count, info.total_memory_bytes / 1024 / 1024);
+            }
+        }
+
+        if count >= 2 {
+            let mesh = create_cube();
+            let mut points = Vec::new();
+            for i in 0..2048 {
+                let x = (i as f64 * 0.01).sin() * 2.0;
+                let y = (i as f64 * 0.013).cos() * 2.0;
+                let z = (i as f64 * 0.017).sin() * 2.0;
+                points.push(Point3::new(x, y, z));
+            }
+
+            // Run concurrently on dev 0 and dev 1
+            let (dist0, dist1) = rayon::join(
+                || {
+                    let a0 = truck_meshalgo::gpu::cuda::CudaMeshAnalyzer::with_device(0);
+                    a0.distance2_point_cloud(&mesh, &points)
+                },
+                || {
+                    let a1 = truck_meshalgo::gpu::cuda::CudaMeshAnalyzer::with_device(1);
+                    a1.distance2_point_cloud(&mesh, &points)
+                },
+            );
+
+            assert_eq!(dist0.len(), points.len());
+            assert_eq!(dist1.len(), points.len());
+            for i in 0..points.len() {
+                assert!(
+                    (dist0[i] - dist1[i]).abs() < 1e-4,
+                    "Mismatch at point {}: dev0={}, dev1={}", i, dist0[i], dist1[i]
+                );
+            }
+
+            // Now test through Dispatcher multi-GPU automatic splitting
+            let dispatcher = Dispatcher::global();
+            dispatcher.set_override(Some(KernelTarget::GpuPtxSm86));
+            let multi_dist = dispatcher.distance2_point_cloud(&mesh, &points);
+            let multi_inside = dispatcher.inside(&mesh, &points);
+            dispatcher.reset_override();
+
+            // Compare against CPU Rayon
+            dispatcher.set_override(Some(KernelTarget::CpuRayon));
+            let cpu_dist = dispatcher.distance2_point_cloud(&mesh, &points);
+            let cpu_inside = dispatcher.inside(&mesh, &points);
+            dispatcher.reset_override();
+
+            assert_eq!(multi_dist.len(), points.len());
+            assert_eq!(multi_inside.len(), points.len());
+            for i in 0..points.len() {
+                assert!(
+                    (multi_dist[i] - cpu_dist[i]).abs() < 1e-3,
+                    "Multi-GPU dist mismatch at {}: multi={}, cpu={}", i, multi_dist[i], cpu_dist[i]
+                );
+                assert_eq!(
+                    multi_inside[i], cpu_inside[i],
+                    "Multi-GPU inside mismatch at point {}", i
+                );
+            }
+            println!("Multi-GPU concurrent execution passed across {} CUDA devices!", count);
+        } else {
+            println!("Skipping multi-GPU test: only {} CUDA device detected", count);
+        }
+    }
+
+    #[cfg(feature = "gpu")]
+    {
+        let vulkan_devices = truck_meshalgo::gpu::get_all_vulkan_devices();
+        println!("Detected {} Vulkan device(s):", vulkan_devices.len());
+        for v in &vulkan_devices {
+            println!("  Vulkan #{}: {} ({})", v.adapter_index, v.name, v.driver);
+        }
     }
 }

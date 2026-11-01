@@ -119,7 +119,225 @@ impl Dispatcher {
             _ => self.profile.select_kernel(op, size),
         }
     }
+}
 
+// ============================================================================
+// Multi-GPU Batch Execution Helpers
+// ============================================================================
+
+#[cfg(feature = "cuda")]
+fn multi_gpu_cuda_split<T, R, F>(items: &[T], f: F) -> Vec<R>
+where
+    T: Sync,
+    R: Send,
+    F: Fn(&crate::gpu::cuda::CudaMeshAnalyzer, &[T]) -> Vec<R> + Sync,
+{
+    let hw = SystemMetadata::current();
+    let devices = &hw.gpu.cuda_devices;
+    if devices.len() <= 1 || items.len() < 1024 {
+        return f(&crate::gpu::cuda::CudaMeshAnalyzer::new(), items);
+    }
+
+    if devices.len() == 2 {
+        let sm0 = devices[0].multi_processor_count.max(1) as usize;
+        let sm1 = devices[1].multi_processor_count.max(1) as usize;
+        let total_sms = sm0 + sm1;
+        let split_idx = ((items.len() * sm0) / total_sms).clamp(1, items.len() - 1);
+
+        let dev0 = devices[0].device_id;
+        let dev1 = devices[1].device_id;
+
+        let (mut res0, res1) = rayon::join(
+            || f(&crate::gpu::cuda::CudaMeshAnalyzer::with_device(dev0), &items[..split_idx]),
+            || f(&crate::gpu::cuda::CudaMeshAnalyzer::with_device(dev1), &items[split_idx..]),
+        );
+        res0.extend(res1);
+        res0
+    } else {
+        let total_sms: usize = devices.iter().map(|d| d.multi_processor_count.max(1) as usize).sum();
+        let mut starts_ends = Vec::with_capacity(devices.len());
+        let mut start = 0;
+        for (i, d) in devices.iter().enumerate() {
+            if i == devices.len() - 1 {
+                starts_ends.push((d.device_id, start, items.len()));
+            } else {
+                let cnt = (items.len() * (d.multi_processor_count.max(1) as usize)) / total_sms;
+                let end = (start + cnt).min(items.len());
+                starts_ends.push((d.device_id, start, end));
+                start = end;
+            }
+        }
+        starts_ends
+            .into_par_iter()
+            .flat_map(|(dev_id, s, e)| {
+                if s < e {
+                    f(&crate::gpu::cuda::CudaMeshAnalyzer::with_device(dev_id), &items[s..e])
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect()
+    }
+}
+
+#[cfg(feature = "cuda")]
+fn multi_gpu_cuda_split_pair<T, U, R, F>(items1: &[T], items2: &[U], f: F) -> Vec<R>
+where
+    T: Sync,
+    U: Sync,
+    R: Send,
+    F: Fn(&crate::gpu::cuda::CudaMeshAnalyzer, &[T], &[U]) -> Vec<R> + Sync,
+{
+    assert_eq!(items1.len(), items2.len());
+    let hw = SystemMetadata::current();
+    let devices = &hw.gpu.cuda_devices;
+    if devices.len() <= 1 || items1.len() < 1024 {
+        return f(&crate::gpu::cuda::CudaMeshAnalyzer::new(), items1, items2);
+    }
+
+    if devices.len() == 2 {
+        let sm0 = devices[0].multi_processor_count.max(1) as usize;
+        let sm1 = devices[1].multi_processor_count.max(1) as usize;
+        let total_sms = sm0 + sm1;
+        let split_idx = ((items1.len() * sm0) / total_sms).clamp(1, items1.len() - 1);
+
+        let dev0 = devices[0].device_id;
+        let dev1 = devices[1].device_id;
+
+        let (mut res0, res1) = rayon::join(
+            || f(
+                &crate::gpu::cuda::CudaMeshAnalyzer::with_device(dev0),
+                &items1[..split_idx],
+                &items2[..split_idx],
+            ),
+            || f(
+                &crate::gpu::cuda::CudaMeshAnalyzer::with_device(dev1),
+                &items1[split_idx..],
+                &items2[split_idx..],
+            ),
+        );
+        res0.extend(res1);
+        res0
+    } else {
+        let total_sms: usize = devices.iter().map(|d| d.multi_processor_count.max(1) as usize).sum();
+        let mut starts_ends = Vec::with_capacity(devices.len());
+        let mut start = 0;
+        for (i, d) in devices.iter().enumerate() {
+            if i == devices.len() - 1 {
+                starts_ends.push((d.device_id, start, items1.len()));
+            } else {
+                let cnt = (items1.len() * (d.multi_processor_count.max(1) as usize)) / total_sms;
+                let end = (start + cnt).min(items1.len());
+                starts_ends.push((d.device_id, start, end));
+                start = end;
+            }
+        }
+        starts_ends
+            .into_par_iter()
+            .flat_map(|(dev_id, s, e)| {
+                if s < e {
+                    f(&crate::gpu::cuda::CudaMeshAnalyzer::with_device(dev_id), &items1[s..e], &items2[s..e])
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect()
+    }
+}
+
+#[cfg(feature = "gpu")]
+static GLOBAL_VULKAN_ANALYZERS: OnceLock<Vec<crate::gpu::GpuMeshAnalyzer>> = OnceLock::new();
+
+#[cfg(feature = "gpu")]
+fn get_vulkan_analyzers() -> &'static [crate::gpu::GpuMeshAnalyzer] {
+    GLOBAL_VULKAN_ANALYZERS.get_or_init(crate::gpu::GpuMeshAnalyzer::try_create_all).as_slice()
+}
+
+#[cfg(feature = "gpu")]
+fn multi_gpu_vulkan_split<T, R, F>(items: &[T], f: F) -> Vec<R>
+where
+    T: Sync,
+    R: Send,
+    F: Fn(&crate::gpu::GpuMeshAnalyzer, &[T]) -> Vec<R> + Sync,
+{
+    let analyzers = get_vulkan_analyzers();
+    if analyzers.is_empty() {
+        return Vec::new();
+    }
+    if analyzers.len() <= 1 || items.len() < 1024 {
+        return f(&analyzers[0], items);
+    }
+
+    if analyzers.len() == 2 {
+        let split_idx = (items.len() / 2).clamp(1, items.len() - 1);
+        let (mut res0, res1) = rayon::join(
+            || f(&analyzers[0], &items[..split_idx]),
+            || f(&analyzers[1], &items[split_idx..]),
+        );
+        res0.extend(res1);
+        res0
+    } else {
+        let chunk_size = (items.len() + analyzers.len() - 1) / analyzers.len();
+        analyzers
+            .par_iter()
+            .enumerate()
+            .flat_map(|(i, analyzer)| {
+                let start = (i * chunk_size).min(items.len());
+                let end = ((i + 1) * chunk_size).min(items.len());
+                if start < end {
+                    f(analyzer, &items[start..end])
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect()
+    }
+}
+
+#[cfg(feature = "gpu")]
+fn multi_gpu_vulkan_split_pair<T, U, R, F>(items1: &[T], items2: &[U], f: F) -> Vec<R>
+where
+    T: Sync,
+    U: Sync,
+    R: Send,
+    F: Fn(&crate::gpu::GpuMeshAnalyzer, &[T], &[U]) -> Vec<R> + Sync,
+{
+    assert_eq!(items1.len(), items2.len());
+    let analyzers = get_vulkan_analyzers();
+    if analyzers.is_empty() {
+        return Vec::new();
+    }
+    if analyzers.len() <= 1 || items1.len() < 1024 {
+        return f(&analyzers[0], items1, items2);
+    }
+
+    if analyzers.len() == 2 {
+        let split_idx = (items1.len() / 2).clamp(1, items1.len() - 1);
+        let (mut res0, res1) = rayon::join(
+            || f(&analyzers[0], &items1[..split_idx], &items2[..split_idx]),
+            || f(&analyzers[1], &items1[split_idx..], &items2[split_idx..]),
+        );
+        res0.extend(res1);
+        res0
+    } else {
+        let chunk_size = (items1.len() + analyzers.len() - 1) / analyzers.len();
+        analyzers
+            .par_iter()
+            .enumerate()
+            .flat_map(|(i, analyzer)| {
+                let start = (i * chunk_size).min(items1.len());
+                let end = ((i + 1) * chunk_size).min(items1.len());
+                if start < end {
+                    f(analyzer, &items1[start..end], &items2[start..end])
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect()
+    }
+}
+
+impl Dispatcher {
     // ========================================================================
     // Operation 1: Point-Mesh Distance
     // ========================================================================
@@ -134,20 +352,29 @@ impl Dispatcher {
         match target {
             KernelTarget::GpuPtxSm86 => {
                 #[cfg(feature = "cuda")]
-                return crate::gpu::cuda::CudaMeshAnalyzer::new().distance2_point_cloud(mesh, points);
+                return multi_gpu_cuda_split(points, |analyzer, pts| {
+                    analyzer.distance2_point_cloud(mesh, pts)
+                });
                 #[cfg(not(feature = "cuda"))]
                 self.distance2_point_cloud_rayon(mesh, points)
             }
             KernelTarget::GpuCuda => {
                 #[cfg(feature = "cuda")]
-                return crate::gpu::cuda::CudaMeshAnalyzer::new().distance2_point_cloud_baseline(mesh, points);
+                return multi_gpu_cuda_split(points, |analyzer, pts| {
+                    analyzer.distance2_point_cloud_baseline(mesh, pts)
+                });
                 #[cfg(not(feature = "cuda"))]
                 self.distance2_point_cloud_rayon(mesh, points)
             }
             KernelTarget::GpuVulkan => {
                 #[cfg(feature = "gpu")]
-                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
-                    return analyzer.distance2_point_cloud(mesh, points);
+                {
+                    let res = multi_gpu_vulkan_split(points, |analyzer, pts| {
+                        analyzer.distance2_point_cloud(mesh, pts)
+                    });
+                    if !res.is_empty() {
+                        return res;
+                    }
                 }
                 self.distance2_point_cloud_rayon(mesh, points)
             }
@@ -196,14 +423,21 @@ impl Dispatcher {
         match target {
             KernelTarget::GpuPtxSm86 | KernelTarget::GpuCuda => {
                 #[cfg(feature = "cuda")]
-                return crate::gpu::cuda::CudaMeshAnalyzer::new().inside(mesh, points);
+                return multi_gpu_cuda_split(points, |analyzer, pts| {
+                    analyzer.inside(mesh, pts)
+                });
                 #[cfg(not(feature = "cuda"))]
                 self.inside_rayon(mesh, points)
             }
             KernelTarget::GpuVulkan => {
                 #[cfg(feature = "gpu")]
-                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
-                    return analyzer.inside(mesh, points);
+                {
+                    let res = multi_gpu_vulkan_split(points, |analyzer, pts| {
+                        analyzer.inside(mesh, pts)
+                    });
+                    if !res.is_empty() {
+                        return res;
+                    }
                 }
                 self.inside_rayon(mesh, points)
             }
@@ -227,22 +461,24 @@ impl Dispatcher {
         match target {
             KernelTarget::GpuPtxSm86 | KernelTarget::GpuCuda => {
                 #[cfg(feature = "cuda")]
-                return crate::gpu::cuda::CudaMeshAnalyzer::new()
-                    .signed_crossing_rays(mesh, points, ray_dirs)
-                    .into_iter()
-                    .map(|c| c as isize)
-                    .collect();
+                return multi_gpu_cuda_split_pair(points, ray_dirs, |analyzer, pts, dirs| {
+                    analyzer.signed_crossing_rays(mesh, pts, dirs)
+                })
+                .into_iter()
+                .map(|c| c as isize)
+                .collect();
                 #[cfg(not(feature = "cuda"))]
                 self.signed_crossing_rays_rayon(mesh, points, ray_dirs)
             }
             KernelTarget::GpuVulkan => {
                 #[cfg(feature = "gpu")]
-                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
-                    return analyzer
-                        .signed_crossing_rays(mesh, points, ray_dirs)
-                        .into_iter()
-                        .map(|c| c as isize)
-                        .collect();
+                {
+                    let res = multi_gpu_vulkan_split_pair(points, ray_dirs, |analyzer, pts, dirs| {
+                        analyzer.signed_crossing_rays(mesh, pts, dirs)
+                    });
+                    if !res.is_empty() {
+                        return res.into_iter().map(|c| c as isize).collect();
+                    }
                 }
                 self.signed_crossing_rays_rayon(mesh, points, ray_dirs)
             }
@@ -878,14 +1114,21 @@ impl Dispatcher {
         match target {
             KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
                 #[cfg(feature = "cuda")]
-                return crate::gpu::cuda::CudaMeshAnalyzer::new().raycast_mesh(mesh, rays);
+                return multi_gpu_cuda_split(rays, |analyzer, r| {
+                    analyzer.raycast_mesh(mesh, r)
+                });
                 #[cfg(not(feature = "cuda"))]
                 crate::analyzers::raycast_mesh_rayon(mesh, rays)
             }
             KernelTarget::GpuVulkan => {
                 #[cfg(feature = "gpu")]
-                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
-                    return analyzer.raycast_mesh(mesh, rays);
+                {
+                    let res = multi_gpu_vulkan_split(rays, |analyzer, r| {
+                        analyzer.raycast_mesh(mesh, r)
+                    });
+                    if !res.is_empty() {
+                        return res;
+                    }
                 }
                 crate::analyzers::raycast_mesh_rayon(mesh, rays)
             }
@@ -1317,14 +1560,21 @@ impl Dispatcher {
         match target {
             KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
                 #[cfg(feature = "cuda")]
-                return crate::gpu::cuda::CudaMeshAnalyzer::new().segment_mesh_distances(mesh, segments);
+                return multi_gpu_cuda_split(segments, |analyzer, segs| {
+                    analyzer.segment_mesh_distances(mesh, segs)
+                });
                 #[cfg(not(feature = "cuda"))]
                 self.segment_mesh_distances_rayon(mesh, segments)
             }
             KernelTarget::GpuVulkan => {
                 #[cfg(feature = "gpu")]
-                if let Some(analyzer) = crate::gpu::GpuMeshAnalyzer::try_create_default() {
-                    return analyzer.segment_mesh_distances(mesh, segments);
+                {
+                    let res = multi_gpu_vulkan_split(segments, |analyzer, segs| {
+                        analyzer.segment_mesh_distances(mesh, segs)
+                    });
+                    if !res.is_empty() {
+                        return res;
+                    }
                 }
                 self.segment_mesh_distances_rayon(mesh, segments)
             }

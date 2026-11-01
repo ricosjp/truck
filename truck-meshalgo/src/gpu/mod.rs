@@ -3175,6 +3175,8 @@ fn grid_index_layout_entries() -> [BindGroupLayoutEntry; 2] {
 /// Metadata describing a Vulkan GPU device.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct VulkanDeviceInfo {
+    /// Zero-based adapter index.
+    pub adapter_index: usize,
     /// Device adapter name (e.g. "NVIDIA GeForce RTX 3080").
     pub name: String,
     /// Backend API name (e.g. "Vulkan").
@@ -3185,8 +3187,8 @@ pub struct VulkanDeviceInfo {
     pub driver_info: String,
 }
 
-/// Initializes a Vulkan device handler if a suitable Vulkan GPU is found.
-pub fn try_init_vulkan_device() -> Option<DeviceHandler> {
+/// Returns all hardware Vulkan adapters detected on the system.
+pub fn enumerate_vulkan_adapters() -> Vec<Adapter> {
     pollster::block_on(async {
         let instance = Instance::new(InstanceDescriptor {
             backends: Backends::VULKAN,
@@ -3195,29 +3197,73 @@ pub fn try_init_vulkan_device() -> Option<DeviceHandler> {
             backend_options: Default::default(),
             display: None,
         });
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::HighPerformance,
-                compatible_surface: None,
-                force_fallback_adapter: false,
-                apply_limit_buckets: false,
-            })
-            .await
-            .ok()?;
-        let (device, queue) = adapter
-            .request_device(&DeviceDescriptor {
-                label: Some("truck_meshalgo_vulkan_device"),
-                ..Default::default()
-            })
-            .await
-            .ok()?;
-        Some(DeviceHandler::new(adapter, device, queue))
+        let adapters = instance.enumerate_adapters(Backends::VULKAN).await;
+        let hardware: Vec<_> = adapters
+            .into_iter()
+            .filter(|a| a.get_info().device_type != DeviceType::Cpu)
+            .collect();
+        if !hardware.is_empty() {
+            hardware
+        } else {
+            let instance2 = Instance::new(InstanceDescriptor {
+                backends: Backends::VULKAN,
+                flags: InstanceFlags::from_build_config(),
+                memory_budget_thresholds: Default::default(),
+                backend_options: Default::default(),
+                display: None,
+            });
+            instance2.enumerate_adapters(Backends::VULKAN).await
+        }
     })
+}
+
+/// Queries metadata for all available Vulkan GPU devices.
+pub fn get_all_vulkan_devices() -> Vec<VulkanDeviceInfo> {
+    enumerate_vulkan_adapters()
+        .into_iter()
+        .enumerate()
+        .map(|(adapter_index, adapter)| {
+            let info = adapter.get_info();
+            VulkanDeviceInfo {
+                adapter_index,
+                name: info.name,
+                backend: format!("{:?}", info.backend),
+                driver: info.driver,
+                driver_info: info.driver_info,
+            }
+        })
+        .collect()
+}
+
+/// Initializes a Vulkan device handler for each detected hardware GPU.
+pub fn try_init_all_vulkan_devices() -> Vec<DeviceHandler> {
+    pollster::block_on(async {
+        let adapters = enumerate_vulkan_adapters();
+        let mut handlers = Vec::new();
+        for adapter in adapters {
+            if let Ok((device, queue)) = adapter
+                .request_device(&DeviceDescriptor {
+                    label: Some("truck_meshalgo_vulkan_device"),
+                    ..Default::default()
+                })
+                .await
+            {
+                handlers.push(DeviceHandler::new(adapter, device, queue));
+            }
+        }
+        handlers
+    })
+}
+
+/// Initializes a Vulkan device handler if a suitable Vulkan GPU is found.
+pub fn try_init_vulkan_device() -> Option<DeviceHandler> {
+    try_init_all_vulkan_devices().into_iter().next()
 }
 
 /// GPU-accelerated mesh analyzer for distance queries, in-out containment, normals, trimming, and collisions.
 #[derive(Debug)]
 pub struct GpuMeshAnalyzer {
+    adapter_index: usize,
     handler: DeviceHandler,
     dist_engine: ComputeEngine,
     in_out_engine: ComputeEngine,
@@ -3251,10 +3297,25 @@ impl GpuMeshAnalyzer {
         Some(Self::new(&handler))
     }
 
+    /// Attempts to create GPU mesh analyzers for all detected Vulkan devices.
+    pub fn try_create_all() -> Vec<Self> {
+        let handlers = try_init_all_vulkan_devices();
+        handlers
+            .into_iter()
+            .enumerate()
+            .map(|(idx, h)| {
+                let mut analyzer = Self::new(&h);
+                analyzer.adapter_index = idx;
+                analyzer
+            })
+            .collect()
+    }
+
     /// Queries the Vulkan device information for this analyzer.
     pub fn device_info(&self) -> VulkanDeviceInfo {
         let info = self.handler.adapter().get_info();
         VulkanDeviceInfo {
+            adapter_index: self.adapter_index,
             name: info.name,
             backend: format!("{:?}", info.backend),
             driver: info.driver,
@@ -3332,6 +3393,7 @@ impl GpuMeshAnalyzer {
         let grid_index_engine = ComputeEngine::new(handler, GRID_INDEX_GEN_SHADER, "main", &grid_idx_entries);
 
         Self {
+            adapter_index: 0,
             handler: handler.clone(),
             dist_engine,
             in_out_engine,

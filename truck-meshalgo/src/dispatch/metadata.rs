@@ -55,41 +55,91 @@ impl CpuMetadata {
 /// Metadata describing available GPU accelerators (CUDA and Vulkan).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GpuMetadata {
-    /// CUDA device details, if available.
+    /// CUDA device details, if available (primary device).
     #[cfg(feature = "cuda")]
     pub cuda: Option<crate::gpu::cuda::CudaDeviceInfo>,
     /// Placeholder when CUDA feature is disabled.
     #[cfg(not(feature = "cuda"))]
     pub cuda: Option<()>,
 
-    /// Vulkan device details, if available.
+    /// All detected CUDA devices.
+    #[cfg(feature = "cuda")]
+    #[serde(default)]
+    pub cuda_devices: Vec<crate::gpu::cuda::CudaDeviceInfo>,
+    /// Placeholder when CUDA feature is disabled.
+    #[cfg(not(feature = "cuda"))]
+    #[serde(default)]
+    pub cuda_devices: Vec<()>,
+
+    /// Vulkan device details, if available (primary device).
     #[cfg(feature = "gpu")]
     pub vulkan: Option<crate::gpu::VulkanDeviceInfo>,
     /// Placeholder when Vulkan/GPU feature is disabled.
     #[cfg(not(feature = "gpu"))]
     pub vulkan: Option<()>,
+
+    /// All detected Vulkan devices.
+    #[cfg(feature = "gpu")]
+    #[serde(default)]
+    pub vulkan_devices: Vec<crate::gpu::VulkanDeviceInfo>,
+    /// Placeholder when Vulkan/GPU feature is disabled.
+    #[cfg(not(feature = "gpu"))]
+    #[serde(default)]
+    pub vulkan_devices: Vec<()>,
 }
 
 impl GpuMetadata {
     /// Returns true if at least one GPU accelerator (CUDA or Vulkan) is detected and available.
     pub fn has_gpu(&self) -> bool {
-        self.cuda.is_some() || self.vulkan.is_some()
+        self.cuda.is_some()
+            || self.vulkan.is_some()
+            || !self.cuda_devices.is_empty()
+            || !self.vulkan_devices.is_empty()
+    }
+
+    /// Returns the number of detected physical GPU devices.
+    pub fn device_count(&self) -> usize {
+        #[cfg(feature = "cuda")]
+        if !self.cuda_devices.is_empty() {
+            return self.cuda_devices.len();
+        }
+        #[cfg(feature = "gpu")]
+        if !self.vulkan_devices.is_empty() {
+            return self.vulkan_devices.len();
+        }
+        if self.has_gpu() {
+            1
+        } else {
+            0
+        }
     }
 
     /// Detects current GPU devices on the system.
     pub fn current() -> Self {
         #[cfg(feature = "cuda")]
+        let cuda_devices = crate::gpu::cuda::CudaMeshAnalyzer::get_all_devices();
+        #[cfg(feature = "cuda")]
         let cuda = crate::gpu::cuda::CudaMeshAnalyzer::get_device_info();
+        #[cfg(not(feature = "cuda"))]
+        let cuda_devices = Vec::new();
         #[cfg(not(feature = "cuda"))]
         let cuda = None;
 
         #[cfg(feature = "gpu")]
-        let vulkan = crate::gpu::GpuMeshAnalyzer::try_create_default()
-            .map(|analyzer| analyzer.device_info());
+        let vulkan_devices = crate::gpu::get_all_vulkan_devices();
+        #[cfg(feature = "gpu")]
+        let vulkan = vulkan_devices.first().cloned();
+        #[cfg(not(feature = "gpu"))]
+        let vulkan_devices = Vec::new();
         #[cfg(not(feature = "gpu"))]
         let vulkan = None;
 
-        Self { cuda, vulkan }
+        Self {
+            cuda,
+            cuda_devices,
+            vulkan,
+            vulkan_devices,
+        }
     }
 }
 
