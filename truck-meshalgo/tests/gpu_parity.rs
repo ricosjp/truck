@@ -455,3 +455,214 @@ fn test_cuda_baseline_vs_sm86_ptx_exact_parity() {
     assert_eq!(in_ptx, in_base, "Driver PTX inside flags differ from baseline!");
 }
 
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_face_and_smooth_normals() {
+    let cuda = CudaMeshAnalyzer::new();
+    let sphere = common::shapes::sphere(Point3::origin(), 1.0, 16, 16);
+
+    // 1. Face normals
+    let face_normals = cuda.compute_face_normals(&sphere);
+    let triangles = CudaMeshAnalyzer::extract_triangles(&sphere);
+    assert_eq!(face_normals.len(), triangles.len());
+
+    for (i, &tri) in triangles.iter().enumerate() {
+        let p0 = Point3::new(tri.v0[0] as f64, tri.v0[1] as f64, tri.v0[2] as f64);
+        let p1 = Point3::new(tri.v1[0] as f64, tri.v1[1] as f64, tri.v1[2] as f64);
+        let p2 = Point3::new(tri.v2[0] as f64, tri.v2[1] as f64, tri.v2[2] as f64);
+        let cross = (p1 - p0).cross(p2 - p0);
+        let cuda_nor = face_normals[i];
+        if cross.magnitude2() < 1e-12 {
+            assert_eq!(cuda_nor, Vector3::zero(), "Degenerate polar triangle should yield zero normal");
+        } else {
+            let expected_nor = cross.normalize();
+            let diff = (cuda_nor - expected_nor).magnitude();
+            assert!(diff < 1e-4, "Face normal mismatch at {}: expected {:?}, got {:?}", i, expected_nor, cuda_nor);
+        }
+    }
+
+    // 2. Smooth normals on sphere (should point radially outwards)
+    let smooth_normals = cuda.compute_smooth_normals(&sphere);
+    let positions = sphere.positions();
+    assert_eq!(smooth_normals.len(), positions.len());
+
+    for (i, &pos) in positions.iter().enumerate() {
+        let expected_radial = pos.to_vec().normalize();
+        let cuda_nor = smooth_normals[i];
+        let dot = cuda_nor.dot(expected_radial);
+        assert!(dot > 0.98, "Smooth normal not radial at vertex #{}: dot={}", i, dot);
+    }
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_trimming_loop_include() {
+    let cuda = CudaMeshAnalyzer::new();
+
+    // Unit square boundary [0, 1]^2
+    let segments = vec![
+        [Point2::new(0.0, 0.0), Point2::new(1.0, 0.0)],
+        [Point2::new(1.0, 0.0), Point2::new(1.0, 1.0)],
+        [Point2::new(1.0, 1.0), Point2::new(0.0, 1.0)],
+        [Point2::new(0.0, 1.0), Point2::new(0.0, 0.0)],
+    ];
+
+    let query_points = vec![
+        Point2::new(0.5, 0.5),   // inside
+        Point2::new(0.2, 0.8),   // inside
+        Point2::new(1.5, 0.5),   // outside
+        Point2::new(-0.5, 0.5),  // outside
+        Point2::new(0.5, 1.5),   // outside
+        Point2::new(0.5, -0.5),  // outside
+    ];
+
+    let inside = cuda.trimming_loop_include(&segments, &query_points);
+    assert_eq!(inside, vec![true, true, false, false, false, false]);
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_collide_triangles() {
+    let cuda = CudaMeshAnalyzer::new();
+    let cube0 = create_unit_cube();
+
+    // Overlapping cube translated by (0.5, 0.5, 0.5)
+    let cube1 = PolygonMesh::new(
+        StandardAttributes {
+            positions: cube0.positions().iter().map(|&p| p + Vector3::new(0.5, 0.5, 0.5)).collect(),
+            ..Default::default()
+        },
+        cube0.faces().clone(),
+    );
+
+    // Far cube translated by (10.0, 0.0, 0.0)
+    let cube_far = PolygonMesh::new(
+        StandardAttributes {
+            positions: cube0.positions().iter().map(|&p| p + Vector3::new(10.0, 0.0, 0.0)).collect(),
+            ..Default::default()
+        },
+        cube0.faces().clone(),
+    );
+
+    // Colliding cubes
+    let hit = cuda.collide_with(&cube0, &cube1);
+    assert!(hit.is_some(), "Overlapping cubes should collide!");
+
+    let lines = cuda.collide_triangles(&cube0, &cube1);
+    assert!(!lines.is_empty(), "Should extract interference lines for overlapping cubes!");
+
+    // Non-colliding cubes
+    let miss = cuda.collide_with(&cube0, &cube_far);
+    assert!(miss.is_none(), "Disjoint cubes should not collide!");
+
+    let no_lines = cuda.collide_triangles(&cube0, &cube_far);
+    assert!(no_lines.is_empty(), "Disjoint cubes should have 0 interference lines!");
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_cuda_evaluate_bspline_surface() {
+    use truck_geometry::prelude::*;
+
+    let cuda = CudaMeshAnalyzer::new();
+
+    // Construct a bi-quadratic B-spline surface
+    let u_knots = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    let v_knots = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    let u_degree = 2;
+    let v_degree = 2;
+
+    let ctrl_pts = vec![
+        vec![Point3::new(0.0, 0.0, 0.0), Point3::new(0.5, 0.0, 1.0), Point3::new(1.0, 0.0, 0.0)],
+        vec![Point3::new(0.0, 0.5, 1.0), Point3::new(0.5, 0.5, 2.0), Point3::new(1.0, 0.5, 1.0)],
+        vec![Point3::new(0.0, 1.0, 0.0), Point3::new(0.5, 1.0, 1.0), Point3::new(1.0, 1.0, 0.0)],
+    ];
+
+    let bsp = BSplineSurface::new(
+        (KnotVec::from(u_knots.clone()), KnotVec::from(v_knots.clone())),
+        ctrl_pts.clone(),
+    );
+
+    let mut query_uv = Vec::new();
+    for i in 0..10 {
+        for j in 0..10 {
+            query_uv.push(Point2::new(i as f64 / 9.0, j as f64 / 9.0));
+        }
+    }
+
+    let (cuda_pts, cuda_nors) = cuda.evaluate_bspline_surface(
+        &u_knots,
+        &v_knots,
+        u_degree,
+        v_degree,
+        &ctrl_pts,
+        &query_uv,
+    );
+
+    assert_eq!(cuda_pts.len(), query_uv.len());
+    assert_eq!(cuda_nors.len(), query_uv.len());
+
+    for (k, &uv) in query_uv.iter().enumerate() {
+        let cpu_pt = bsp.subs(uv.x, uv.y);
+        let cpu_nor = bsp.normal(uv.x, uv.y);
+
+        let pt_diff = (cuda_pts[k] - cpu_pt).magnitude();
+        assert!(pt_diff < 1e-4, "Surface point mismatch at index {}: CPU={:?}, CUDA={:?}", k, cpu_pt, cuda_pts[k]);
+
+        let nor_diff = (cuda_nors[k] - cpu_nor).magnitude();
+        assert!(nor_diff < 1e-3, "Surface normal mismatch at index {}: CPU={:?}, CUDA={:?}", k, cpu_nor, cuda_nors[k]);
+    }
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_vulkan_vs_cuda_advanced_candidates_parity() {
+    let handler = init_vulkan_device();
+    let vulkan = GpuMeshAnalyzer::new(&handler);
+    let cuda = CudaMeshAnalyzer::new();
+
+    let sphere = common::shapes::sphere(Point3::origin(), 1.0, 16, 16);
+
+    // 1. Face Normals Parity
+    let vulkan_nors = vulkan.compute_face_normals(&sphere);
+    let cuda_nors = cuda.compute_face_normals(&sphere);
+    assert_eq!(vulkan_nors.len(), cuda_nors.len());
+    for i in 0..vulkan_nors.len() {
+        let diff = (vulkan_nors[i] - cuda_nors[i]).magnitude();
+        assert!(diff < 1e-4, "Face normal difference between Vulkan and CUDA at #{}: Vulkan={:?}, CUDA={:?}", i, vulkan_nors[i], cuda_nors[i]);
+    }
+
+    // 2. Trimming Loop Include Parity
+    let segments = vec![
+        [Point2::new(0.0, 0.0), Point2::new(1.0, 0.0)],
+        [Point2::new(1.0, 0.0), Point2::new(1.0, 1.0)],
+        [Point2::new(1.0, 1.0), Point2::new(0.0, 1.0)],
+        [Point2::new(0.0, 1.0), Point2::new(0.0, 0.0)],
+    ];
+    let query_points = vec![
+        Point2::new(0.5, 0.5),
+        Point2::new(0.2, 0.8),
+        Point2::new(1.5, 0.5),
+        Point2::new(-0.5, 0.5),
+        Point2::new(0.5, 1.5),
+        Point2::new(0.5, -0.5),
+    ];
+    let vulkan_inc = vulkan.trimming_loop_include(&segments, &query_points);
+    let cuda_inc = cuda.trimming_loop_include(&segments, &query_points);
+    assert_eq!(vulkan_inc, cuda_inc, "Trimming loop include flags mismatch between Vulkan and CUDA!");
+
+    // 3. Collision Parity
+    let cube0 = create_unit_cube();
+    let cube1 = PolygonMesh::new(
+        StandardAttributes {
+            positions: cube0.positions().iter().map(|&p| p + Vector3::new(0.5, 0.5, 0.5)).collect(),
+            ..Default::default()
+        },
+        cube0.faces().clone(),
+    );
+    let vulkan_hit = vulkan.collide_with(&cube0, &cube1);
+    let cuda_hit = cuda.collide_with(&cube0, &cube1);
+    assert_eq!(vulkan_hit.is_some(), cuda_hit.is_some(), "Collision hit presence differs between Vulkan and CUDA!");
+}
+
+

@@ -285,6 +285,316 @@ fn main() {
         println!();
     }
 
+    // ========================================================================
+    // Candidate 1: Mesh Normal Generation & Smoothing
+    // ========================================================================
+    {
+        let sphere_dense = create_sphere(3.0, 64, 64);
+        let n_tris = extract_cpu_triangles(&sphere_dense).len();
+        println!(">>> Benchmarking Mesh Normal Generation ({} triangles)...", n_tris);
+
+        let t_cpu_single = bench_fn("CPU Face Normals", || {
+            let res: Vec<Vector3> = sphere_dense
+                .face_iter()
+                .map(|face| {
+                    let p0 = sphere_dense.positions()[face[0].pos];
+                    let p1 = sphere_dense.positions()[face[1].pos];
+                    let p2 = sphere_dense.positions()[face[2].pos];
+                    (p1 - p0).cross(p2 - p0).normalize()
+                })
+                .collect();
+            std::hint::black_box(res);
+        }, 5);
+
+        let t_cpu_rayon = bench_fn("CPU Rayon Smooth Normals", || {
+            let mut clone = sphere_dense.clone();
+            clone.add_smooth_normals(0.8, true);
+            std::hint::black_box(clone);
+        }, 3);
+
+        let t_vulkan = bench_fn("GPU Vulkan Face Normals", || {
+            let res = vulkan_analyzer.compute_face_normals(&sphere_dense);
+            std::hint::black_box(res);
+        }, 10);
+
+        #[cfg(feature = "cuda")]
+        let t_cuda_base = bench_fn("GPU CUDA Face Normals", || {
+            let res = cuda_analyzer.compute_face_normals(&sphere_dense);
+            std::hint::black_box(res);
+        }, 10);
+        #[cfg(not(feature = "cuda"))]
+        let t_cuda_base = Duration::ZERO;
+
+        #[cfg(feature = "cuda")]
+        let t_ptx_sm86 = bench_fn("GPU CUDA Smooth Normals", || {
+            let res = cuda_analyzer.compute_smooth_normals(&sphere_dense);
+            std::hint::black_box(res);
+        }, 10);
+        #[cfg(not(feature = "cuda"))]
+        let t_ptx_sm86 = Duration::ZERO;
+
+        results.push(ResultRow {
+            workload: "Mesh Normals".to_string(),
+            points: sphere_dense.positions().len(),
+            triangles: n_tris,
+            cpu_single: t_cpu_single,
+            cpu_rayon: t_cpu_rayon,
+            gpu_vulkan: t_vulkan,
+            gpu_cuda_baseline: t_cuda_base,
+            gpu_ptx_sm86: t_ptx_sm86,
+        });
+
+        println!();
+    }
+
+    // ========================================================================
+    // Candidate 2: 2D Trimming Loop Inclusion Testing
+    // ========================================================================
+    {
+        let n_segs = 64;
+        let segments: Vec<[Point2; 2]> = (0..n_segs)
+            .map(|i| {
+                let theta0 = 2.0 * PI * (i as f64) / (n_segs as f64);
+                let theta1 = 2.0 * PI * ((i + 1) as f64) / (n_segs as f64);
+                let r0 = 1.0 + 0.3 * (theta0 * 4.0).sin();
+                let r1 = 1.0 + 0.3 * (theta1 * 4.0).sin();
+                [
+                    Point2::new(r0 * theta0.cos(), r0 * theta0.sin()),
+                    Point2::new(r1 * theta1.cos(), r1 * theta1.sin()),
+                ]
+            })
+            .collect();
+
+        let n_points = 50_000;
+        let query_points: Vec<Point2> = (0..n_points)
+            .map(|i| {
+                let u = (i as f64 * 0.1234).sin() * 2.0;
+                let v = (i as f64 * 0.5678).cos() * 2.0;
+                Point2::new(u, v)
+            })
+            .collect();
+
+        println!(">>> Benchmarking 2D Trimming Loop Inclusion ({} segs, {} points)...", n_segs, n_points);
+
+        let t_cpu_single = bench_fn("CPU Single-Thread", || {
+            let res: Vec<bool> = query_points
+                .iter()
+                .map(|&c| {
+                    let t = 2.0 * PI * hash::HashGen::hash1(c);
+                    let r = Vector2::new(t.cos(), t.sin());
+                    let mut counter = 0i32;
+                    let mut valid = true;
+                    for seg in &segments {
+                        let a = seg[0] - c;
+                        let b = seg[1] - c;
+                        let s0 = r.x * a.y - r.y * a.x;
+                        let s1 = r.x * b.y - r.y * b.x;
+                        let s2 = a.x * b.y - a.y * b.x;
+                        let denom = s1 - s0;
+                        if denom.abs() < 1e-12 { continue; }
+                        let x = s2 / denom;
+                        if x.abs() < 1e-7 && s0 * s1 < 0.0 { valid = false; break; }
+                        else if x > 0.0 && s0 <= 0.0 && s1 > 0.0 { counter += 1; }
+                        else if x > 0.0 && s0 >= 0.0 && s1 < 0.0 { counter -= 1; }
+                    }
+                    valid && counter > 0
+                })
+                .collect();
+            std::hint::black_box(res);
+        }, 2);
+
+        let t_cpu_rayon = bench_fn("CPU Rayon Multi-Thread", || {
+            let res: Vec<bool> = query_points
+                .par_iter()
+                .map(|&c| {
+                    let t = 2.0 * PI * hash::HashGen::hash1(c);
+                    let r = Vector2::new(t.cos(), t.sin());
+                    let mut counter = 0i32;
+                    let mut valid = true;
+                    for seg in &segments {
+                        let a = seg[0] - c;
+                        let b = seg[1] - c;
+                        let s0 = r.x * a.y - r.y * a.x;
+                        let s1 = r.x * b.y - r.y * b.x;
+                        let s2 = a.x * b.y - a.y * b.x;
+                        let denom = s1 - s0;
+                        if denom.abs() < 1e-12 { continue; }
+                        let x = s2 / denom;
+                        if x.abs() < 1e-7 && s0 * s1 < 0.0 { valid = false; break; }
+                        else if x > 0.0 && s0 <= 0.0 && s1 > 0.0 { counter += 1; }
+                        else if x > 0.0 && s0 >= 0.0 && s1 < 0.0 { counter -= 1; }
+                    }
+                    valid && counter > 0
+                })
+                .collect();
+            std::hint::black_box(res);
+        }, 3);
+
+        let t_vulkan = bench_fn("GPU Vulkan (RTX 3080)", || {
+            let res = vulkan_analyzer.trimming_loop_include(&segments, &query_points);
+            std::hint::black_box(res);
+        }, 5);
+
+        #[cfg(feature = "cuda")]
+        let t_ptx_sm86 = bench_fn("GPU PTX SM 8.6 (RTX 3080)", || {
+            let res = cuda_analyzer.trimming_loop_include(&segments, &query_points);
+            std::hint::black_box(res);
+        }, 5);
+        #[cfg(not(feature = "cuda"))]
+        let t_ptx_sm86 = Duration::ZERO;
+
+        results.push(ResultRow {
+            workload: "2D Trimming Loop".to_string(),
+            points: n_points,
+            triangles: n_segs,
+            cpu_single: t_cpu_single,
+            cpu_rayon: t_cpu_rayon,
+            gpu_vulkan: t_vulkan,
+            gpu_cuda_baseline: t_ptx_sm86,
+            gpu_ptx_sm86: t_ptx_sm86,
+        });
+
+        println!();
+    }
+
+    // ========================================================================
+    // Candidate 3: Triangle-Triangle Collision & Interference
+    // ========================================================================
+    {
+        let sphere0 = create_sphere(2.0, 24, 24);
+        let sphere1 = PolygonMesh::new(
+            StandardAttributes {
+                positions: sphere0.positions().iter().map(|&p| p + Vector3::new(1.0, 0.5, 0.5)).collect(),
+                ..Default::default()
+            },
+            sphere0.faces().clone(),
+        );
+        let n_tris = extract_cpu_triangles(&sphere0).len();
+
+        println!(">>> Benchmarking Mesh-Mesh Interference ({} x {} tris)...", n_tris, n_tris);
+
+        let t_cpu_single = bench_fn("CPU extract_interference", || {
+            let res = sphere0.extract_interference(&sphere1);
+            std::hint::black_box(res);
+        }, 3);
+
+        let t_cpu_rayon = bench_fn("CPU collide_with", || {
+            let res = sphere0.collide_with(&sphere1);
+            std::hint::black_box(res);
+        }, 5);
+
+        let t_vulkan = bench_fn("GPU Vulkan collide_triangles", || {
+            let res = vulkan_analyzer.collide_triangles(&sphere0, &sphere1);
+            std::hint::black_box(res);
+        }, 5);
+
+        #[cfg(feature = "cuda")]
+        let t_ptx_sm86 = bench_fn("GPU CUDA collide_triangles", || {
+            let res = cuda_analyzer.collide_triangles(&sphere0, &sphere1);
+            std::hint::black_box(res);
+        }, 5);
+        #[cfg(not(feature = "cuda"))]
+        let t_ptx_sm86 = Duration::ZERO;
+
+        results.push(ResultRow {
+            workload: "Mesh Interference".to_string(),
+            points: sphere0.positions().len(),
+            triangles: n_tris,
+            cpu_single: t_cpu_single,
+            cpu_rayon: t_cpu_rayon,
+            gpu_vulkan: t_vulkan,
+            gpu_cuda_baseline: t_ptx_sm86,
+            gpu_ptx_sm86: t_ptx_sm86,
+        });
+
+        println!();
+    }
+
+    // ========================================================================
+    // Candidate 4: Batch B-Spline Surface Evaluation
+    // ========================================================================
+    {
+        use truck_geometry::prelude::*;
+
+        let u_knots = vec![0.0, 0.0, 0.0, 0.0, 0.5, 1.0, 1.0, 1.0, 1.0];
+        let v_knots = vec![0.0, 0.0, 0.0, 0.0, 0.5, 1.0, 1.0, 1.0, 1.0];
+        let u_degree = 3;
+        let v_degree = 3;
+
+        let ctrl_pts: Vec<Vec<Point3>> = (0..5)
+            .map(|i| {
+                (0..5)
+                    .map(|j| {
+                        let x = i as f64 / 4.0;
+                        let y = j as f64 / 4.0;
+                        let z = (x * PI).sin() * (y * PI).sin();
+                        Point3::new(x, y, z)
+                    })
+                    .collect()
+            })
+            .collect();
+
+        let bsp = BSplineSurface::new(
+            (KnotVec::from(u_knots.clone()), KnotVec::from(v_knots.clone())),
+            ctrl_pts.clone(),
+        );
+
+        let n_points = 50_000;
+        let query_uv: Vec<Point2> = (0..n_points)
+            .map(|i| {
+                let u = (i as f64 * 0.12345).sin().abs() * 0.98 + 0.01;
+                let v = (i as f64 * 0.67891).cos().abs() * 0.98 + 0.01;
+                Point2::new(u, v)
+            })
+            .collect();
+
+        println!(">>> Benchmarking Batch B-Spline Surface Evaluation (N = {} points)...", n_points);
+
+        let t_cpu_single = bench_fn("CPU Single-Thread", || {
+            let res: Vec<(Point3, Vector3)> = query_uv
+                .iter()
+                .map(|&p| (bsp.subs(p.x, p.y), bsp.normal(p.x, p.y)))
+                .collect();
+            std::hint::black_box(res);
+        }, 2);
+
+        let t_cpu_rayon = bench_fn("CPU Rayon Multi-Thread", || {
+            let res: Vec<(Point3, Vector3)> = query_uv
+                .par_iter()
+                .map(|&p| (bsp.subs(p.x, p.y), bsp.normal(p.x, p.y)))
+                .collect();
+            std::hint::black_box(res);
+        }, 3);
+
+        #[cfg(feature = "cuda")]
+        let t_ptx_sm86 = bench_fn("GPU CUDA (RTX 3080)", || {
+            let res = cuda_analyzer.evaluate_bspline_surface(
+                &u_knots,
+                &v_knots,
+                u_degree,
+                v_degree,
+                &ctrl_pts,
+                &query_uv,
+            );
+            std::hint::black_box(res);
+        }, 5);
+        #[cfg(not(feature = "cuda"))]
+        let t_ptx_sm86 = Duration::ZERO;
+
+        results.push(ResultRow {
+            workload: "B-Spline Evaluation".to_string(),
+            points: n_points,
+            triangles: 25,
+            cpu_single: t_cpu_single,
+            cpu_rayon: t_cpu_rayon,
+            gpu_vulkan: Duration::ZERO,
+            gpu_cuda_baseline: t_ptx_sm86,
+            gpu_ptx_sm86: t_ptx_sm86,
+        });
+
+        println!();
+    }
+
     println!("\n=================================================================================================================================");
     println!("                                                    BENCHMARK SUMMARY TABLE                                                      ");
     println!("=================================================================================================================================");

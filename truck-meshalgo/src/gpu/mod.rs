@@ -198,6 +198,281 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 "#;
 
+const FACE_NORMALS_SHADER: &str = r#"
+struct Triangle {
+    v0: vec4<f32>,
+    v1: vec4<f32>,
+    v2: vec4<f32>,
+};
+
+struct Uniforms {
+    num_triangles: u32,
+    pad0: u32,
+    pad1: u32,
+    pad2: u32,
+};
+
+@group(0) @binding(0)
+var<uniform> uniforms: Uniforms;
+
+@group(0) @binding(1)
+var<storage, read> triangles: array<Triangle>;
+
+@group(0) @binding(2)
+var<storage, read_write> face_normals: array<vec4<f32>>;
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    if (idx >= uniforms.num_triangles) {
+        return;
+    }
+    let tri = triangles[idx];
+    let v0 = tri.v0.xyz;
+    let v1 = tri.v1.xyz;
+    let v2 = tri.v2.xyz;
+    let nor = cross(v1 - v0, v2 - v0);
+    let len2 = dot(nor, nor);
+    if (len2 < 1.0e-12) {
+        face_normals[idx] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    } else {
+        face_normals[idx] = vec4<f32>(normalize(nor), 0.0);
+    }
+}
+"#;
+
+const TRIMMING_LOOP_SHADER: &str = r#"
+struct Uniforms {
+    num_segments: u32,
+    num_points: u32,
+    pad0: u32,
+    pad1: u32,
+};
+
+@group(0) @binding(0)
+var<uniform> uniforms: Uniforms;
+
+@group(0) @binding(1)
+var<storage, read> segments: array<vec4<f32>>;
+
+@group(0) @binding(2)
+var<storage, read> points: array<vec2<f32>>;
+
+@group(0) @binding(3)
+var<storage, read> ray_dirs: array<vec2<f32>>;
+
+@group(0) @binding(4)
+var<storage, read_write> inside_flags: array<i32>;
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx = global_id.x;
+    if (idx >= uniforms.num_points) {
+        return;
+    }
+    let c = points[idx];
+    let r = ray_dirs[idx];
+    var counter: i32 = 0;
+    var valid: bool = true;
+
+    for (var i: u32 = 0u; i < uniforms.num_segments; i = i + 1u) {
+        let seg = segments[i];
+        let p0 = seg.xy;
+        let p1 = seg.zw;
+        let a = p0 - c;
+        let b = p1 - c;
+        let s0 = r.x * a.y - r.y * a.x;
+        let s1 = r.x * b.y - r.y * b.x;
+        let s2 = a.x * b.y - a.y * b.x;
+        let denom = s1 - s0;
+        if (abs(denom) < 1.0e-12) {
+            continue;
+        }
+        let x = s2 / denom;
+        if (abs(x) < 1.0e-7 && s0 * s1 < 0.0) {
+            valid = false;
+            break;
+        } else if (x > 0.0 && s0 <= 0.0 && s1 > 0.0) {
+            counter = counter + 1;
+        } else if (x > 0.0 && s0 >= 0.0 && s1 < 0.0) {
+            counter = counter - 1;
+        }
+    }
+    if (valid && counter > 0) {
+        inside_flags[idx] = 1;
+    } else {
+        inside_flags[idx] = 0;
+    }
+}
+"#;
+
+const COLLIDE_TRIANGLES_SHADER: &str = r#"
+struct Triangle {
+    v0: vec4<f32>,
+    v1: vec4<f32>,
+    v2: vec4<f32>,
+};
+
+struct CollisionUniforms {
+    num_tri0: u32,
+    num_tri1: u32,
+    max_segments: u32,
+    pad0: u32,
+};
+
+@group(0) @binding(0)
+var<uniform> uniforms: CollisionUniforms;
+
+@group(0) @binding(1)
+var<storage, read> mesh0: array<Triangle>;
+
+@group(0) @binding(2)
+var<storage, read> mesh1: array<Triangle>;
+
+@group(0) @binding(3)
+var<storage, read_write> num_interferences: atomic<u32>;
+
+@group(0) @binding(4)
+var<storage, read_write> out_segments: array<vec4<f32>>;
+
+fn collide_seg_triangle(p: vec3<f32>, q: vec3<f32>, v0: vec3<f32>, v1: vec3<f32>, v2: vec3<f32>, out_h: ptr<function, vec3<f32>>) -> bool {
+    let ab = v1 - v0;
+    let bc = v2 - v1;
+    let ca = v0 - v2;
+    let nor = cross(ab, ca);
+    let nor_len2 = dot(nor, nor);
+    if (nor_len2 < 1.0e-12) {
+        return false;
+    }
+
+    let ap = p - v0;
+    let aq = q - v0;
+    let dotapnor = dot(ap, nor);
+    let dotaqnor = dot(aq, nor);
+    if (dotapnor * dotaqnor > 0.0) {
+        return false;
+    }
+
+    let denom = dotapnor - dotaqnor;
+    if (abs(denom) < 1.0e-12) {
+        return false;
+    }
+
+    let t = dotapnor / denom;
+    let h = p + t * (q - p);
+
+    let s0 = sign(dot(cross(ab, nor), h - v0) + 1.0e-6);
+    let s1 = sign(dot(cross(bc, nor), h - v1) + 1.0e-6);
+    let s2 = sign(dot(cross(ca, nor), h - v2) + 1.0e-6);
+
+    if (s0 + s1 + s2 >= 2.0) {
+        *out_h = h;
+        return true;
+    }
+    return false;
+}
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let idx0 = global_id.x;
+    if (idx0 >= uniforms.num_tri0) {
+        return;
+    }
+
+    let t0 = mesh0[idx0];
+    let a0 = t0.v0.xyz;
+    let a1 = t0.v1.xyz;
+    let a2 = t0.v2.xyz;
+
+    let a_min = min(min(a0, a1), a2);
+    let a_max = max(max(a0, a1), a2);
+
+    for (var idx1: u32 = 0u; idx1 < uniforms.num_tri1; idx1 = idx1 + 1u) {
+        let t1 = mesh1[idx1];
+        let b0 = t1.v0.xyz;
+        let b1 = t1.v1.xyz;
+        let b2 = t1.v2.xyz;
+
+        let b_min = min(min(b0, b1), b2);
+        let b_max = max(max(b0, b1), b2);
+
+        if (a_max.x < b_min.x || b_max.x < a_min.x ||
+            a_max.y < b_min.y || b_max.y < a_min.y ||
+            a_max.z < b_min.z || b_max.z < a_min.z) {
+            continue;
+        }
+
+        var p = vec3<f32>(0.0);
+        var q = vec3<f32>(0.0);
+        var has_p = false;
+        var has_q = false;
+
+        var pt = vec3<f32>(0.0);
+        if (collide_seg_triangle(a0, a1, b0, b1, b2, &pt)) {
+            p = pt; has_p = true;
+        }
+        if (collide_seg_triangle(a1, a2, b0, b1, b2, &pt)) {
+            if (!has_p) { p = pt; has_p = true; }
+            else if (!has_q) { q = pt; has_q = true; }
+            else {
+                let d0 = dot(pt - p, pt - p);
+                let d1 = dot(pt - q, pt - q);
+                let d2 = dot(p - q, p - q);
+                if (d2 < d0) { q = pt; } else if (d2 < d1) { p = pt; }
+            }
+        }
+        if (collide_seg_triangle(a2, a0, b0, b1, b2, &pt)) {
+            if (!has_p) { p = pt; has_p = true; }
+            else if (!has_q) { q = pt; has_q = true; }
+            else {
+                let d0 = dot(pt - p, pt - p);
+                let d1 = dot(pt - q, pt - q);
+                let d2 = dot(p - q, p - q);
+                if (d2 < d0) { q = pt; } else if (d2 < d1) { p = pt; }
+            }
+        }
+        if (collide_seg_triangle(b0, b1, a0, a1, a2, &pt)) {
+            if (!has_p) { p = pt; has_p = true; }
+            else if (!has_q) { q = pt; has_q = true; }
+            else {
+                let d0 = dot(pt - p, pt - p);
+                let d1 = dot(pt - q, pt - q);
+                let d2 = dot(p - q, p - q);
+                if (d2 < d0) { q = pt; } else if (d2 < d1) { p = pt; }
+            }
+        }
+        if (collide_seg_triangle(b1, b2, a0, a1, a2, &pt)) {
+            if (!has_p) { p = pt; has_p = true; }
+            else if (!has_q) { q = pt; has_q = true; }
+            else {
+                let d0 = dot(pt - p, pt - p);
+                let d1 = dot(pt - q, pt - q);
+                let d2 = dot(p - q, p - q);
+                if (d2 < d0) { q = pt; } else if (d2 < d1) { p = pt; }
+            }
+        }
+        if (collide_seg_triangle(b2, b0, a0, a1, a2, &pt)) {
+            if (!has_p) { p = pt; has_p = true; }
+            else if (!has_q) { q = pt; has_q = true; }
+            else {
+                let d0 = dot(pt - p, pt - p);
+                let d1 = dot(pt - q, pt - q);
+                let d2 = dot(p - q, p - q);
+                if (d2 < d0) { q = pt; } else if (d2 < d1) { p = pt; }
+            }
+        }
+
+        if (has_p && has_q) {
+            let slot = atomicAdd(&num_interferences, 1u);
+            if (slot < uniforms.max_segments) {
+                out_segments[slot * 2u + 0u] = vec4<f32>(p, 0.0);
+                out_segments[slot * 2u + 1u] = vec4<f32>(q, 0.0);
+            }
+        }
+    }
+}
+"#;
+
 fn distance_layout_entries() -> [BindGroupLayoutEntry; 4] {
     [
         BindGroupLayoutEntry {
@@ -298,12 +573,105 @@ fn in_out_layout_entries() -> [BindGroupLayoutEntry; 5] {
     ]
 }
 
-/// GPU-accelerated mesh analyzer for point-cloud distance queries and in-out containment.
+fn face_normals_layout_entries() -> [BindGroupLayoutEntry; 3] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
+fn collision_layout_entries() -> [BindGroupLayoutEntry; 5] {
+    [
+        BindGroupLayoutEntry {
+            binding: 0,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 1,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 2,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 3,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntry {
+            binding: 4,
+            visibility: ShaderStages::COMPUTE,
+            ty: BindingType::Buffer {
+                ty: BufferBindingType::Storage { read_only: false },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ]
+}
+
+/// GPU-accelerated mesh analyzer for distance queries, in-out containment, normals, trimming, and collisions.
 #[derive(Debug)]
 pub struct GpuMeshAnalyzer {
     handler: DeviceHandler,
     dist_engine: ComputeEngine,
     in_out_engine: ComputeEngine,
+    face_normals_engine: ComputeEngine,
+    trimming_loop_engine: ComputeEngine,
+    collide_triangles_engine: ComputeEngine,
 }
 
 impl GpuMeshAnalyzer {
@@ -315,10 +683,22 @@ impl GpuMeshAnalyzer {
         let in_out_entries = in_out_layout_entries();
         let in_out_engine = ComputeEngine::new(handler, IN_OUT_SHADER, "main", &in_out_entries);
 
+        let fn_entries = face_normals_layout_entries();
+        let face_normals_engine = ComputeEngine::new(handler, FACE_NORMALS_SHADER, "main", &fn_entries);
+
+        let trim_entries = in_out_layout_entries();
+        let trimming_loop_engine = ComputeEngine::new(handler, TRIMMING_LOOP_SHADER, "main", &trim_entries);
+
+        let col_entries = collision_layout_entries();
+        let collide_triangles_engine = ComputeEngine::new(handler, COLLIDE_TRIANGLES_SHADER, "main", &col_entries);
+
         Self {
             handler: handler.clone(),
             dist_engine,
             in_out_engine,
+            face_normals_engine,
+            trimming_loop_engine,
+            collide_triangles_engine,
         }
     }
 
@@ -463,5 +843,175 @@ impl GpuMeshAnalyzer {
         let dirs: Vec<Vector3> = points.iter().map(|&p| hash::take_one_unit(p)).collect();
         let counts = self.signed_crossing_rays(mesh, points, &dirs);
         counts.into_iter().map(|c| c >= 1).collect()
+    }
+
+    /// Computes normalized face normals for all triangular faces in the mesh on the GPU via Vulkan.
+    pub fn compute_face_normals(&self, mesh: &PolygonMesh) -> Vec<Vector3> {
+        let triangles = Self::extract_triangles(mesh);
+        if triangles.is_empty() {
+            return Vec::new();
+        }
+
+        let num_triangles = triangles.len() as u32;
+        let uniforms = [num_triangles, 0, 0, 0];
+        let uniform_buf = BufferHandler::from_slice(
+            &uniforms,
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+
+        let tri_buf = BufferHandler::storage_from_slice(&triangles, self.handler.device());
+        let out_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_triangles as usize * size_of::<[f32; 4]>()) as u64,
+        );
+
+        let bind_group = self.face_normals_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            tri_buf.binding_resource(),
+            out_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_triangles + 63) / 64, 1, 1);
+        self.face_normals_engine.dispatch(&bind_group, workgroups);
+
+        let raw: Vec<[f32; 4]> = out_buf.read_to_vec_block(&self.handler);
+        raw.into_iter()
+            .map(|n| Vector3::new(n[0] as f64, n[1] as f64, n[2] as f64))
+            .collect()
+    }
+
+    /// Tests whether 2D query points are included within a 2D boundary represented by segments on the GPU via Vulkan.
+    pub fn trimming_loop_include(
+        &self,
+        segments: &[[Point2; 2]],
+        points: &[Point2],
+    ) -> Vec<bool> {
+        if points.is_empty() {
+            return Vec::new();
+        }
+        if segments.is_empty() {
+            return vec![false; points.len()];
+        }
+
+        let num_segments = segments.len() as u32;
+        let num_points = points.len() as u32;
+
+        let uniforms = [num_segments, num_points, 0, 0];
+        let uniform_buf = BufferHandler::from_slice(
+            &uniforms,
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+
+        let seg_vec: Vec<[f32; 4]> = segments
+            .iter()
+            .map(|seg| [seg[0].x as f32, seg[0].y as f32, seg[1].x as f32, seg[1].y as f32])
+            .collect();
+        let pt_vec: Vec<[f32; 2]> = points
+            .iter()
+            .map(|p| [p.x as f32, p.y as f32])
+            .collect();
+        let ray_vec: Vec<[f32; 2]> = points
+            .iter()
+            .map(|&c| {
+                let t = 2.0 * std::f64::consts::PI * hash::HashGen::hash1(c);
+                [t.cos() as f32, t.sin() as f32]
+            })
+            .collect();
+
+        let seg_buf = BufferHandler::storage_from_slice(&seg_vec, self.handler.device());
+        let pt_buf = BufferHandler::storage_from_slice(&pt_vec, self.handler.device());
+        let ray_buf = BufferHandler::storage_from_slice(&ray_vec, self.handler.device());
+        let out_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (num_points as usize * size_of::<i32>()) as u64,
+        );
+
+        let bind_group = self.trimming_loop_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            seg_buf.binding_resource(),
+            pt_buf.binding_resource(),
+            ray_buf.binding_resource(),
+            out_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_points + 63) / 64, 1, 1);
+        self.trimming_loop_engine.dispatch(&bind_group, workgroups);
+
+        let flags: Vec<i32> = out_buf.read_to_vec_block(&self.handler);
+        flags.into_iter().map(|f| f > 0).collect()
+    }
+
+    /// Extracts interference line segments between two polygon meshes on the GPU via Vulkan.
+    pub fn collide_triangles(
+        &self,
+        mesh0: &PolygonMesh,
+        mesh1: &PolygonMesh,
+    ) -> Vec<(Point3, Point3)> {
+        let tri0 = Self::extract_triangles(mesh0);
+        let tri1 = Self::extract_triangles(mesh1);
+        if tri0.is_empty() || tri1.is_empty() {
+            return Vec::new();
+        }
+
+        let num_tri0 = tri0.len() as u32;
+        let num_tri1 = tri1.len() as u32;
+        let max_segments = 65536u32;
+
+        let uniforms = [num_tri0, num_tri1, max_segments, 0];
+        let uniform_buf = BufferHandler::from_slice(
+            &uniforms,
+            self.handler.device(),
+            BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+        );
+
+        let tri0_buf = BufferHandler::storage_from_slice(&tri0, self.handler.device());
+        let tri1_buf = BufferHandler::storage_from_slice(&tri1, self.handler.device());
+        let count_buf = BufferHandler::from_slice(
+            &[0u32],
+            self.handler.device(),
+            BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+        );
+        let out_buf = BufferHandler::storage_empty(
+            self.handler.device(),
+            (max_segments as usize * 2 * size_of::<[f32; 4]>()) as u64,
+        );
+
+        let bind_group = self.collide_triangles_engine.create_bind_group([
+            uniform_buf.binding_resource(),
+            tri0_buf.binding_resource(),
+            tri1_buf.binding_resource(),
+            count_buf.binding_resource(),
+            out_buf.binding_resource(),
+        ]);
+
+        let workgroups = ((num_tri0 + 63) / 64, 1, 1);
+        self.collide_triangles_engine.dispatch(&bind_group, workgroups);
+
+        let count_vec: Vec<u32> = count_buf.read_to_vec_block(&self.handler);
+        let count = count_vec[0].min(max_segments) as usize;
+        if count == 0 {
+            return Vec::new();
+        }
+
+        let segs: Vec<[f32; 4]> = out_buf.read_to_vec_block(&self.handler);
+        (0..count)
+            .map(|i| {
+                let p = Point3::new(segs[i * 2][0] as f64, segs[i * 2][1] as f64, segs[i * 2][2] as f64);
+                let q = Point3::new(segs[i * 2 + 1][0] as f64, segs[i * 2 + 1][1] as f64, segs[i * 2 + 1][2] as f64);
+                (p, q)
+            })
+            .collect()
+    }
+
+    /// Tests if two polygon meshes collide on the GPU via Vulkan.
+    pub fn collide_with(
+        &self,
+        mesh0: &PolygonMesh,
+        mesh1: &PolygonMesh,
+    ) -> Option<(Point3, Point3)> {
+        let lines = self.collide_triangles(mesh0, mesh1);
+        lines.into_iter().next()
     }
 }
