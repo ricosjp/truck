@@ -119,7 +119,7 @@ fn oi() {
     );
     oitest_tryfrom::<NurbsCurve<Vector3>, RationalBSplineCurveHolder>(NurbsCurve::new(
         BSplineCurve::new(
-            KnotVec::bezier_knot(3),
+            KnotVec::bezier_knot(2),
             vec![
                 Vector3::new(0.0, 1.0, 2.0),
                 Vector3::new(3.0, 4.0, 5.0),
