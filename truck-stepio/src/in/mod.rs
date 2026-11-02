@@ -910,11 +910,11 @@ pub struct Vector {
 }
 impl From<&Vector> for Vector2 {
     #[inline(always)]
-    fn from(vec: &Vector) -> Self { Self::from(&vec.orientation) * vec.magnitude }
+    fn from(vec: &Vector) -> Self { Self::from(&vec.orientation).normalize() * vec.magnitude }
 }
 impl From<&Vector> for Vector3 {
     #[inline(always)]
-    fn from(vec: &Vector) -> Self { Self::from(&vec.orientation) * vec.magnitude }
+    fn from(vec: &Vector) -> Self { Self::from(&vec.orientation).normalize() * vec.magnitude }
 }
 
 /// `placement`
@@ -1010,7 +1010,7 @@ impl From<&Axis2Placement2d> for Matrix3 {
     fn from(axis: &Axis2Placement2d) -> Self {
         let z = Point2::from(&axis.location);
         let x = match &axis.ref_direction {
-            Some(axis) => Vector2::from(axis),
+            Some(axis) => Vector2::from(axis).normalize(),
             None => Vector2::unit_x(),
         };
         let y = Vector2::new(-x.y, x.x);
@@ -1038,15 +1038,17 @@ impl From<&Axis2Placement3d> for Matrix4 {
     fn from(axis: &Axis2Placement3d) -> Matrix4 {
         let w = Point3::from(&axis.location);
         let z = match &axis.axis {
-            Some(axis) => Vector3::from(axis),
+            Some(axis) => Vector3::from(axis).normalize(),
             None => Vector3::unit_z(),
         };
         let x = match &axis.ref_direction {
             Some(axis) => Vector3::from(axis),
+            // STEP first_proj_axis uses Y when the normal is parallel to X.
+            None if z.cross(Vector3::unit_x()).magnitude2() == 0.0 => Vector3::unit_y(),
             None => Vector3::unit_x(),
         };
-        let x = (x - x.dot(z) * z).normalize();
-        let y = z.cross(x);
+        let y = z.cross(x).normalize();
+        let x = y.cross(z);
         Matrix4::from_cols(
             x.extend(0.0),
             y.extend(0.0),
