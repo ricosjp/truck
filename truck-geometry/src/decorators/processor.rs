@@ -481,6 +481,11 @@ where
         trials: usize,
     ) -> Option<(f64, f64)> {
         let inv = self.transform.inverse_transform().unwrap();
+        let hint = match (self.orientation, hint.into()) {
+            (false, SPHint2D::Parameter(u, v)) => SPHint2D::Parameter(v, u),
+            (false, SPHint2D::Range(u, v)) => SPHint2D::Range(v, u),
+            (_, hint) => hint,
+        };
         let (u, v) = self
             .entity
             .search_parameter(inv.transform_point(point), hint, trials)?;
@@ -529,6 +534,11 @@ where
         trials: usize,
     ) -> Option<(f64, f64)> {
         let inv = self.transform.inverse_transform().unwrap();
+        let hint = match (self.orientation, hint.into()) {
+            (false, SPHint2D::Parameter(u, v)) => SPHint2D::Parameter(v, u),
+            (false, SPHint2D::Range(u, v)) => SPHint2D::Range(v, u),
+            (_, hint) => hint,
+        };
         let hint =
             self.entity
                 .search_nearest_parameter(inv.transform_point(point), hint, trials)?;

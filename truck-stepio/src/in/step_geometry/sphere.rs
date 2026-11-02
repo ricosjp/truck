@@ -1,6 +1,15 @@
 use super::*;
 use std::f64::consts::PI;
 use std::ops::Bound;
+impl Sphere {
+    fn inner_hint(hint: impl Into<SPHint2D>) -> SPHint2D {
+        match hint.into() {
+            SPHint2D::Parameter(u, v) => SPHint2D::Parameter(PI / 2.0 - v, u),
+            SPHint2D::Range(u, (v0, v1)) => SPHint2D::Range((PI / 2.0 - v1, PI / 2.0 - v0), u),
+            SPHint2D::None => SPHint2D::None,
+        }
+    }
+}
 impl ParametricSurface for Sphere {
     type Point = Point3;
     type Vector = Vector3;
@@ -44,7 +53,7 @@ impl SearchNearestParameter<D2> for Sphere {
         trials: usize,
     ) -> Option<(f64, f64)> {
         self.0
-            .search_nearest_parameter(point, hint, trials)
+            .search_nearest_parameter(point, Self::inner_hint(hint), trials)
             .map(|(u, v)| (v, PI / 2.0 - u))
     }
 }
@@ -58,7 +67,7 @@ impl SearchParameter<D2> for Sphere {
         trials: usize,
     ) -> Option<(f64, f64)> {
         self.0
-            .search_parameter(point, hint, trials)
+            .search_parameter(point, Self::inner_hint(hint), trials)
             .map(|(u, v)| (v, PI / 2.0 - u))
     }
 }
