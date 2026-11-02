@@ -33,10 +33,10 @@ rayon = "1.12.0"
 env_logger = "0.11.11"
 naga = { version = "30.0.1", features = ["wgsl-in"] }
 pollster = "1.0.1"
-log = "0.4.34"
+log = "0.4.35"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-wasm-bindgen-futures = "0.4.79"
+wasm-bindgen-futures = "0.4.80"
 console_error_panic_hook = "0.1.7"
 console_log = "1.1.0"
 gloo-utils = "0.3.0"
