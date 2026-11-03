@@ -58,6 +58,20 @@ impl Revolution {
     }
 }
 
+/// The angle of a point on the seam, where 0 and 2π are the same place, taken at the end
+/// of the period nearer the hint's angle. [`Revolution::proj_angle`] decides it by the sign of a cross
+/// product that is rounding noise there, so a boundary followed point by point could come back to
+/// the seam at the other end of the period from where it left, and its parameter polygon folded
+/// over itself (a whole turn of a cylinder had no area, and no intersection loop lay inside it).
+fn seam_side(angle: f64, hint: Option<f64>) -> f64 {
+    const SEAM: f64 = 1.0e-7;
+    match hint {
+        Some(h) if angle < SEAM && h > PI => angle + 2.0 * PI,
+        Some(h) if angle > 2.0 * PI - SEAM && h < PI => angle - 2.0 * PI,
+        _ => angle,
+    }
+}
+
 impl<C: ParametricCurve3D> ParametricSurface for RevolutedCurve<C> {
     type Point = Point3;
     type Vector = Vector3;
@@ -325,14 +339,19 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchParameter<D2> for RevolutedCurve
                 revolution: self.revolution,
             };
             let p = self.revolution.proj_point(point);
-            let hint0 = match hint.into() {
+            let hint = hint.into();
+            let hint_angle = match hint {
+                SPHint2D::Parameter(_, y) => Some(y),
+                _ => None,
+            };
+            let hint0 = match hint {
                 SPHint2D::Parameter(x, _) => SPHint1D::Parameter(x),
                 SPHint2D::Range((x0, _), (x1, _)) => SPHint1D::Range(x0, x1),
                 SPHint2D::None => SPHint1D::None,
             };
             let t = proj_curve.search_parameter(p, hint0, trials)?;
             let p = self.curve.subs(t);
-            let ang = self.revolution.proj_angle(p, point);
+            let ang = seam_side(self.revolution.proj_angle(p, point), hint_angle);
             match self.subs(t, ang).near(&point) {
                 true => Some((t, ang)),
                 false => None,
@@ -372,14 +391,19 @@ impl<C: ParametricCurve3D + BoundedCurve> SearchNearestParameter<D2> for Revolut
                 revolution: self.revolution,
             };
             let p = self.revolution.proj_point(point);
-            let hint0 = match hint.into() {
+            let hint = hint.into();
+            let hint_angle = match hint {
+                SPHint2D::Parameter(_, y) => Some(y),
+                _ => None,
+            };
+            let hint0 = match hint {
                 SPHint2D::Parameter(x, _) => SPHint1D::Parameter(x),
                 SPHint2D::Range((x0, _), (x1, _)) => SPHint1D::Range(x0, x1),
                 SPHint2D::None => SPHint1D::None,
             };
             let t = proj_curve.search_nearest_parameter(p, hint0, trials)?;
             let p = self.curve.subs(t);
-            Some((t, self.revolution.proj_angle(p, point)))
+            Some((t, seam_side(self.revolution.proj_angle(p, point), hint_angle)))
         }
     }
 }
