@@ -610,6 +610,13 @@ impl ParametricSurface3D for NurbsSurface<Vector4> {
         let vd = self.0.vder(u, v);
         rat_der(&[pt, ud]).cross(rat_der(&[pt, vd])).normalize()
     }
+
+    #[inline(always)]
+    fn as_nurbs(&self) -> Option<(&[f64], &[f64], usize, usize, &[Vec<Vector4>])> {
+        let (ukv, vkv) = self.knot_vecs();
+        let (udeg, vdeg) = self.0.degrees();
+        Some((ukv.as_slice(), vkv.as_slice(), udeg, vdeg, self.control_points().as_slice()))
+    }
 }
 
 impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParameterDivision2D

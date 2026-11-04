@@ -102,3 +102,56 @@ fn collide_parabola() {
         assert_near!(pt.distance(Point3::origin()) * 0.5, f64::sqrt(0.5) * 0.5);
     }
 }
+
+#[test]
+fn gpu_ssi_seeds_newton_raphson_convergence() {
+    #[rustfmt::skip]
+    let ctrl0 = vec![
+        vec![Point3::new(-1.0, -1.0, 3.0), Point3::new(-1.0, 0.0, -1.0), Point3::new(-1.0, 1.0, 3.0)],
+        vec![Point3::new(0.0, -1.0, -1.0), Point3::new(0.0, 0.0, -5.0), Point3::new(0.0, 1.0, -1.0)],
+        vec![Point3::new(1.0, -1.0, 3.0), Point3::new(1.0, 0.0, -1.0), Point3::new(1.0, 1.0, 3.0)],
+    ];
+    #[rustfmt::skip]
+    let ctrl1 = vec![
+        vec![Point3::new(-1.0, -1.0, -3.0), Point3::new(-1.0, 0.0, 1.0), Point3::new(-1.0, 1.0, -3.0)],
+        vec![Point3::new(0.0, -1.0, 1.0), Point3::new(0.0, 0.0, 5.0), Point3::new(0.0, 1.0, 1.0)],
+        vec![Point3::new(1.0, -1.0, -3.0), Point3::new(1.0, 0.0, 1.0), Point3::new(1.0, 1.0, -3.0)],
+    ];
+    let surface0 = BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)), ctrl0);
+    let surface1 = BSplineSurface::new((KnotVec::bezier_knot(2), KnotVec::bezier_knot(2)), ctrl1);
+
+    let seeds = Dispatcher::global()
+        .find_surface_intersection_seeds(&surface0, &surface1, 0.05);
+
+    assert!(!seeds.is_empty(), "Seeds finder should find candidate intersection seeds");
+
+    for &(uv0, uv1) in &seeds {
+        // Newton-Raphson refinement
+        let mut p0 = uv0;
+        let mut p1 = uv1;
+        let mut converged = false;
+        for _ in 0..30 {
+            let pt0 = surface0.subs(p0.x, p0.y);
+            let pt1 = surface1.subs(p1.x, p1.y);
+            if pt0.distance(pt1) < 1e-7 {
+                converged = true;
+                break;
+            }
+            if let Some(new_p0) = surface0.search_nearest_parameter(pt1, Some((p0.x, p0.y)), 10) {
+                p0 = Point2::new(new_p0.0, new_p0.1);
+            }
+            let pt0_new = surface0.subs(p0.x, p0.y);
+            if let Some(new_p1) = surface1.search_nearest_parameter(pt0_new, Some((p1.x, p1.y)), 10) {
+                p1 = Point2::new(new_p1.0, new_p1.1);
+            }
+        }
+        let final_pt0 = surface0.subs(p0.x, p0.y);
+        let final_pt1 = surface1.subs(p1.x, p1.y);
+        assert!(
+            converged || final_pt0.distance(final_pt1) < 1e-4,
+            "Seed {:?} -> {:?} should converge under Newton-Raphson nearest point search (final dist = {})",
+            (uv0, uv1), (p0, p1), final_pt0.distance(final_pt1)
+        );
+    }
+}
+

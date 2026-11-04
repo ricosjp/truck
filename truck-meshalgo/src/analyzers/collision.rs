@@ -22,6 +22,8 @@ pub trait Collision {
     /// # Remarks
     /// The results is not arranged so that included lines make continuous maximal polyline curve.
     fn extract_interference(&self, other: &PolygonMesh) -> Vec<(Point3, Point3)>;
+    /// Evaluates the minimum clearance distance from each 3D line segment to the mesh.
+    fn segment_mesh_distances(&self, segments: &[(Point3, Point3)]) -> Vec<f64>;
 }
 
 impl Collision for PolygonMesh {
@@ -32,6 +34,10 @@ impl Collision for PolygonMesh {
     #[inline(always)]
     fn extract_interference(&self, other: &PolygonMesh) -> Vec<(Point3, Point3)> {
         collision(self, other)
+    }
+    #[inline(always)]
+    fn segment_mesh_distances(&self, segments: &[(Point3, Point3)]) -> Vec<f64> {
+        dispatch::Dispatcher::global().segment_mesh_distances(self, segments)
     }
 }
 
