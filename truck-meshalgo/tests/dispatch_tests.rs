@@ -609,3 +609,96 @@ fn test_persistent_bvh_caching_and_speed() {
     println!("Persistent BVH 512-ray query time: {:?} per batch ({:?} total for {} iters)", per_iter, elapsed, num_iters);
     assert!(per_iter < std::time::Duration::from_millis(5), "Expected sub-5ms per batch, got {:?}", per_iter);
 }
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_bvh_scaling_benchmark() {
+    let sphere = create_refined_sphere(32, 32); // 2,048 triangles
+    let sphere_dense = create_refined_sphere(128, 128); // 32,768 triangles
+    let analyzer = truck_meshalgo::gpu::cuda::CudaMeshAnalyzer::new();
+    let bvh = truck_meshalgo::gpu::bvh::CudaMeshBvh::new(&sphere);
+    let bvh_dense = truck_meshalgo::gpu::bvh::CudaMeshBvh::new(&sphere_dense);
+
+    println!("\n==========================================================================================");
+    println!("             GPU BVH SPATIAL ACCELERATION SCALING BENCHMARK (RTX 3080)                    ");
+    println!("==========================================================================================");
+    println!("Test Mesh 1: {} triangles | Test Mesh 2 (Dense): {} triangles", sphere.tri_faces().len(), sphere_dense.tri_faces().len());
+    println!("| {:<18} | {:>10} | {:>12} | {:>14} | {:>14} | {:>12} |", "Workload", "Mesh Tris", "Rays/Points", "CUDA Baseline", "GPU BVH Cached", "BVH Speedup");
+    println!("|{:-<20}|{:-<12}|{:-<14}|{:-<16}|{:-<16}|{:-<14}|", "", "", "", "", "", "");
+
+    for &(mesh_label, mesh_ref, bvh_ref) in &[("2,048 tris", &sphere, &bvh), ("32,768 tris", &sphere_dense, &bvh_dense)] {
+        for &n_rays in &[100, 1_000, 10_000] {
+            let rays: Vec<(Point3, Vector3)> = (0..n_rays)
+                .map(|i| {
+                    let u = (i as f64 * 0.1234).sin() * 5.0;
+                    let v = (i as f64 * 0.5678).cos() * 5.0;
+                    let orig = Point3::new(u, v, 10.0);
+                    let dir = (Point3::origin() - orig).normalize();
+                    (orig, dir)
+                })
+                .collect();
+
+            let iters = 5;
+            let t0 = std::time::Instant::now();
+            for _ in 0..iters {
+                let res = analyzer.raycast(mesh_ref, &rays);
+                std::hint::black_box(res);
+            }
+            let t_base = t0.elapsed() / (iters as u32);
+
+            let t1 = std::time::Instant::now();
+            for _ in 0..iters {
+                let res = bvh_ref.raycast(&rays);
+                std::hint::black_box(res);
+            }
+            let t_bvh = t1.elapsed() / (iters as u32);
+
+            let speedup = t_base.as_secs_f64() / t_bvh.as_secs_f64();
+            println!(
+                "| {:<18} | {:>10} | {:>12} | {:>12.2}ms | {:>12.2}ms | {:>11.2}x |",
+                "Raycast Mesh",
+                mesh_label,
+                n_rays,
+                t_base.as_secs_f64() * 1000.0,
+                t_bvh.as_secs_f64() * 1000.0,
+                speedup
+            );
+        }
+    }
+
+    println!("------------------------------------------------------------------------------------------");
+    for &n_pts in &[100, 1_000, 10_000, 50_000] {
+        let points: Vec<Point3> = (0..n_pts)
+            .map(|i| {
+                let t = i as f64 * 0.1234567;
+                Point3::new(t.sin() * 2.0, t.cos() * 2.0, (t * 0.5).sin() * 2.0)
+            })
+            .collect();
+
+        let iters = if n_pts <= 1_000 { 10 } else { 5 };
+        let t0 = std::time::Instant::now();
+        for _ in 0..iters {
+            let res = analyzer.inside(&sphere, &points);
+            std::hint::black_box(res);
+        }
+        let t_base = t0.elapsed() / (iters as u32);
+
+        let t1 = std::time::Instant::now();
+        for _ in 0..iters {
+            let res = bvh.inside(&points);
+            std::hint::black_box(res);
+        }
+        let t_bvh = t1.elapsed() / (iters as u32);
+
+        let speedup = t_base.as_secs_f64() / t_bvh.as_secs_f64();
+        println!(
+            "| {:<18} | {:>10} | {:>12.2}ms | {:>12.2}ms | {:>11.2}x |",
+            "In-Out Containment",
+            n_pts,
+            t_base.as_secs_f64() * 1000.0,
+            t_bvh.as_secs_f64() * 1000.0,
+            speedup
+        );
+    }
+    println!("==========================================================================================\n");
+}
