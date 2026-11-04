@@ -16,6 +16,11 @@ pub mod cuda;
 #[cfg(feature = "cuda")]
 pub use cuda::*;
 
+pub mod bvh;
+pub use bvh::{build_bvh, build_mesh_bvh, GpuBvhNode};
+#[cfg(feature = "cuda")]
+pub use bvh::CudaMeshBvh;
+
 /// GPU representation of a 3D triangle with 16-byte aligned vertices.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]

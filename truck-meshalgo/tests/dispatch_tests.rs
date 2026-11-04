@@ -178,9 +178,16 @@ fn test_microbench_calibration() {
         profile.bspline_evaluation.cpu_rayon_max,
         profile.bspline_evaluation.preferred_gpu
     );
+    println!("  RaycastMesh         : 1T <= {}, Rayon <= {}, Preferred GPU: {:?}",
+        profile.raycast_mesh.cpu_single_max,
+        profile.raycast_mesh.cpu_rayon_max,
+        profile.raycast_mesh.preferred_gpu
+    );
 
     assert!(profile.point_mesh_distance.cpu_single_max <= profile.point_mesh_distance.cpu_rayon_max);
     assert!(!profile.point_mesh_distance.sample_timings.is_empty());
+    assert!(profile.raycast_mesh.cpu_single_max <= profile.raycast_mesh.cpu_rayon_max);
+    assert!(!profile.raycast_mesh.sample_timings.is_empty());
 }
 
 #[test]
@@ -210,7 +217,7 @@ fn test_dispatcher_routing_and_parity() {
         #[cfg(feature = "cuda")]
         assert!(matches!(
             target_large,
-            KernelTarget::GpuPtxSm86 | KernelTarget::GpuVulkan | KernelTarget::GpuCuda
+            KernelTarget::GpuPtxSm86 | KernelTarget::GpuVulkan | KernelTarget::GpuCuda | KernelTarget::GpuBvh
         ));
     } else {
         let _ = target_large;
@@ -239,12 +246,14 @@ fn test_dispatcher_routing_and_parity() {
     // 3. Manual Override
     dispatcher.set_override(Some(KernelTarget::CpuSingle));
     assert_eq!(dispatcher.select_kernel(Operation::PointMeshDistance, 100000), KernelTarget::CpuSingle);
+    dispatcher.set_override(Some(KernelTarget::GpuBvh));
+    assert_eq!(dispatcher.select_kernel(Operation::RaycastMesh, 10), KernelTarget::GpuBvh);
     dispatcher.reset_override();
     if SystemMetadata::current().has_gpu() {
         #[cfg(feature = "cuda")]
         assert!(matches!(
             dispatcher.select_kernel(Operation::PointMeshDistance, 100000),
-            KernelTarget::GpuPtxSm86 | KernelTarget::GpuVulkan | KernelTarget::GpuCuda
+            KernelTarget::GpuPtxSm86 | KernelTarget::GpuVulkan | KernelTarget::GpuCuda | KernelTarget::GpuBvh
         ));
     }
 }
@@ -406,4 +415,197 @@ fn test_explicit_warmup() {
     println!("Post-warmup first query latency: {:?}", first_query_elapsed);
     assert_eq!(d.len(), 1);
     assert!(first_query_elapsed < std::time::Duration::from_millis(50));
+}
+
+fn create_refined_sphere(lat_divs: usize, lon_divs: usize) -> PolygonMesh {
+    let mut positions = Vec::new();
+    for i in 0..=lat_divs {
+        let theta = std::f64::consts::PI * (i as f64) / (lat_divs as f64);
+        for j in 0..=lon_divs {
+            let phi = 2.0 * std::f64::consts::PI * (j as f64) / (lon_divs as f64);
+            positions.push(Point3::new(
+                theta.sin() * phi.cos(),
+                theta.sin() * phi.sin(),
+                theta.cos(),
+            ));
+        }
+    }
+    let mut faces_vec = Vec::new();
+    for i in 0..lat_divs {
+        for j in 0..lon_divs {
+            let p0 = i * (lon_divs + 1) + j;
+            let p1 = p0 + 1;
+            let p2 = (i + 1) * (lon_divs + 1) + j;
+            let p3 = p2 + 1;
+            faces_vec.push([p0, p2, p1]);
+            faces_vec.push([p1, p2, p3]);
+        }
+    }
+    PolygonMesh::new(
+        StandardAttributes { positions, ..Default::default() },
+        Faces::from_iter(faces_vec),
+    )
+}
+
+#[test]
+fn test_bvh_construction_and_invariants() {
+    let sphere = create_refined_sphere(16, 32);
+    let (nodes, reordered_triangles, orig_indices) = truck_meshalgo::gpu::bvh::build_mesh_bvh(&sphere);
+
+    assert!(!nodes.is_empty(), "BVH nodes must not be empty");
+    assert_eq!(reordered_triangles.len(), sphere.tri_faces().len());
+    assert_eq!(orig_indices.len(), sphere.tri_faces().len());
+
+    // Root node must bound the unit sphere [-1, 1]
+    let root = nodes[0];
+    for a in 0..3 {
+        assert!(root.aabb_min[a] <= -0.99, "root AABB min on axis {} out of bounds: {}", a, root.aabb_min[a]);
+        assert!(root.aabb_max[a] >= 0.99, "root AABB max on axis {} out of bounds: {}", a, root.aabb_max[a]);
+    }
+
+    // Verify tree structural invariants
+    let mut total_leaf_triangles = 0;
+    for (i, node) in nodes.iter().enumerate() {
+        if node.is_leaf() {
+            let (start, count) = node.tri_range().unwrap();
+            assert!(start + count <= reordered_triangles.len());
+            assert!(count > 0);
+            total_leaf_triangles += count;
+        } else {
+            let left = node.left_or_tri_start as usize;
+            let right = node.right_or_tri_count as usize;
+            assert!(left < nodes.len(), "left child out of bounds at node {}", i);
+            assert!(right < nodes.len(), "right child out of bounds at node {}", i);
+
+            // Child AABBs must be within parent AABB
+            for a in 0..3 {
+                assert!(nodes[left].aabb_min[a] >= node.aabb_min[a] - 1e-5);
+                assert!(nodes[left].aabb_max[a] <= node.aabb_max[a] + 1e-5);
+                assert!(nodes[right].aabb_min[a] >= node.aabb_min[a] - 1e-5);
+                assert!(nodes[right].aabb_max[a] <= node.aabb_max[a] + 1e-5);
+            }
+        }
+    }
+    assert_eq!(total_leaf_triangles, reordered_triangles.len());
+    println!("Built SAH BVH: {} nodes over {} triangles", nodes.len(), reordered_triangles.len());
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_bvh_raycast_vs_baseline_cuda_parity() {
+    let sphere = create_refined_sphere(20, 40); // 1,600 triangles
+    let analyzer = truck_meshalgo::gpu::cuda::CudaMeshAnalyzer::new();
+    let bvh = analyzer.create_bvh(&sphere);
+
+    // Generate 256 rays targeting sphere
+    let mut rays = Vec::new();
+    for i in 0..16 {
+        for j in 0..16 {
+            let u = -1.5 + 3.0 * (i as f64) / 15.0;
+            let v = -1.5 + 3.0 * (j as f64) / 15.0;
+            let origin = Point3::new(u, v, 3.0);
+            let dir = Vector3::new(0.0, 0.0, -1.0);
+            rays.push((origin, dir));
+        }
+    }
+
+    let baseline_hits = analyzer.raycast_mesh(&sphere, &rays);
+    let bvh_hits = bvh.raycast(&rays);
+
+    assert_eq!(baseline_hits.len(), bvh_hits.len());
+
+    let mut matched_hits = 0;
+    for (idx, (base, bvh_res)) in baseline_hits.iter().zip(bvh_hits.iter()).enumerate() {
+        match (base, bvh_res) {
+            (Some((d_base, p_base, _)), Some((d_bvh, p_bvh, _))) => {
+                assert!(
+                    (d_base - d_bvh).abs() < 1e-3,
+                    "Ray {} distance mismatch: base={}, bvh={}",
+                    idx,
+                    d_base,
+                    d_bvh
+                );
+                assert!(
+                    p_base.distance2(*p_bvh) < 1e-4,
+                    "Ray {} hit point mismatch: base={:?}, bvh={:?}",
+                    idx,
+                    p_base,
+                    p_bvh
+                );
+                matched_hits += 1;
+            }
+            (None, None) => {}
+            _ => panic!("Ray {} hit mismatch: base={:?}, bvh={:?}", idx, base, bvh_res),
+        }
+    }
+
+    assert!(matched_hits >= 50, "Expected significant hits on unit sphere, got {}", matched_hits);
+    println!("BVH raycast matched {}/{} rays with exact baseline CUDA parity", matched_hits, rays.len());
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_bvh_inside_parity() {
+    let sphere = create_refined_sphere(16, 32);
+    let analyzer = truck_meshalgo::gpu::cuda::CudaMeshAnalyzer::new();
+    let bvh = analyzer.create_bvh(&sphere);
+
+    let mut test_points = Vec::new();
+    // Points inside
+    for r in [0.0, 0.2, 0.5, 0.7, 0.85] {
+        test_points.push(Point3::new(r, 0.0, 0.0));
+        test_points.push(Point3::new(0.0, r, 0.0));
+        test_points.push(Point3::new(0.0, 0.0, r));
+    }
+    // Points outside
+    for r in [1.2, 1.5, 2.0, 3.0] {
+        test_points.push(Point3::new(r, 0.0, 0.0));
+        test_points.push(Point3::new(0.0, r, 0.0));
+        test_points.push(Point3::new(0.0, 0.0, r));
+    }
+
+    let baseline_inside = analyzer.inside(&sphere, &test_points);
+    let bvh_inside = bvh.inside(&test_points);
+
+    assert_eq!(baseline_inside.len(), bvh_inside.len());
+    for (i, (b, v)) in baseline_inside.iter().zip(bvh_inside.iter()).enumerate() {
+        assert_eq!(
+            b, v,
+            "Point {:?} inside mismatch: base={}, bvh={}",
+            test_points[i], b, v
+        );
+    }
+    println!("BVH inside containment matched all {} test points with baseline CUDA", test_points.len());
+}
+
+#[cfg(feature = "cuda")]
+#[test]
+fn test_persistent_bvh_caching_and_speed() {
+    let sphere = create_refined_sphere(24, 48); // ~2,300 triangles
+    let bvh = truck_meshalgo::gpu::bvh::CudaMeshBvh::new(&sphere);
+
+    let rays: Vec<(Point3, Vector3)> = (0..512)
+        .map(|i| {
+            let angle = (i as f64) * 0.1;
+            (
+                Point3::new(angle.cos() * 0.5, angle.sin() * 0.5, 2.0),
+                Vector3::new(0.0, 0.0, -1.0),
+            )
+        })
+        .collect();
+
+    // Warm-up query
+    let _ = bvh.raycast(&rays);
+
+    // Repeated query timing (nodes already on device!)
+    let t0 = std::time::Instant::now();
+    let num_iters = 20;
+    for _ in 0..num_iters {
+        let hits = bvh.raycast(&rays);
+        assert_eq!(hits.len(), rays.len());
+    }
+    let elapsed = t0.elapsed();
+    let per_iter = elapsed / (num_iters as u32);
+    println!("Persistent BVH 512-ray query time: {:?} per batch ({:?} total for {} iters)", per_iter, elapsed, num_iters);
+    assert!(per_iter < std::time::Duration::from_millis(5), "Expected sub-5ms per batch, got {:?}", per_iter);
 }

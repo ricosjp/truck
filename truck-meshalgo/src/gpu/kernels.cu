@@ -4709,4 +4709,503 @@ int truck_cuda_preload_device(int device_id) {
     return 0;
 }
 
+// ============================================================================
+// BVH Spatial Acceleration Structure for GPU Ray Tracing
+// ============================================================================
+
+struct alignas(16) GpuBvhNode {
+    float min_x, min_y, min_z;
+    int left_or_tri_start;
+    float max_x, max_y, max_z;
+    int right_or_tri_count;
+};
+
+__device__ __forceinline__ float safe_inv(float d) {
+    return fabsf(d) > 1.0e-9f ? (1.0f / d) : copysignf(1.0e9f, d);
+}
+
+__device__ __forceinline__ bool intersect_aabb_robust_t(
+    float3 origin,
+    float3 inv_dir,
+    float min_x, float min_y, float min_z,
+    float max_x, float max_y, float max_z,
+    float t_min,
+    float t_max,
+    float* out_tenter
+) {
+    float t0_x = (min_x - origin.x) * inv_dir.x;
+    float t1_x = (max_x - origin.x) * inv_dir.x;
+    float tmin_x = fminf(t0_x, t1_x);
+    float tmax_x = fmaxf(t0_x, t1_x);
+
+    float t0_y = (min_y - origin.y) * inv_dir.y;
+    float t1_y = (max_y - origin.y) * inv_dir.y;
+    float tmin_y = fminf(t0_y, t1_y);
+    float tmax_y = fmaxf(t0_y, t1_y);
+
+    float t0_z = (min_z - origin.z) * inv_dir.z;
+    float t1_z = (max_z - origin.z) * inv_dir.z;
+    float tmin_z = fminf(t0_z, t1_z);
+    float tmax_z = fmaxf(t0_z, t1_z);
+
+    float tenter = fmaxf(fmaxf(tmin_x, tmin_y), fmaxf(tmin_z, t_min));
+    float texit  = fminf(fminf(tmax_x, tmax_y), fminf(tmax_z, t_max));
+
+    *out_tenter = tenter;
+    return tenter <= texit;
+}
+
+__device__ __forceinline__ bool intersect_aabb_robust(
+    float3 origin,
+    float3 inv_dir,
+    float min_x, float min_y, float min_z,
+    float max_x, float max_y, float max_z,
+    float t_min,
+    float t_max
+) {
+    float t_dummy;
+    return intersect_aabb_robust_t(origin, inv_dir, min_x, min_y, min_z, max_x, max_y, max_z, t_min, t_max, &t_dummy);
+}
+
+extern "C" __global__ void truck_cuda_raycast_mesh_bvh_kernel(
+    const float4* __restrict__ ray_origins,
+    const float4* __restrict__ ray_dirs,
+    unsigned int num_rays,
+    const GpuBvhNode* __restrict__ bvh_nodes,
+    unsigned int num_nodes,
+    const GpuTriangle* __restrict__ triangles,
+    const unsigned int* __restrict__ orig_indices,
+    unsigned int num_triangles,
+    float* __restrict__ out_distances,
+    int* __restrict__ out_tri_indices,
+    float4* __restrict__ out_hit_points,
+    float4* __restrict__ out_normals
+) {
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_rays) return;
+
+    if (num_nodes == 0 || num_triangles == 0) {
+        out_distances[idx] = -1.0f;
+        out_tri_indices[idx] = -1;
+        out_hit_points[idx] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        out_normals[idx] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        return;
+    }
+
+    float4 o4 = ray_origins[idx];
+    float4 d4 = ray_dirs[idx];
+    float3 origin = make_float3(o4.x, o4.y, o4.z);
+    float3 dir = make_float3(d4.x, d4.y, d4.z);
+    float3 inv_dir = make_float3(safe_inv(dir.x), safe_inv(dir.y), safe_inv(dir.z));
+
+    float min_t = FLT_MAX;
+    int hit_tri = -1;
+    float3 hit_norm = make_float3(0.0f, 0.0f, 0.0f);
+
+    int stack[64];
+    int stack_ptr = 0;
+    stack[0] = 0;
+
+    while (stack_ptr >= 0) {
+        int node_idx = stack[stack_ptr--];
+        const GpuBvhNode& node = bvh_nodes[node_idx];
+
+        float t_box;
+        if (!intersect_aabb_robust_t(
+            origin, inv_dir,
+            node.min_x, node.min_y, node.min_z,
+            node.max_x, node.max_y, node.max_z,
+            0.0f, min_t, &t_box
+        )) {
+            continue;
+        }
+
+        if (node.left_or_tri_start < 0) {
+            int tri_start = ~node.left_or_tri_start;
+            int tri_count = node.right_or_tri_count;
+
+            for (int k = 0; k < tri_count; ++k) {
+                int tri_idx = tri_start + k;
+                GpuTriangle tri = triangles[tri_idx];
+                float3 v0 = make_float3(tri.v0.x, tri.v0.y, tri.v0.z);
+                float3 v1 = make_float3(tri.v1.x, tri.v1.y, tri.v1.z);
+                float3 v2 = make_float3(tri.v2.x, tri.v2.y, tri.v2.z);
+
+                float3 e1 = sub(v1, v0);
+                float3 e2 = sub(v2, v0);
+                float3 pvec = cross_product(dir, e2);
+                float det = dot_product(e1, pvec);
+
+                if (fabsf(det) > 1e-7f) {
+                    float inv_det = 1.0f / det;
+                    float3 tvec = sub(origin, v0);
+                    float u = dot_product(tvec, pvec) * inv_det;
+                    if (u >= 0.0f && u <= 1.0f) {
+                        float3 qvec = cross_product(tvec, e1);
+                        float v = dot_product(dir, qvec) * inv_det;
+                        if (v >= 0.0f && (u + v) <= 1.0f) {
+                            float hit_dist = dot_product(e2, qvec) * inv_det;
+                            if (hit_dist >= 0.0f && hit_dist < min_t) {
+                                min_t = hit_dist;
+                                hit_tri = orig_indices ? (int)orig_indices[tri_idx] : tri_idx;
+                                float3 geo_norm = cross_product(e1, e2);
+                                float norm_len = sqrtf(dot_product(geo_norm, geo_norm));
+                                if (norm_len > 1e-7f) {
+                                    hit_norm = mul(geo_norm, 1.0f / norm_len);
+                                } else {
+                                    hit_norm = make_float3(0.0f, 0.0f, 1.0f);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            int left_child = node.left_or_tri_start;
+            int right_child = node.right_or_tri_count;
+
+            float t_left, t_right;
+            bool hit_left = intersect_aabb_robust_t(
+                origin, inv_dir,
+                bvh_nodes[left_child].min_x, bvh_nodes[left_child].min_y, bvh_nodes[left_child].min_z,
+                bvh_nodes[left_child].max_x, bvh_nodes[left_child].max_y, bvh_nodes[left_child].max_z,
+                0.0f, min_t, &t_left
+            );
+            bool hit_right = intersect_aabb_robust_t(
+                origin, inv_dir,
+                bvh_nodes[right_child].min_x, bvh_nodes[right_child].min_y, bvh_nodes[right_child].min_z,
+                bvh_nodes[right_child].max_x, bvh_nodes[right_child].max_y, bvh_nodes[right_child].max_z,
+                0.0f, min_t, &t_right
+            );
+
+            if (hit_left && hit_right) {
+                if (t_left < t_right) {
+                    stack[++stack_ptr] = right_child;
+                    stack[++stack_ptr] = left_child;
+                } else {
+                    stack[++stack_ptr] = left_child;
+                    stack[++stack_ptr] = right_child;
+                }
+            } else if (hit_left) {
+                stack[++stack_ptr] = left_child;
+            } else if (hit_right) {
+                stack[++stack_ptr] = right_child;
+            }
+        }
+    }
+
+    if (hit_tri >= 0) {
+        out_distances[idx] = min_t;
+        out_tri_indices[idx] = hit_tri;
+        out_hit_points[idx] = make_float4(
+            origin.x + min_t * dir.x,
+            origin.y + min_t * dir.y,
+            origin.z + min_t * dir.z,
+            1.0f
+        );
+        out_normals[idx] = make_float4(hit_norm.x, hit_norm.y, hit_norm.z, 0.0f);
+    } else {
+        out_distances[idx] = -1.0f;
+        out_tri_indices[idx] = -1;
+        out_hit_points[idx] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        out_normals[idx] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+    }
+}
+
+extern "C" __global__ void truck_cuda_signed_crossing_rays_bvh_kernel(
+    const float4* __restrict__ points,
+    const float4* __restrict__ ray_dirs,
+    unsigned int num_points,
+    const GpuBvhNode* __restrict__ bvh_nodes,
+    unsigned int num_nodes,
+    const GpuTriangle* __restrict__ triangles,
+    unsigned int num_triangles,
+    int* __restrict__ crossing_counts
+) {
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= num_points) return;
+
+    if (num_nodes == 0 || num_triangles == 0) {
+        crossing_counts[idx] = 0;
+        return;
+    }
+
+    float4 p4 = points[idx];
+    float4 d4 = ray_dirs[idx];
+    float3 origin = make_float3(p4.x, p4.y, p4.z);
+    float3 dir = make_float3(d4.x, d4.y, d4.z);
+    float3 inv_dir = make_float3(safe_inv(dir.x), safe_inv(dir.y), safe_inv(dir.z));
+
+    int count = 0;
+    int stack[64];
+    int stack_ptr = 0;
+    stack[0] = 0;
+
+    while (stack_ptr >= 0) {
+        int node_idx = stack[stack_ptr--];
+        const GpuBvhNode& node = bvh_nodes[node_idx];
+
+        if (!intersect_aabb_robust(
+            origin, inv_dir,
+            node.min_x, node.min_y, node.min_z,
+            node.max_x, node.max_y, node.max_z,
+            0.0f, FLT_MAX
+        )) {
+            continue;
+        }
+
+        if (node.left_or_tri_start < 0) {
+            int tri_start = ~node.left_or_tri_start;
+            int tri_count = node.right_or_tri_count;
+
+            for (int k = 0; k < tri_count; ++k) {
+                GpuTriangle tri = triangles[tri_start + k];
+                float3 v0 = make_float3(tri.v0.x, tri.v0.y, tri.v0.z);
+                float3 v1 = make_float3(tri.v1.x, tri.v1.y, tri.v1.z);
+                float3 v2 = make_float3(tri.v2.x, tri.v2.y, tri.v2.z);
+
+                count += check_crossing_baseline(origin, dir, v0, v1, v2);
+            }
+        } else {
+            stack[++stack_ptr] = node.left_or_tri_start;
+            stack[++stack_ptr] = node.right_or_tri_count;
+        }
+    }
+
+    crossing_counts[idx] = count;
+}
+
+struct TruckCudaBvh {
+    int device_id;
+    GpuBvhNode* d_nodes;
+    unsigned int num_nodes;
+    GpuTriangle* d_triangles;
+    unsigned int* d_orig_indices;
+    unsigned int num_triangles;
+};
+
+TruckCudaBvh* truck_cuda_bvh_create(
+    const GpuBvhNode* h_nodes,
+    unsigned int num_nodes,
+    const GpuTriangle* h_triangles,
+    const unsigned int* h_orig_indices,
+    unsigned int num_triangles
+) {
+    if (num_nodes == 0 || num_triangles == 0) return NULL;
+    ensure_best_device();
+
+    int dev_id = 0;
+    cudaGetDevice(&dev_id);
+
+    TruckCudaBvh* bvh = new TruckCudaBvh();
+    bvh->device_id = dev_id;
+    bvh->num_nodes = num_nodes;
+    bvh->num_triangles = num_triangles;
+    bvh->d_nodes = NULL;
+    bvh->d_triangles = NULL;
+    bvh->d_orig_indices = NULL;
+
+    size_t node_bytes = num_nodes * sizeof(GpuBvhNode);
+    size_t tri_bytes = num_triangles * sizeof(GpuTriangle);
+    size_t idx_bytes = num_triangles * sizeof(unsigned int);
+
+    if (cudaMalloc(&bvh->d_nodes, node_bytes) != cudaSuccess) {
+        delete bvh;
+        return NULL;
+    }
+    if (cudaMalloc(&bvh->d_triangles, tri_bytes) != cudaSuccess) {
+        cudaFree(bvh->d_nodes);
+        delete bvh;
+        return NULL;
+    }
+    if (h_orig_indices) {
+        if (cudaMalloc(&bvh->d_orig_indices, idx_bytes) != cudaSuccess) {
+            cudaFree(bvh->d_nodes);
+            cudaFree(bvh->d_triangles);
+            delete bvh;
+            return NULL;
+        }
+    }
+
+    cudaMemcpy(bvh->d_nodes, h_nodes, node_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(bvh->d_triangles, h_triangles, tri_bytes, cudaMemcpyHostToDevice);
+    if (h_orig_indices && bvh->d_orig_indices) {
+        cudaMemcpy(bvh->d_orig_indices, h_orig_indices, idx_bytes, cudaMemcpyHostToDevice);
+    }
+
+    return bvh;
+}
+
+void truck_cuda_bvh_destroy(TruckCudaBvh* bvh) {
+    if (!bvh) return;
+    cudaSetDevice(bvh->device_id);
+    if (bvh->d_nodes) cudaFree(bvh->d_nodes);
+    if (bvh->d_triangles) cudaFree(bvh->d_triangles);
+    if (bvh->d_orig_indices) cudaFree(bvh->d_orig_indices);
+    delete bvh;
+}
+
+int truck_cuda_bvh_raycast(
+    const TruckCudaBvh* bvh,
+    const float* h_ray_origins,
+    const float* h_ray_dirs,
+    unsigned int num_rays,
+    float* h_out_distances,
+    int* h_out_tri_indices,
+    float* h_out_hit_points,
+    float* h_out_normals
+) {
+    if (!bvh || num_rays == 0) return 0;
+    cudaSetDevice(bvh->device_id);
+
+    size_t ray_bytes = (size_t)num_rays * sizeof(float4);
+    size_t dist_bytes = (size_t)num_rays * sizeof(float);
+    size_t idx_bytes = (size_t)num_rays * sizeof(int);
+
+    float4 *d_origins = nullptr, *d_dirs = nullptr;
+    float *d_distances = nullptr;
+    int *d_tri_indices = nullptr;
+    float4 *d_hit_points = nullptr, *d_normals = nullptr;
+
+    if (cudaMalloc(&d_origins, ray_bytes) != cudaSuccess) return -1;
+    if (cudaMalloc(&d_dirs, ray_bytes) != cudaSuccess) { cudaFree(d_origins); return -2; }
+    if (cudaMalloc(&d_distances, dist_bytes) != cudaSuccess) {
+        cudaFree(d_origins); cudaFree(d_dirs); return -3;
+    }
+    if (cudaMalloc(&d_tri_indices, idx_bytes) != cudaSuccess) {
+        cudaFree(d_origins); cudaFree(d_dirs); cudaFree(d_distances); return -4;
+    }
+    if (cudaMalloc(&d_hit_points, ray_bytes) != cudaSuccess) {
+        cudaFree(d_origins); cudaFree(d_dirs); cudaFree(d_distances); cudaFree(d_tri_indices); return -5;
+    }
+    if (cudaMalloc(&d_normals, ray_bytes) != cudaSuccess) {
+        cudaFree(d_origins); cudaFree(d_dirs); cudaFree(d_distances); cudaFree(d_tri_indices); cudaFree(d_hit_points); return -6;
+    }
+
+    cudaMemcpy(d_origins, h_ray_origins, ray_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_dirs, h_ray_dirs, ray_bytes, cudaMemcpyHostToDevice);
+
+    unsigned int block_size = 256;
+    unsigned int grid_size = (num_rays + block_size - 1) / block_size;
+    truck_cuda_raycast_mesh_bvh_kernel<<<grid_size, block_size>>>(
+        d_origins, d_dirs, num_rays,
+        bvh->d_nodes, bvh->num_nodes,
+        bvh->d_triangles, bvh->d_orig_indices, bvh->num_triangles,
+        d_distances, d_tri_indices,
+        d_hit_points, d_normals
+    );
+    cudaDeviceSynchronize();
+
+    if (h_out_distances) {
+        cudaMemcpy(h_out_distances, d_distances, dist_bytes, cudaMemcpyDeviceToHost);
+    }
+    if (h_out_tri_indices) {
+        cudaMemcpy(h_out_tri_indices, d_tri_indices, idx_bytes, cudaMemcpyDeviceToHost);
+    }
+    if (h_out_hit_points) {
+        cudaMemcpy(h_out_hit_points, d_hit_points, ray_bytes, cudaMemcpyDeviceToHost);
+    }
+    if (h_out_normals) {
+        cudaMemcpy(h_out_normals, d_normals, ray_bytes, cudaMemcpyDeviceToHost);
+    }
+
+    cudaFree(d_origins);
+    cudaFree(d_dirs);
+    cudaFree(d_distances);
+    cudaFree(d_tri_indices);
+    cudaFree(d_hit_points);
+    cudaFree(d_normals);
+    return 0;
+}
+
+int truck_cuda_bvh_signed_crossing_rays(
+    const TruckCudaBvh* bvh,
+    const float* h_points,
+    const float* h_ray_dirs,
+    unsigned int num_points,
+    int* h_crossing_counts
+) {
+    if (!bvh || num_points == 0) return 0;
+    cudaSetDevice(bvh->device_id);
+
+    size_t pt_bytes = (size_t)num_points * sizeof(float4);
+    size_t count_bytes = (size_t)num_points * sizeof(int);
+
+    float4 *d_points = nullptr, *d_dirs = nullptr;
+    int *d_counts = nullptr;
+
+    if (cudaMalloc(&d_points, pt_bytes) != cudaSuccess) return -1;
+    if (cudaMalloc(&d_dirs, pt_bytes) != cudaSuccess) { cudaFree(d_points); return -2; }
+    if (cudaMalloc(&d_counts, count_bytes) != cudaSuccess) {
+        cudaFree(d_points); cudaFree(d_dirs); return -3;
+    }
+
+    cudaMemcpy(d_points, h_points, pt_bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_dirs, h_ray_dirs, pt_bytes, cudaMemcpyHostToDevice);
+
+    unsigned int block_size = 256;
+    unsigned int grid_size = (num_points + block_size - 1) / block_size;
+    truck_cuda_signed_crossing_rays_bvh_kernel<<<grid_size, block_size>>>(
+        d_points, d_dirs, num_points,
+        bvh->d_nodes, bvh->num_nodes,
+        bvh->d_triangles, bvh->num_triangles,
+        d_counts
+    );
+    cudaDeviceSynchronize();
+
+    if (h_crossing_counts) {
+        cudaMemcpy(h_crossing_counts, d_counts, count_bytes, cudaMemcpyDeviceToHost);
+    }
+
+    cudaFree(d_points);
+    cudaFree(d_dirs);
+    cudaFree(d_counts);
+    return 0;
+}
+
+int truck_cuda_raycast_mesh_bvh(
+    const float* h_ray_origins,
+    const float* h_ray_dirs,
+    unsigned int num_rays,
+    const GpuBvhNode* h_nodes,
+    unsigned int num_nodes,
+    const GpuTriangle* h_triangles,
+    const unsigned int* h_orig_indices,
+    unsigned int num_triangles,
+    float* h_out_distances,
+    int* h_out_tri_indices,
+    float* h_out_hit_points,
+    float* h_out_normals
+) {
+    if (num_rays == 0) return 0;
+    TruckCudaBvh* bvh = truck_cuda_bvh_create(h_nodes, num_nodes, h_triangles, h_orig_indices, num_triangles);
+    if (!bvh) return -1;
+    int res = truck_cuda_bvh_raycast(
+        bvh, h_ray_origins, h_ray_dirs, num_rays,
+        h_out_distances, h_out_tri_indices, h_out_hit_points, h_out_normals
+    );
+    truck_cuda_bvh_destroy(bvh);
+    return res;
+}
+
+int truck_cuda_signed_crossing_rays_bvh(
+    const float* h_points,
+    const float* h_ray_dirs,
+    unsigned int num_points,
+    const GpuBvhNode* h_nodes,
+    unsigned int num_nodes,
+    const GpuTriangle* h_triangles,
+    unsigned int num_triangles,
+    int* h_crossing_counts
+) {
+    if (num_points == 0) return 0;
+    TruckCudaBvh* bvh = truck_cuda_bvh_create(h_nodes, num_nodes, h_triangles, NULL, num_triangles);
+    if (!bvh) return -1;
+    int res = truck_cuda_bvh_signed_crossing_rays(
+        bvh, h_points, h_ray_dirs, num_points, h_crossing_counts
+    );
+    truck_cuda_bvh_destroy(bvh);
+    return res;
+}
+
 } // extern "C"

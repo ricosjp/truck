@@ -24,6 +24,11 @@ pub use metadata::{CpuMetadata, GpuMetadata, SystemMetadata};
 pub use profile::{DispatchProfile, KernelTarget, Operation, SampleTiming, ScalingThresholds};
 pub use cache::{cache_file_path, clear_cache, load_cached_profile, save_cached_profile, KernelCache, CURRENT_CACHE_VERSION};
 
+#[cfg(feature = "gpu")]
+pub use crate::gpu::bvh::{build_bvh, build_mesh_bvh, GpuBvhNode};
+#[cfg(feature = "cuda")]
+pub use crate::gpu::bvh::CudaMeshBvh;
+
 /// Eagerly warms up the dispatcher and preloads GPU execution environments (CUDA contexts, PTX modules, scratchpads, and Vulkan compute pipelines).
 ///
 /// Calling this during application startup or splash screens (optionally on a background thread)
@@ -90,6 +95,7 @@ impl Dispatcher {
                 Some("vulkan") => AtomicI32::new(3),
                 Some("cuda") => AtomicI32::new(4),
                 Some("ptx") => AtomicI32::new(5),
+                Some("bvh") => AtomicI32::new(6),
                 _ => AtomicI32::new(0), // Auto
             };
 
@@ -117,6 +123,7 @@ impl Dispatcher {
             Some(KernelTarget::GpuVulkan) => 3,
             Some(KernelTarget::GpuCuda) => 4,
             Some(KernelTarget::GpuPtxSm86) => 5,
+            Some(KernelTarget::GpuBvh) => 6,
         };
         self.override_target.store(code, Ordering::Relaxed);
     }
@@ -139,6 +146,7 @@ impl Dispatcher {
             3 => KernelTarget::GpuVulkan,
             4 => KernelTarget::GpuCuda,
             5 => KernelTarget::GpuPtxSm86,
+            6 => KernelTarget::GpuBvh,
             _ => self.profile.select_kernel(op, size),
         }
     }
@@ -373,7 +381,7 @@ impl Dispatcher {
 
         let target = self.select_kernel(Operation::PointMeshDistance, points.len());
         match target {
-            KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuBvh | KernelTarget::GpuPtxSm86 => {
                 #[cfg(feature = "cuda")]
                 return multi_gpu_cuda_split(points, |analyzer, pts| {
                     analyzer.distance2_point_cloud(mesh, pts)
@@ -444,6 +452,14 @@ impl Dispatcher {
 
         let target = self.select_kernel(Operation::InOutContainment, points.len());
         match target {
+            KernelTarget::GpuBvh => {
+                #[cfg(feature = "cuda")]
+                return multi_gpu_cuda_split(points, |analyzer, pts| {
+                    analyzer.inside_bvh(mesh, pts)
+                });
+                #[cfg(not(feature = "cuda"))]
+                self.inside_rayon(mesh, points)
+            }
             KernelTarget::GpuPtxSm86 | KernelTarget::GpuCuda => {
                 #[cfg(feature = "cuda")]
                 return multi_gpu_cuda_split(points, |analyzer, pts| {
@@ -482,6 +498,17 @@ impl Dispatcher {
 
         let target = self.select_kernel(Operation::InOutContainment, points.len());
         match target {
+            KernelTarget::GpuBvh => {
+                #[cfg(feature = "cuda")]
+                return multi_gpu_cuda_split_pair(points, ray_dirs, |analyzer, pts, dirs| {
+                    analyzer.signed_crossing_rays_bvh(mesh, pts, dirs)
+                })
+                .into_iter()
+                .map(|c| c as isize)
+                .collect();
+                #[cfg(not(feature = "cuda"))]
+                self.signed_crossing_rays_rayon(mesh, points, ray_dirs)
+            }
             KernelTarget::GpuPtxSm86 | KernelTarget::GpuCuda => {
                 #[cfg(feature = "cuda")]
                 return multi_gpu_cuda_split_pair(points, ray_dirs, |analyzer, pts, dirs| {
@@ -974,7 +1001,7 @@ impl Dispatcher {
         }
         let target = self.select_kernel(Operation::PlanarFaceSegmentation, mesh.faces().len());
         match target {
-            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh => {
                 #[cfg(feature = "cuda")]
                 return crate::gpu::cuda::CudaMeshAnalyzer::new().extract_planes(mesh, tol);
                 #[cfg(not(feature = "cuda"))]
@@ -1027,7 +1054,7 @@ impl Dispatcher {
         let total_faces = mesh.faces().len();
         let target = self.select_kernel(Operation::LinearSubdivision, total_faces);
         match target {
-            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh => {
                 #[cfg(feature = "cuda")]
                 return crate::gpu::cuda::CudaMeshAnalyzer::new().linear_subdivide(mesh);
                 #[cfg(not(feature = "cuda"))]
@@ -1049,7 +1076,7 @@ impl Dispatcher {
     pub fn subdivide_triangles(&self, triangles: &[crate::gpu::GpuTriangle]) -> Vec<crate::gpu::GpuTriangle> {
         let target = self.select_kernel(Operation::LinearSubdivision, triangles.len());
         match target {
-            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh => {
                 #[cfg(feature = "cuda")]
                 return crate::gpu::cuda::CudaMeshAnalyzer::new().subdivide_triangles(triangles);
                 #[cfg(not(feature = "cuda"))]
@@ -1135,6 +1162,14 @@ impl Dispatcher {
 
         let target = self.select_kernel(Operation::RaycastMesh, rays.len());
         match target {
+            KernelTarget::GpuBvh => {
+                #[cfg(feature = "cuda")]
+                return multi_gpu_cuda_split(rays, |analyzer, r| {
+                    analyzer.raycast_mesh_bvh(mesh, r)
+                });
+                #[cfg(not(feature = "cuda"))]
+                crate::analyzers::raycast_mesh_rayon(mesh, rays)
+            }
             KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
                 #[cfg(feature = "cuda")]
                 return multi_gpu_cuda_split(rays, |analyzer, r| {
@@ -1179,7 +1214,7 @@ impl Dispatcher {
         let total_faces = mesh.faces().len();
         let target = self.select_kernel(Operation::LoopSubdivision, total_faces);
         match target {
-            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh => {
                 #[cfg(feature = "cuda")]
                 return crate::gpu::cuda::CudaMeshAnalyzer::new().loop_subdivide(mesh);
                 #[cfg(not(feature = "cuda"))]
@@ -1333,7 +1368,7 @@ impl Dispatcher {
         let total_faces = mesh.faces().len();
         let target = self.select_kernel(Operation::FeatureEdges, total_faces);
         match target {
-            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh => {
                 #[cfg(feature = "cuda")]
                 return crate::gpu::cuda::CudaMeshAnalyzer::new().extract_feature_edges(mesh, crease_angle_rad);
                 #[cfg(not(feature = "cuda"))]
@@ -1356,7 +1391,7 @@ impl Dispatcher {
         let total_faces = mesh.faces().len();
         let target = self.select_kernel(Operation::FeatureEdges, total_faces);
         match target {
-            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh => {
                 #[cfg(feature = "cuda")]
                 return crate::gpu::cuda::CudaMeshAnalyzer::new().extract_boundary_edges(mesh);
                 #[cfg(not(feature = "cuda"))]
@@ -1507,7 +1542,7 @@ impl Dispatcher {
         }
         let target = self.select_kernel(Operation::QemEdgeCollapse, tri_faces.len());
         match target {
-            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh => {
                 #[cfg(feature = "cuda")]
                 return crate::gpu::cuda::CudaMeshAnalyzer::new().compute_edge_collapse_costs(mesh);
                 #[cfg(not(feature = "cuda"))]
@@ -1544,7 +1579,7 @@ impl Dispatcher {
         }
         let target = self.select_kernel(Operation::PointIn2dLoops, points.len());
         match target {
-            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh => {
                 #[cfg(feature = "cuda")]
                 return crate::gpu::cuda::CudaMeshAnalyzer::new().point_in_2d_loops(points, loops);
                 #[cfg(not(feature = "cuda"))]
@@ -1581,7 +1616,7 @@ impl Dispatcher {
         }
         let target = self.select_kernel(Operation::SegmentMeshDistance, segments.len());
         match target {
-            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh => {
                 #[cfg(feature = "cuda")]
                 return multi_gpu_cuda_split(segments, |analyzer, segs| {
                     analyzer.segment_mesh_distances(mesh, segs)
@@ -1625,7 +1660,7 @@ impl Dispatcher {
         }
         let target = self.select_kernel(Operation::WeldAttributes, attrs.len());
         match target {
-            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh => {
                 #[cfg(feature = "cuda")]
                 return crate::gpu::cuda::CudaMeshAnalyzer::new().weld_attributes_3d(attrs, tol);
                 #[cfg(not(feature = "cuda"))]
@@ -1650,7 +1685,7 @@ impl Dispatcher {
         }
         let target = self.select_kernel(Operation::WeldAttributes, attrs.len());
         match target {
-            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 => {
+            KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh => {
                 #[cfg(feature = "cuda")]
                 return crate::gpu::cuda::CudaMeshAnalyzer::new().weld_attributes_2d(attrs, tol);
                 #[cfg(not(feature = "cuda"))]

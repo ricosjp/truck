@@ -233,7 +233,7 @@ pub fn run_scaling_microbenchmark() -> DispatchProfile {
             });
         }
 
-        // CUDA & PTX
+        // CUDA & PTX & BVH
         #[cfg(feature = "cuda")]
         if cuda_available {
             let d_ptx = time_run(|| {
@@ -244,6 +244,16 @@ pub fn run_scaling_microbenchmark() -> DispatchProfile {
                 size,
                 kernel: KernelTarget::GpuPtxSm86,
                 duration_nanos: d_ptx.as_nanos() as u64,
+            });
+
+            let d_bvh = time_run(|| {
+                let res = cuda_analyzer.signed_crossing_rays_bvh(&mesh, &pts, dirs);
+                std::hint::black_box(res);
+            });
+            in_out_samples.push(SampleTiming {
+                size,
+                kernel: KernelTarget::GpuBvh,
+                duration_nanos: d_bvh.as_nanos() as u64,
             });
         }
     }
@@ -428,6 +438,85 @@ pub fn run_scaling_microbenchmark() -> DispatchProfile {
 
     let bspline_evaluation = calibrate_thresholds(Operation::BsplineEvaluation, &bsp_samples);
 
+    // ------------------------------------------------------------------------
+    // 7. RaycastMesh
+    // ------------------------------------------------------------------------
+    let mut raycast_samples = Vec::new();
+    let raycast_rays: Vec<(Point3, Vector3)> = (0..sizes[sizes.len() - 1])
+        .map(|i| {
+            let t = i as f64 * 0.456789;
+            let origin = Point3::new(t.cos() * 2.0, t.sin() * 2.0, (t * 0.5).sin() * 2.0);
+            let dir = (-origin.to_vec()).normalize();
+            (origin, dir)
+        })
+        .collect();
+
+    for &size in &sizes {
+        let rays = &raycast_rays[..size];
+
+        // CPU Single
+        let d_cpu1 = time_run(|| {
+            let res = crate::analyzers::raycast_mesh_cpu(&mesh, rays);
+            std::hint::black_box(res);
+        });
+        raycast_samples.push(SampleTiming {
+            size,
+            kernel: KernelTarget::CpuSingle,
+            duration_nanos: d_cpu1.as_nanos() as u64,
+        });
+
+        // CPU Rayon
+        let d_rayon = time_run(|| {
+            let res = crate::analyzers::raycast_mesh_rayon(&mesh, rays);
+            std::hint::black_box(res);
+        });
+        raycast_samples.push(SampleTiming {
+            size,
+            kernel: KernelTarget::CpuRayon,
+            duration_nanos: d_rayon.as_nanos() as u64,
+        });
+
+        // Vulkan
+        #[cfg(feature = "gpu")]
+        if let Some(ref v_analyzer) = vulkan_analyzer {
+            let d_vulkan = time_run(|| {
+                let res = v_analyzer.raycast_mesh(&mesh, rays);
+                std::hint::black_box(res);
+            });
+            raycast_samples.push(SampleTiming {
+                size,
+                kernel: KernelTarget::GpuVulkan,
+                duration_nanos: d_vulkan.as_nanos() as u64,
+            });
+        }
+
+        // CUDA Baseline & BVH
+        #[cfg(feature = "cuda")]
+        if cuda_available {
+            let d_cuda = time_run(|| {
+                let res = cuda_analyzer.raycast_mesh(&mesh, rays);
+                std::hint::black_box(res);
+            });
+            raycast_samples.push(SampleTiming {
+                size,
+                kernel: KernelTarget::GpuCuda,
+                duration_nanos: d_cuda.as_nanos() as u64,
+            });
+
+            let d_bvh = time_run(|| {
+                let res = cuda_analyzer.raycast_mesh_bvh(&mesh, rays);
+                std::hint::black_box(res);
+            });
+            raycast_samples.push(SampleTiming {
+                size,
+                kernel: KernelTarget::GpuBvh,
+                duration_nanos: d_bvh.as_nanos() as u64,
+            });
+        }
+    }
+
+    let raycast_mesh = calibrate_thresholds(Operation::RaycastMesh, &raycast_samples);
+
     DispatchProfile {
         point_mesh_distance,
         in_out_containment,
@@ -441,7 +530,7 @@ pub fn run_scaling_microbenchmark() -> DispatchProfile {
         planar_face_segmentation: ScalingThresholds::default_fallback(Operation::PlanarFaceSegmentation),
         linear_subdivision: ScalingThresholds::default_fallback(Operation::LinearSubdivision),
         nurbs_curve_evaluation: ScalingThresholds::default_fallback(Operation::NurbsCurveEvaluation),
-        raycast_mesh: ScalingThresholds::default_fallback(Operation::RaycastMesh),
+        raycast_mesh,
         loop_subdivision: ScalingThresholds::default_fallback(Operation::LoopSubdivision),
         feature_edges: ScalingThresholds::default_fallback(Operation::FeatureEdges),
         qem_edge_collapse: ScalingThresholds::default_fallback(Operation::QemEdgeCollapse),
@@ -472,7 +561,7 @@ fn calibrate_thresholds(op: Operation, samples: &[SampleTiming]) -> ScalingThres
 
     let is_gpu = |k: KernelTarget| matches!(
         k,
-        KernelTarget::GpuVulkan | KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86
+        KernelTarget::GpuVulkan | KernelTarget::GpuCuda | KernelTarget::GpuPtxSm86 | KernelTarget::GpuBvh
     );
 
     // Determine preferred GPU by comparing GPU kernels at the largest tested size

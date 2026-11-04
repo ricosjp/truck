@@ -745,6 +745,31 @@ impl CudaMeshAnalyzer {
         counts.into_iter().map(|c| c >= 1).collect()
     }
 
+    /// Computes signed crossing face counts accelerated by the GPU BVH.
+    pub fn signed_crossing_rays_bvh(
+        &self,
+        mesh: &PolygonMesh,
+        points: &[Point3],
+        dirs: &[Vector3],
+    ) -> Vec<i32> {
+        self.bind_device();
+        let bvh = super::bvh::CudaMeshBvh::new_on_device(mesh, self.device_id.unwrap_or(0));
+        bvh.signed_crossing_rays(points, dirs)
+    }
+
+    /// Determines whether each point in `points` is inside the closed mesh accelerated by the GPU BVH.
+    pub fn inside_bvh(&self, mesh: &PolygonMesh, points: &[Point3]) -> Vec<bool> {
+        self.bind_device();
+        let bvh = super::bvh::CudaMeshBvh::new_on_device(mesh, self.device_id.unwrap_or(0));
+        bvh.inside(points)
+    }
+
+    /// Creates a GPU-resident BVH structure for fast repeated raycasting and containment queries.
+    pub fn create_bvh(&self, mesh: &PolygonMesh) -> super::bvh::CudaMeshBvh {
+        self.bind_device();
+        super::bvh::CudaMeshBvh::new_on_device(mesh, self.device_id.unwrap_or(0))
+    }
+
     // ========================================================================
     // Candidate 1: Mesh Normal Generation & Smoothing
     // ========================================================================
@@ -1569,6 +1594,17 @@ impl CudaMeshAnalyzer {
                 }
             })
             .collect()
+    }
+
+    /// Raycasts an array of rays against a polygon mesh using GPU BVH spatial acceleration.
+    pub fn raycast_mesh_bvh(
+        &self,
+        mesh: &PolygonMesh,
+        rays: &[(Point3, Vector3)],
+    ) -> Vec<Option<(f64, Point3, Vector3)>> {
+        self.bind_device();
+        let bvh = super::bvh::CudaMeshBvh::new_on_device(mesh, self.device_id.unwrap_or(0));
+        bvh.raycast(rays)
     }
 
     /// Smooth Loop subdivision surface refinement on the GPU via CUDA (FP64 precision).

@@ -15,6 +15,8 @@ pub enum KernelTarget {
     GpuCuda,
     /// GPU implementation using handcrafted Ampere SM 8.6 PTX kernels.
     GpuPtxSm86,
+    /// GPU implementation using BVH spatial acceleration.
+    GpuBvh,
 }
 
 impl std::fmt::Display for KernelTarget {
@@ -25,6 +27,7 @@ impl std::fmt::Display for KernelTarget {
             Self::GpuVulkan => write!(f, "GPU (Vulkan)"),
             Self::GpuCuda => write!(f, "GPU (CUDA Baseline)"),
             Self::GpuPtxSm86 => write!(f, "GPU (Ampere PTX SM 8.6)"),
+            Self::GpuBvh => write!(f, "GPU (BVH Spatial Acceleration)"),
         }
     }
 }
@@ -109,7 +112,7 @@ impl ScalingThresholds {
             Operation::InOutContainment => Self {
                 cpu_single_max: 64,
                 cpu_rayon_max: 256,
-                preferred_gpu: KernelTarget::GpuPtxSm86,
+                preferred_gpu: KernelTarget::GpuBvh,
                 sample_timings: Vec::new(),
             },
             Operation::MeshNormals => Self {
@@ -175,7 +178,7 @@ impl ScalingThresholds {
             Operation::RaycastMesh => Self {
                 cpu_single_max: 64,
                 cpu_rayon_max: 256,
-                preferred_gpu: KernelTarget::GpuCuda,
+                preferred_gpu: KernelTarget::GpuBvh,
                 sample_timings: Vec::new(),
             },
             Operation::LoopSubdivision => Self {
