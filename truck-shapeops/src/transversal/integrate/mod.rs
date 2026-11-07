@@ -72,6 +72,70 @@ fn altshell_to_shell<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     )
 }
 
+/// Inside/outside judge against a closed tessellated shell.
+///
+/// Counts signed ray crossings (the winding number) against the face polygons **with the face orientation applied**.
+/// For an outward shell the count is 1 inside and 0 outside. For an inverted shell (`Solid::not`, as used for
+/// difference) it is -1 inside the original region and 0 outside, and the "inside" of the inverted shell is the
+/// complement, so the threshold is 0 instead of 1. A ray that grazes a triangle edge can be counted twice or missed,
+/// so the verdict is a majority of three rays.
+struct InsideJudge {
+    polys: Vec<PolygonMesh>,
+    threshold: isize,
+}
+
+impl InsideJudge {
+    fn new(poly_shell: &Shell<Point3, PolylineCurve<Point3>, Option<PolygonMesh>>) -> Option<Self> {
+        let polys = poly_shell
+            .face_iter()
+            .map(|face| {
+                let mut poly = face.surface()?;
+                if !face.orientation() {
+                    poly.invert();
+                }
+                Some(poly)
+            })
+            .collect::<Option<Vec<_>>>()?;
+        let volume: f64 = polys.iter().map(signed_volume).sum();
+        Some(Self {
+            polys,
+            threshold: if volume < 0.0 { 0 } else { 1 },
+        })
+    }
+
+    fn inside(&self, pt: Point3) -> bool {
+        let votes = [
+            Vector3::new(0.0, 0.0, 0.0),
+            Vector3::new(0.31, 0.17, 0.53),
+            Vector3::new(-0.43, 0.29, -0.11),
+        ]
+        .into_iter()
+        .filter(|&offset| {
+            let dir = hash::take_one_unit(pt + offset);
+            let count: isize = self
+                .polys
+                .iter()
+                .map(|poly| poly.signed_crossing_faces(pt, dir))
+                .sum();
+            count >= self.threshold
+        })
+        .count();
+        votes >= 2
+    }
+}
+
+/// Signed volume of a polygon mesh (divergence theorem); positive when the faces point outward.
+fn signed_volume(poly: &PolygonMesh) -> f64 {
+    let ps = poly.positions();
+    poly.faces()
+        .triangle_iter()
+        .map(|t| {
+            let [a, b, c] = [ps[t[0].pos], ps[t[1].pos], ps[t[2].pos]];
+            a.to_vec().dot(b.to_vec().cross(c.to_vec())) / 6.0
+        })
+        .sum()
+}
+
 fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     shell0: &Shell<Point3, C, S>,
     shell1: &Shell<Point3, C, S>,
@@ -93,33 +157,26 @@ fn process_one_pair_of_shells<C: ShapeOpsCurve<S>, S: ShapeOpsSurface>(
     cls0.integrate_by_component();
     let mut cls1 = divide_face::divide_faces(&altshell1, &loops_store1, tol)?;
     cls1.integrate_by_component();
+    // Faces untouched by any intersection curve are classified by whether they lie inside the other shell. The judge
+    // honors face orientation and inverted shells; previously a difference whose tool does not touch the target
+    // always produced an open or empty result.
+    let judge1 = InsideJudge::new(&poly_shell1)?;
     let [mut and0, mut or0, unknown0] = cls0.and_or_unknown();
     unknown0.into_iter().try_for_each(|face| {
-        let pt = face.boundaries()[0].vertex_iter().next().unwrap().point();
-        let dir = hash::take_one_unit(pt);
-        let count = poly_shell1.iter().try_fold(0, |count, face| {
-            let poly = face.surface()?;
-            Some(count + poly.signed_crossing_faces(pt, dir))
-        })?;
-        if count >= 1 {
-            and0.push(face);
-        } else {
-            or0.push(face);
+        let pt = face.boundaries()[0].vertex_iter().next()?.point();
+        match judge1.inside(pt) {
+            true => and0.push(face),
+            false => or0.push(face),
         }
         Some(())
     })?;
+    let judge0 = InsideJudge::new(&poly_shell0)?;
     let [mut and1, mut or1, unknown1] = cls1.and_or_unknown();
     unknown1.into_iter().try_for_each(|face| {
-        let pt = face.boundaries()[0].vertex_iter().next().unwrap().point();
-        let dir = hash::take_one_unit(pt);
-        let count = poly_shell0.iter().try_fold(0, |count, face| {
-            let poly = face.surface()?;
-            Some(count + poly.signed_crossing_faces(pt, dir))
-        })?;
-        if count >= 1 {
-            and1.push(face);
-        } else {
-            or1.push(face);
+        let pt = face.boundaries()[0].vertex_iter().next()?.point();
+        match judge0.inside(pt) {
+            true => and1.push(face),
+            false => or1.push(face),
         }
         Some(())
     })?;
