@@ -26,7 +26,7 @@ truck-polymesh = { version = "0.6.0", path = "../truck-polymesh" }
 [dev-dependencies]
 async-trait = "0.1.92"
 env_logger = "0.11.11"
-pollster = "1.0.1"
+pollster = "1.0.2"
 rayon = "1.12.0"
 serde_json = "1.0.154"
 truck-meshalgo = { version = "0.4.0", path = "../truck-meshalgo" }
@@ -38,4 +38,4 @@ web-time = "1.1.0"
 wasm-bindgen-futures = "0.4.80"
 console_error_panic_hook = "0.1.7"
 console_log = "1.1.0"
-gloo-utils = "0.3.0"
+gloo-utils = "0.3.1"
