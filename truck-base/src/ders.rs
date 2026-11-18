@@ -777,8 +777,8 @@ impl<V> SurfaceDers<V> {
         let max_order = self.max_order.min(other.max_order);
         let mut res = SurfaceDers::new(max_order);
         for m in 0..=max_order {
-            for n in 0..=max_order - m {
-                res[m][n] = self.combinatorial_der(other, &binomial, m, n);
+            for (n, v) in res[m].iter_mut().enumerate().take((max_order - m) + 1) {
+                *v = self.combinatorial_der(other, &binomial, m, n);
             }
         }
         res

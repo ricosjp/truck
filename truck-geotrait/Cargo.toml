@@ -17,7 +17,7 @@ polynomial = []
 
 [dependencies]
 truck-base = { version = "0.5.0", path = "../truck-base" }
-rand = "0.10.3"
+rand = "0.10.4"
 thiserror = "2.0.21"
 truck-derivers = { version = "0.1.0", path = "../truck-derivers", optional = true }
 
