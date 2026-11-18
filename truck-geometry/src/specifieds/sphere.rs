@@ -188,14 +188,19 @@ impl SearchNearestParameter<D2> for Sphere {
     fn search_nearest_parameter<H: Into<SPHint2D>>(
         &self,
         point: Point3,
-        _: H,
+        hint: H,
         _: usize,
     ) -> Option<(f64, f64)> {
         let radius = (point - self.center).normalize();
         let u = f64::acos(f64::clamp(radius[2], -1.0, 1.0));
         let sinu = f64::sqrt(1.0 - radius[2] * radius[2]);
         let cosv = f64::clamp(radius[0] / sinu, -1.0, 1.0);
-        let v = if radius[1] > 0.0 {
+        let v = if sinu.so_small() {
+            match hint.into() {
+                SPHint2D::Parameter(_, v) => v,
+                _ => 0.0,
+            }
+        } else if radius[1] > 0.0 {
             f64::acos(cosv)
         } else {
             2.0 * PI - f64::acos(cosv)
