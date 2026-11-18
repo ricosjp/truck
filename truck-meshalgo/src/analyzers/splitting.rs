@@ -148,9 +148,7 @@ impl Splitting for PolygonMesh {
 
     fn extract_planes(&self, tol: f64) -> (Vec<usize>, Vec<usize>) {
         nonpositive_tolerance!(tol, 0.0);
-        self.faces_into_two_clusters(|face: &[Vertex]| {
-            is_in_the_plane(self.positions(), self.normals(), face, tol * tol)
-        })
+        dispatch::Dispatcher::global().extract_planes(self, tol)
     }
 
     fn components(&self, use_normal: bool) -> Vec<Vec<usize>> {
@@ -268,7 +266,8 @@ fn get_components(adjacency: &[Vec<usize>]) -> Vec<Vec<usize>> {
     }
 }
 
-fn is_in_the_plane(positions: &[Point3], normals: &[Vector3], face: &[Vertex], tol2: f64) -> bool {
+/// Determines if any vertex normal of a face matches the face normal within squared tolerance `tol2`.
+pub fn is_in_the_plane(positions: &[Point3], normals: &[Vector3], face: &[Vertex], tol2: f64) -> bool {
     let n = FaceNormal::new(positions, face, 0).normal;
     for v in face {
         if let Some(nor) = v.nor {

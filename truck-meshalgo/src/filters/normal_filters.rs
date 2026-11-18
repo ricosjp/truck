@@ -16,7 +16,7 @@ pub trait NormalFilters {
     ///         positions: vec![Point3::new(0.0, 0.0, 0.0)],
     ///         normals: vec![
     ///             Vector3::new(100.0, 20.0, 56.0),
-    ///             Vector3::new(1.0e-12, 3.536e10, std::f64::NAN),
+    ///             Vector3::new(1.0e-12, 3.536e10, f64::NAN),
     ///             Vector3::new(0.0, 1.0, 0.0),
     ///         ],
     ///         ..Default::default()

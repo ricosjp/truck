@@ -171,3 +171,58 @@ fn exec_tex_render_test(backend: Backends, out_dir: &str) {
 
 #[test]
 fn tex_render_test() { common::os_alt_exec_test(exec_tex_render_test) }
+
+#[test]
+fn zero_copy_direct_nurbs_render_test() {
+    let mut scene = test_scene(Backends::VULKAN);
+    let creator = scene.instance_creator();
+    let vulkan = truck_meshalgo::gpu::GpuMeshAnalyzer::new(scene.device_handler());
+
+    let u_knots = vec![0.0, 0.0, 1.0, 1.0];
+    let v_knots = vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    let sqrt2_inv = 1.0 / std::f64::consts::SQRT_2;
+    let control_points = vec![
+        vec![
+            Vector4::new(1.0, 0.0, 0.0, 1.0),
+            Vector4::new(sqrt2_inv, sqrt2_inv, 0.0, sqrt2_inv),
+            Vector4::new(0.0, 1.0, 0.0, 1.0),
+        ],
+        vec![
+            Vector4::new(1.0, 0.0, 1.0, 1.0),
+            Vector4::new(sqrt2_inv, sqrt2_inv, sqrt2_inv, sqrt2_inv),
+            Vector4::new(0.0, 1.0, 1.0, 1.0),
+        ],
+    ];
+
+    let (vb, ib, _idx_count) = vulkan.tessellate_nurbs_surface_direct(
+        &u_knots,
+        &v_knots,
+        1,
+        2,
+        &control_points,
+        16,
+        16,
+    );
+
+    let instance: PolygonInstance = creator.create_direct_polygon_instance(
+        vb,
+        ib,
+        &PolygonState {
+            material: Material {
+                albedo: Vector4::new(0.2, 0.6, 1.0, 1.0),
+                roughness: 0.3,
+                reflectance: 0.8,
+                ambient_ratio: 0.05,
+                background_ratio: 0.0,
+                alpha_blend: false,
+            },
+            ..Default::default()
+        },
+    );
+
+    let img_bytes = common::render_one(&mut scene, &instance);
+    assert!(!img_bytes.is_empty(), "Zero-copy rendered buffer must produce valid rendered pixels");
+    let non_zero_pixels = img_bytes.chunks_exact(4).filter(|p| p != &[0, 0, 0, 255] && p != &[0, 0, 0, 0]).count();
+    assert!(non_zero_pixels > 100, "Rendered scene should contain visible geometry pixels");
+    println!("Zero-copy direct GPU tessellated NURBS instance successfully rendered with {} visible surface pixels!", non_zero_pixels);
+}

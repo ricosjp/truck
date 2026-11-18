@@ -18,6 +18,22 @@ impl PolygonInstance {
     #[inline(always)]
     pub fn instance_state_mut(&mut self) -> &mut PolygonState { &mut self.state }
 
+    /// Creates an instance directly from existing GPU vertex and index buffer handlers (zero-copy display pipeline).
+    #[inline(always)]
+    pub fn from_buffer_handlers(
+        vertex_buffer: Arc<BufferHandler>,
+        index_buffer: Arc<BufferHandler>,
+        shaders: &PolygonShaders,
+        state: &PolygonState,
+    ) -> PolygonInstance {
+        PolygonInstance {
+            polygon: (vertex_buffer, index_buffer),
+            state: state.clone(),
+            shaders: shaders.clone(),
+            id: RenderID::gen(),
+        }
+    }
+
     /// swap vertex buffers and index buffers
     #[inline(always)]
     pub fn swap_vertex(&mut self, other: &mut PolygonInstance) {

@@ -13,6 +13,15 @@ pub trait Topology {
     /// Examples for each condition can be found on the page of
     /// [`ShellCondition`](https://docs.rs/truck-topology/0.2.0/truck_topology/shell/enum.ShellCondition.html).
     fn shell_condition(&self) -> ShellCondition;
+    /// Extracts feature edges (creases and open boundaries) as 3D line segments.
+    fn extract_feature_edges(&self, crease_angle_rad: f64) -> Vec<(Point3, Point3)> {
+        let _ = crease_angle_rad;
+        Vec::new()
+    }
+    /// Extracts open boundary edges as 3D line segments.
+    fn extract_boundary_edges(&self) -> Vec<(Point3, Point3)> {
+        Vec::new()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -114,4 +123,10 @@ impl Topology for Faces {
 impl Topology for PolygonMesh {
     fn extract_boundaries(&self) -> Vec<Vec<usize>> { self.faces().extract_boundaries() }
     fn shell_condition(&self) -> ShellCondition { self.faces().shell_condition() }
+    fn extract_feature_edges(&self, crease_angle_rad: f64) -> Vec<(Point3, Point3)> {
+        dispatch::Dispatcher::global().extract_feature_edges(self, crease_angle_rad)
+    }
+    fn extract_boundary_edges(&self) -> Vec<(Point3, Point3)> {
+        dispatch::Dispatcher::global().extract_boundary_edges(self)
+    }
 }

@@ -3,9 +3,13 @@ use std::fmt::Debug;
 use thiserror::Error;
 use truck_base::{
     assert_near,
-    cgmath64::{Point2, Point3, Vector2, Vector3},
+    cgmath64::{Point2, Point3, Vector2, Vector3, Vector4},
     tolerance::Tolerance,
 };
+
+/// Data tuple representing the components of a B-spline or NURBS curve:
+/// `(knots, degree, control_points)`.
+pub type BSplineCurveData<'a, P> = (&'a [f64], usize, &'a [P]);
 
 /// Parametric curves
 pub trait ParametricCurve: Clone {
@@ -38,6 +42,13 @@ pub trait ParametricCurve: Clone {
     /// `None` in default implementation; `Some(period)` if periodic.
     #[inline(always)]
     fn period(&self) -> Option<f64> { None }
+
+    /// Returns the components of the rational NURBS curve if `self` is a NURBS curve:
+    /// `(knots, degree, control_points)`
+    #[inline(always)]
+    fn as_nurbs_curve(&self) -> Option<BSplineCurveData<'_, Vector4>> {
+        None
+    }
 }
 
 /// bounded parametric curves i.e. it is guaranteed that the return value of `parameter_range` is not `Bound::Unbounded`.
@@ -94,6 +105,8 @@ impl<C: ParametricCurve> ParametricCurve for &C {
     fn parameter_range(&self) -> ParameterRange { (*self).parameter_range() }
     #[inline(always)]
     fn period(&self) -> Option<f64> { (*self).period() }
+    #[inline(always)]
+    fn as_nurbs_curve(&self) -> Option<BSplineCurveData<'_, Vector4>> { (*self).as_nurbs_curve() }
 }
 
 impl<C: BoundedCurve> BoundedCurve for &C {
@@ -119,6 +132,8 @@ impl<C: ParametricCurve> ParametricCurve for Box<C> {
     fn parameter_range(&self) -> ParameterRange { (**self).parameter_range() }
     #[inline(always)]
     fn period(&self) -> Option<f64> { (**self).period() }
+    #[inline(always)]
+    fn as_nurbs_curve(&self) -> Option<BSplineCurveData<'_, Vector4>> { (**self).as_nurbs_curve() }
 }
 
 impl<C: BoundedCurve> BoundedCurve for Box<C> {

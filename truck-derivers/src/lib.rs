@@ -528,6 +528,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                 fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector>,
                 fn parameter_range(&self,) -> ParameterRange,
                 fn period(&self,) -> Option<f64>,
+                fn as_nurbs_curve(&self,) -> Option<(&[f64], usize, &[truck_geotrait::Vector4])>,
             );
             quote! {
                 #[automatically_derived]
@@ -562,6 +563,7 @@ pub fn derive_parametric_curve(input: TokenStream) -> TokenStream {
                     fn ders(&self, n: usize, t: f64) -> CurveDers<Self::Vector> { self.0.ders(n, t) }
                     fn parameter_range(&self) -> ParameterRange { self.0.parameter_range() }
                     fn period(&self) -> Option<f64> { self.0.period() }
+                    fn as_nurbs_curve(&self) -> Option<(&[f64], usize, &[truck_geotrait::Vector4])> { self.0.as_nurbs_curve() }
                 }
             }
         }

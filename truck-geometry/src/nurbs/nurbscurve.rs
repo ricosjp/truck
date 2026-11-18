@@ -82,6 +82,7 @@ impl<V: Homogeneous<Scalar = f64>> NurbsCurve<V> {
         let BSplineCurve {
             knot_vec,
             control_points,
+            ..
         } = curve;
         if control_points.len() != weights.len() {
             return Err(Error::DifferentLength);
@@ -518,6 +519,14 @@ impl<V: Homogeneous<Scalar = f64> + ControlPoint<f64, Diff = V>> ParametricCurve
             Bound::Included(self.0.knot_vec[0]),
             Bound::Included(self.0.knot_vec[self.0.knot_vec.len() - 1]),
         )
+    }
+}
+
+impl NurbsCurve<Vector4> {
+    /// Returns NURBS representation `(knots, degree, control_points)`
+    #[inline(always)]
+    pub fn as_nurbs_curve(&self) -> Option<(&[f64], usize, &[Vector4])> {
+        Some((self.knot_vec().as_slice(), self.degree(), self.control_points().as_slice()))
     }
 }
 

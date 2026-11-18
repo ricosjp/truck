@@ -7,6 +7,6 @@ mod structuring;
 mod subdivision;
 
 pub use normal_filters::NormalFilters;
-pub use optimizing::OptimizingFilter;
+pub use optimizing::{sub_put_together_same_attrs, OptimizingFilter, SameAttr};
 pub use structuring::StructuringFilter;
 pub use subdivision::Subdivision;

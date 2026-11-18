@@ -459,9 +459,32 @@ where
     let mut poly_loops_store1: LoopsStore<_, _> = poly_shell1.face_iter().collect();
     let store0_len = geom_loops_store0.len();
     let store1_len = geom_loops_store1.len();
-    (0..store0_len)
+    let pairs: Vec<(usize, usize)> = (0..store0_len)
         .flat_map(move |i| (0..store1_len).map(move |j| (i, j)))
-        .try_for_each(|(face_index0, face_index1)| {
+        .collect();
+
+    #[cfg(feature = "cuda")]
+    let active_pairs: Vec<(usize, usize)> = {
+        let cuda = CudaMeshAnalyzer::new();
+        pairs
+            .into_iter()
+            .filter(|&(face_index0, face_index1)| {
+                let poly0 = match poly_shell0[face_index0].surface() {
+                    Some(p) => p,
+                    None => return false,
+                };
+                let poly1 = match poly_shell1[face_index1].surface() {
+                    Some(p) => p,
+                    None => return false,
+                };
+                cuda.collide_with(&poly0, &poly1).is_some()
+            })
+            .collect()
+    };
+    #[cfg(not(feature = "cuda"))]
+    let active_pairs = pairs;
+
+    active_pairs.into_iter().try_for_each(|(face_index0, face_index1)| {
             let ori0 = geom_shell0[face_index0].orientation();
             let ori1 = geom_shell1[face_index1].orientation();
             let surface0 = geom_shell0[face_index0].surface();

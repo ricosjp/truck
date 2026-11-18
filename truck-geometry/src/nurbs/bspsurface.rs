@@ -1694,7 +1694,14 @@ where P: EuclideanSpace<Scalar = f64, Diff = <P as ControlPoint<f64>>::Diff>
     }
 }
 
-impl ParametricSurface3D for BSplineSurface<Point3> {}
+impl ParametricSurface3D for BSplineSurface<Point3> {
+    #[inline(always)]
+    fn as_bspline(&self) -> Option<(&[f64], &[f64], usize, usize, &[Vec<Point3>])> {
+        let (ukv, vkv) = self.knot_vecs();
+        let (udeg, vdeg) = self.degrees();
+        Some((ukv.as_slice(), vkv.as_slice(), udeg, vdeg, self.control_points().as_slice()))
+    }
+}
 
 impl<V> BoundedSurface for BSplineSurface<V> where BSplineSurface<V>: ParametricSurface {}
 

@@ -1,4 +1,5 @@
 use std::ops::Bound;
+pub use truck_base::cgmath64::Vector4;
 use truck_base::cgmath64::*;
 
 mod curve;

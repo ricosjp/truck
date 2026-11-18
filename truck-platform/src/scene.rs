@@ -91,6 +91,50 @@ impl DeviceHandler {
 
     /// Creates default device handler.
     pub async fn default_device() -> Self { init_default_device(None).await.0 }
+
+    /// Reads a GPU buffer into a `Vec<T>`.
+    pub async fn read_buffer<T: Pod + Zeroable>(&self, buffer: &Buffer, size: u64) -> Vec<T> {
+        let device = self.device();
+        let staging_buffer = device.create_buffer(&BufferDescriptor {
+            label: Some("staging_read_buffer"),
+            size,
+            usage: BufferUsages::COPY_DST | BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+        let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor {
+            label: Some("staging_copy_encoder"),
+        });
+        encoder.copy_buffer_to_buffer(buffer, 0, &staging_buffer, 0, size);
+        self.queue().submit(Some(encoder.finish()));
+
+        let slice = staging_buffer.slice(..);
+        let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
+        slice.map_async(MapMode::Read, move |res| sender.send(res).unwrap());
+        device
+            .poll(PollType::Wait {
+                submission_index: None,
+                timeout: None,
+            })
+            .unwrap();
+        match receiver.receive().await {
+            Some(Ok(())) => match slice.get_mapped_range() {
+                Ok(view) => {
+                    let result: Vec<T> = bytemuck::cast_slice(&view).to_vec();
+                    drop(view);
+                    staging_buffer.unmap();
+                    result
+                }
+                Err(e) => panic!("Failed to get mapped range: {:?}", e),
+            },
+            Some(Err(e)) => panic!("Failed to map buffer: {:?}", e),
+            None => panic!("Asynchronous buffer mapping failed"),
+        }
+    }
+
+    /// Synchronously reads a GPU buffer into a `Vec<T>`.
+    pub fn read_buffer_block<T: Pod + Zeroable>(&self, buffer: &Buffer, size: u64) -> Vec<T> {
+        pollster::block_on(self.read_buffer(buffer, size))
+    }
 }
 
 impl Default for StudioConfig {
