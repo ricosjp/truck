@@ -62,7 +62,9 @@ fn polycurve_snp_on_curve(
 #[property_test]
 fn polycurve_division(#[strategy = prop::array::uniform15(-10.0f64..=10.0f64)] a: [f64; 15]) {
     let coef: Vec<Vector3> = a
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|a| Vector3::new(a[0], a[1], a[2]))
         .collect();
     let poly = PolynomialCurve::<Point3>(coef);
