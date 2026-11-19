@@ -176,3 +176,23 @@ fn include_curve_abnormal1() {
     let line = BSplineCurve::new(KnotVec::bezier_knot(1), vec![pt0, pt1]);
     assert!(!surface.include(&line));
 }
+
+/// A point on the seam (angle 0 = 2π) is reported at the end of the period nearer the hint,
+/// so a boundary traced along the seam does not jump a whole turn and fold its parameter polygon.
+#[test]
+fn seam_point_follows_hint() {
+    let line = BSplineCurve::new(
+        KnotVec::bezier_knot(1),
+        vec![Point3::new(1.0, 0.0, 0.0), Point3::new(1.0, 0.0, 1.0)],
+    );
+    let cylinder = RevolutedCurve::by_revolution(line, Point3::origin(), Vector3::unit_z());
+    let seam = cylinder.subs(0.5, 0.0);
+    for (hint, expected) in [(2.0 * PI - 0.1, 2.0 * PI), (0.1, 0.0)] {
+        let (u, v) = cylinder.search_parameter(seam, (0.5, hint), 100).unwrap();
+        assert_near!(u, 0.5);
+        assert_near!(v, expected);
+        let (u, v) = cylinder.search_nearest_parameter(seam, (0.5, hint), 100).unwrap();
+        assert_near!(u, 0.5);
+        assert_near!(v, expected);
+    }
+}
