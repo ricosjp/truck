@@ -11,7 +11,11 @@ use ruststep::{
 };
 use serde::{Deserialize, Serialize};
 use std::result::Result;
-use std::{collections::HashMap, f64::consts::PI};
+use std::{
+    collections::HashMap,
+    f64::consts::PI,
+    ops::{Range, RangeInclusive},
+};
 use truck_assembly::assy::*;
 use truck_geometry::prelude as truck;
 use truck_topology::compress::*;
@@ -1215,20 +1219,118 @@ pub struct BSplineCurveWithKnots {
     pub knots: Vec<f64>,
     pub knot_spec: KnotType,
 }
-impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&BSplineCurveWithKnots> for BSplineCurve<P> {
+impl BSplineCurveWithKnots {
+    /// The B-spline with the knot vector as written, before restricting it to the STEP domain.
+    fn raw_bspline<P: for<'a> From<&'a CartesianPoint>>(
+        &self,
+    ) -> Result<BSplineCurve<P>, StepConvertingError> {
+        let knots = knot_vec_from_step(&self.knots, &self.knot_multiplicities)?;
+        let ctrpts = self.control_points_list.iter().map(Into::into).collect();
+        Ok(BSplineCurve::try_new(knots, ctrpts)?)
+    }
+}
+impl<P> TryFrom<&BSplineCurveWithKnots> for BSplineCurve<P>
+where P: for<'a> From<&'a CartesianPoint> + control_point::ControlPoint<f64> + truck::Tolerance
+{
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(curve: &BSplineCurveWithKnots) -> Result<Self, StepConvertingError> {
-        let knots = curve.knots.clone();
-        let multi = curve
-            .knot_multiplicities
-            .iter()
-            .map(|n| *n as usize)
-            .collect();
-        let knots = KnotVec::from_single_multi(knots, multi).unwrap();
-        let ctrpts = curve.control_points_list.iter().map(Into::into).collect();
-        Ok(Self::try_new(knots, ctrpts)?)
+        bspline_curve_on_step_domain(curve.raw_bspline()?)
     }
+}
+
+/// The knot vector given by the distinct knots and their multiplicities, as written in STEP.
+fn knot_vec_from_step(
+    knots: &[f64],
+    multiplicities: &[i64],
+) -> Result<KnotVec, StepConvertingError> {
+    if knots.len() != multiplicities.len() {
+        return Err("knots and knot multiplicities have different lengths".into());
+    }
+    let multiplicities = multiplicities
+        .iter()
+        .map(|m| usize::try_from(*m).map_err(|_| "negative knot multiplicity".into()))
+        .collect::<Result<Vec<_>, StepConvertingError>>()?;
+    Ok(KnotVec::from_single_multi(knots.to_vec(), multiplicities)?)
+}
+
+/// Restricts a B-spline curve to the domain on which STEP defines it.
+///
+/// In STEP (ISO 10303-42), a B-spline curve of degree `p` with knots `u_0, ..., u_m`
+/// is defined on `[u_p, u_{m-p}]` only, whereas truck evaluates a B-spline on its whole
+/// knot vector. The two coincide for clamped knot vectors. An unclamped knot vector, such as
+/// that of a periodic curve exported by Open CASCADE or of any `uniform_curve`, has spans
+/// outside the STEP domain: there the curve drifts away from the intended geometry, and a
+/// rational curve evaluates to `0 / 0` at the ends of its knot vector.
+///
+/// Inserting knots until both ends of the STEP domain have multiplicity `p + 1`, then dropping
+/// the knots and control points outside of it, gives the same geometry with a clamped knot vector.
+///
+/// Multiplicities are counted with exact equality: `Cut::cut` and `KnotVec::multiplicity` treat
+/// knots closer than `TOLERANCE` as one knot, which would restrict close but distinct knots wrongly.
+/// The new control points are still computed by `add_knot`, which, like truck's evaluation, treats
+/// knot spans shorter than `TOLERANCE` as empty.
+///
+/// # Failure
+/// Returns an error if the STEP domain is empty (fewer than `p + 1` control points, or
+/// `u_p == u_{m-p}`) or too short for truck.
+fn bspline_curve_on_step_domain<P: control_point::ControlPoint<f64> + truck::Tolerance>(
+    mut curve: BSplineCurve<P>,
+) -> Result<BSplineCurve<P>, StepConvertingError> {
+    let degree = curve.degree();
+    let (front, back) = step_domain(curve.knot_vec(), degree)?;
+    for _ in exact_multiplicity(curve.knot_vec(), back)..=degree {
+        curve.add_knot(back);
+    }
+    for _ in exact_multiplicity(curve.knot_vec(), front)..=degree {
+        curve.add_knot(front);
+    }
+    let (knots, ctrls) = step_domain_indices(curve.knot_vec(), degree, front, back);
+    let knot_vec = curve.knot_vec().sub_vec(knots);
+    let control_points = curve.control_points()[ctrls].to_vec();
+    Ok(BSplineCurve::try_new(knot_vec, control_points)?)
+}
+
+/// The parameter range `[u_p, u_{m-p}]` on which STEP defines a B-spline of degree `p`
+/// with knots `u_0, ..., u_m`.
+fn step_domain(knot_vec: &KnotVec, degree: usize) -> Result<(f64, f64), StepConvertingError> {
+    let last = knot_vec.len() - 1;
+    match (
+        knot_vec.get(degree),
+        last.checked_sub(degree).map(|i| knot_vec[i]),
+    ) {
+        (Some(front), Some(back)) if front < back => Ok((front, back)),
+        _ => Err("B-spline has an empty STEP domain".into()),
+    }
+}
+
+/// The number of knots exactly equal to `t`.
+fn exact_multiplicity(knot_vec: &KnotVec, t: f64) -> usize {
+    knot_vec.iter().filter(|u| **u == t).count()
+}
+
+/// The indices of the knots and control points that define a B-spline of degree `degree`
+/// on `[front, back]`, given that `front` and `back` are knots of multiplicity at least `degree + 1`.
+fn step_domain_indices(
+    knot_vec: &KnotVec,
+    degree: usize,
+    front: f64,
+    back: f64,
+) -> (RangeInclusive<usize>, Range<usize>) {
+    // An end of the knot vector which is already clamped is kept as is. Otherwise, keep the
+    // last `degree + 1` copies of `front` and the first `degree + 1` copies of `back`.
+    let last = knot_vec.len() - 1;
+    let start = if knot_vec[0] == front {
+        0
+    } else {
+        knot_vec.iter().rposition(|u| *u == front).unwrap() - degree
+    };
+    let end = if knot_vec[last] == back {
+        last
+    } else {
+        knot_vec.iter().position(|u| *u == back).unwrap() + degree
+    };
+    (start..=end, start..end - degree)
 }
 
 /// `bezier_curve`
@@ -1301,13 +1403,23 @@ pub struct UniformCurve {
     pub closed_curve: Logical,
     pub self_intersect: Logical,
 }
-impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&UniformCurve> for BSplineCurve<P> {
+impl UniformCurve {
+    /// The B-spline with the uniform knot vector, before restricting it to the STEP domain.
+    fn raw_bspline<P: for<'a> From<&'a CartesianPoint>>(
+        &self,
+    ) -> Result<BSplineCurve<P>, StepConvertingError> {
+        let knots = uniform_knots(self.control_points_list.len(), self.degree as usize)?;
+        let ctrpts = self.control_points_list.iter().map(Into::into).collect();
+        Ok(BSplineCurve::try_new(knots, ctrpts)?)
+    }
+}
+impl<P> TryFrom<&UniformCurve> for BSplineCurve<P>
+where P: for<'a> From<&'a CartesianPoint> + control_point::ControlPoint<f64> + truck::Tolerance
+{
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(curve: &UniformCurve) -> Result<Self, StepConvertingError> {
-        let knots = uniform_knots(curve.control_points_list.len(), curve.degree as usize)?;
-        let ctrpts = curve.control_points_list.iter().map(Into::into).collect();
-        Ok(Self::try_new(knots, ctrpts)?)
+        bspline_curve_on_step_domain(curve.raw_bspline()?)
     }
 }
 
@@ -1335,17 +1447,28 @@ pub enum NonRationalBSplineCurve {
     UniformCurve(UniformCurve),
 }
 
-impl<P: for<'a> From<&'a CartesianPoint>> TryFrom<&NonRationalBSplineCurve> for BSplineCurve<P> {
+impl NonRationalBSplineCurve {
+    /// The B-spline before restricting it to the STEP domain, whose control points
+    /// still match the weights of a [`RationalBSplineCurve`].
+    fn raw_bspline<P: for<'a> From<&'a CartesianPoint>>(
+        &self,
+    ) -> Result<BSplineCurve<P>, StepConvertingError> {
+        use NonRationalBSplineCurve::*;
+        match self {
+            BSplineCurveWithKnots(x) => x.raw_bspline(),
+            BezierCurve(x) => x.try_into(),
+            QuasiUniformCurve(x) => x.try_into(),
+            UniformCurve(x) => x.raw_bspline(),
+        }
+    }
+}
+impl<P> TryFrom<&NonRationalBSplineCurve> for BSplineCurve<P>
+where P: for<'a> From<&'a CartesianPoint> + control_point::ControlPoint<f64> + truck::Tolerance
+{
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(curve: &NonRationalBSplineCurve) -> Result<Self, StepConvertingError> {
-        use NonRationalBSplineCurve::*;
-        match curve {
-            BSplineCurveWithKnots(x) => x.try_into(),
-            BezierCurve(x) => x.try_into(),
-            QuasiUniformCurve(x) => x.try_into(),
-            UniformCurve(x) => x.try_into(),
-        }
+        bspline_curve_on_step_domain(curve.raw_bspline()?)
     }
 }
 
@@ -1365,16 +1488,19 @@ pub struct RationalBSplineCurve {
 }
 impl<V> TryFrom<&RationalBSplineCurve> for NurbsCurve<V>
 where
-    V: Homogeneous<Scalar = f64>,
+    V: Homogeneous<Scalar = f64> + control_point::ControlPoint<f64, Diff = V> + truck::Tolerance,
     V::Point: for<'a> From<&'a CartesianPoint>,
 {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(curve: &RationalBSplineCurve) -> Result<Self, StepConvertingError> {
-        Ok(Self::try_from_bspline_and_weights(
-            BSplineCurve::try_from(&curve.non_rational_b_spline_curve)?,
+        let nurbs = Self::try_from_bspline_and_weights(
+            curve.non_rational_b_spline_curve.raw_bspline()?,
             curve.weights_data.clone(),
-        )?)
+        )?;
+        Ok(Self::new(bspline_curve_on_step_domain(
+            nurbs.into_non_rationalized(),
+        )?))
     }
 }
 
@@ -1977,26 +2103,20 @@ impl TryFrom<&BSplineSurfaceWithKnots> for BSplineSurface<Point3> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(surface: &BSplineSurfaceWithKnots) -> Result<Self, StepConvertingError> {
-        let uknots = surface.u_knots.to_vec();
-        let umulti = surface
-            .u_multiplicities
-            .iter()
-            .map(|n| *n as usize)
-            .collect();
-        let uknots = KnotVec::from_single_multi(uknots, umulti).unwrap();
-        let vknots = surface.v_knots.to_vec();
-        let vmulti = surface
-            .v_multiplicities
-            .iter()
-            .map(|n| *n as usize)
-            .collect();
-        let vknots = KnotVec::from_single_multi(vknots, vmulti).unwrap();
-        let ctrls = surface
+        bspline_surface_on_step_domain(surface.raw_bspline()?)
+    }
+}
+impl BSplineSurfaceWithKnots {
+    /// The B-spline with the knot vectors as written, before restricting it to the STEP domain.
+    fn raw_bspline(&self) -> Result<BSplineSurface<Point3>, StepConvertingError> {
+        let uknots = knot_vec_from_step(&self.u_knots, &self.u_multiplicities)?;
+        let vknots = knot_vec_from_step(&self.v_knots, &self.v_multiplicities)?;
+        let ctrls = self
             .control_points_list
             .iter()
             .map(|vec| vec.iter().map(Point3::from).collect())
             .collect();
-        Ok(Self::try_new((uknots, vknots), ctrls)?)
+        Ok(BSplineSurface::try_new((uknots, vknots), ctrls)?)
     }
 }
 
@@ -2021,18 +2141,24 @@ impl TryFrom<&UniformSurface> for BSplineSurface<Point3> {
     type Error = StepConvertingError;
     #[inline(always)]
     fn try_from(surface: &UniformSurface) -> Result<Self, StepConvertingError> {
-        let uknots = uniform_knots(surface.control_points_list.len(), surface.u_degree as usize)?;
-        let first = surface
+        bspline_surface_on_step_domain(surface.raw_bspline()?)
+    }
+}
+impl UniformSurface {
+    /// The B-spline with uniform knot vectors, before restricting it to the STEP domain.
+    fn raw_bspline(&self) -> Result<BSplineSurface<Point3>, StepConvertingError> {
+        let uknots = uniform_knots(self.control_points_list.len(), self.u_degree as usize)?;
+        let first = self
             .control_points_list
             .first()
             .ok_or("control points list is empty.")?;
-        let vknots = uniform_knots(first.len(), surface.v_degree as usize)?;
-        let ctrls = surface
+        let vknots = uniform_knots(first.len(), self.v_degree as usize)?;
+        let ctrls = self
             .control_points_list
             .iter()
             .map(|vec| vec.iter().map(Point3::from).collect())
             .collect();
-        Ok(Self::try_new((uknots, vknots), ctrls)?)
+        Ok(BSplineSurface::try_new((uknots, vknots), ctrls)?)
     }
 }
 
@@ -2120,18 +2246,58 @@ pub enum NonRationalBSplineSurface {
     BezierSurface(Box<BezierSurface>),
 }
 
-impl TryFrom<&NonRationalBSplineSurface> for BSplineSurface<Point3> {
-    type Error = StepConvertingError;
-    #[inline(always)]
-    fn try_from(value: &NonRationalBSplineSurface) -> Result<Self, Self::Error> {
+impl NonRationalBSplineSurface {
+    /// The B-spline before restricting it to the STEP domain, whose control points
+    /// still match the weights of a [`RationalBSplineSurface`].
+    fn raw_bspline(&self) -> Result<BSplineSurface<Point3>, StepConvertingError> {
         use NonRationalBSplineSurface::*;
-        match value {
-            BSplineSurfaceWithKnots(x) => x.as_ref().try_into(),
-            UniformSurface(x) => x.as_ref().try_into(),
+        match self {
+            BSplineSurfaceWithKnots(x) => x.raw_bspline(),
+            UniformSurface(x) => x.raw_bspline(),
             QuasiUniformSurface(x) => x.as_ref().try_into(),
             BezierSurface(x) => Ok(x.as_ref().into()),
         }
     }
+}
+impl TryFrom<&NonRationalBSplineSurface> for BSplineSurface<Point3> {
+    type Error = StepConvertingError;
+    #[inline(always)]
+    fn try_from(value: &NonRationalBSplineSurface) -> Result<Self, Self::Error> {
+        bspline_surface_on_step_domain(value.raw_bspline()?)
+    }
+}
+
+/// Restricts a B-spline surface to the domain on which STEP defines it,
+/// in both directions. See [`bspline_curve_on_step_domain`].
+fn bspline_surface_on_step_domain<P: control_point::ControlPoint<f64> + truck::Tolerance>(
+    mut surface: BSplineSurface<P>,
+) -> Result<BSplineSurface<P>, StepConvertingError> {
+    let (udegree, vdegree) = (surface.udegree(), surface.vdegree());
+    let (ufront, uback) = step_domain(surface.uknot_vec(), udegree)?;
+    let (vfront, vback) = step_domain(surface.vknot_vec(), vdegree)?;
+    for _ in exact_multiplicity(surface.uknot_vec(), uback)..=udegree {
+        surface.add_uknot(uback);
+    }
+    for _ in exact_multiplicity(surface.uknot_vec(), ufront)..=udegree {
+        surface.add_uknot(ufront);
+    }
+    for _ in exact_multiplicity(surface.vknot_vec(), vback)..=vdegree {
+        surface.add_vknot(vback);
+    }
+    for _ in exact_multiplicity(surface.vknot_vec(), vfront)..=vdegree {
+        surface.add_vknot(vfront);
+    }
+    let (uknots, urows) = step_domain_indices(surface.uknot_vec(), udegree, ufront, uback);
+    let (vknots, vcols) = step_domain_indices(surface.vknot_vec(), vdegree, vfront, vback);
+    let knot_vecs = (
+        surface.uknot_vec().sub_vec(uknots),
+        surface.vknot_vec().sub_vec(vknots),
+    );
+    let control_points = surface.control_points()[urows]
+        .iter()
+        .map(|row| row[vcols.clone()].to_vec())
+        .collect();
+    Ok(BSplineSurface::try_new(knot_vecs, control_points)?)
 }
 
 /// `rational_b_spline_surface` as complex entity
@@ -2158,11 +2324,13 @@ impl TryFrom<&RationalBSplineSurface> for NurbsSurface<Vector4> {
             weights_data,
         }: &RationalBSplineSurface,
     ) -> Result<Self, Self::Error> {
-        let surface: BSplineSurface<Point3> = non_rational_b_spline_surface.try_into()?;
-        Ok(Self::try_from_bspline_and_weights(
-            surface,
+        let nurbs = Self::try_from_bspline_and_weights(
+            non_rational_b_spline_surface.raw_bspline()?,
             weights_data.clone(),
-        )?)
+        )?;
+        Ok(Self::new(bspline_surface_on_step_domain(
+            nurbs.into_non_rationalized(),
+        )?))
     }
 }
 
